@@ -38,18 +38,14 @@ export default function ProductsPage() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
-                <span className="text-sm font-semibold leading-tight">{p.name}</span>
+                <span className="text-sm font-semibold leading-tight">{p.productName}</span>
                 <StatusBadge status={p.stockStatus} />
               </div>
-              {p.origin && <p className="text-xs text-muted-foreground mt-0.5">Origin: {p.origin}</p>}
-              <p className="text-xs text-muted-foreground capitalize mt-0.5">{p.roastLevel?.replace(/_/g, " ")} · {p.grind?.replace(/_/g, " ")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 font-mono">{p.sku}</p>
+              <p className="text-xs text-muted-foreground capitalize mt-0.5">{p.category?.replace(/_/g, " ")} · {p.businessChannel}</p>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-sm font-bold text-primary">{formatCurrency(p.unitPrice)}</span>
-                <span className="text-xs text-muted-foreground">{p.unitSize} {p.unitOfMeasure}</span>
               </div>
-              {p.stockQuantity != null && (
-                <p className="text-xs text-muted-foreground mt-0.5">Stock: {p.stockQuantity} units</p>
-              )}
             </div>
           </Card>
         ))}
