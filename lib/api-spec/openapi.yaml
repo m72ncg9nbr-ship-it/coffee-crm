@@ -1,22 +1,41 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Coffee Distribution CRM API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User management
+  - name: customers
+    description: Customer management
+  - name: leads
+    description: Lead and request management
+  - name: products
+    description: Product catalog
+  - name: orders
+    description: Order management
+  - name: deliveries
+    description: Delivery management
+  - name: accounting
+    description: Accounting approval
+  - name: activity
+    description: Activity logs
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +43,734 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      summary: List customers
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: priority
+          schema:
+            type: string
+        - in: query
+          name: active
+          schema:
+            type: string
+        - in: query
+          name: channel
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Customer"
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerBody"
+      responses:
+        "201":
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Get a customer
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateCustomer
+      tags: [customers]
+      summary: Update a customer
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerBody"
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}/addresses:
+    get:
+      operationId: listCustomerAddresses
+      tags: [customers]
+      summary: List customer addresses
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer addresses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomerAddress"
+    post:
+      operationId: createCustomerAddress
+      tags: [customers]
+      summary: Create a customer address
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerAddressBody"
+      responses:
+        "201":
+          description: Address created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAddress"
+
+  /leads:
+    get:
+      operationId: listLeads
+      tags: [leads]
+      summary: List leads
+      responses:
+        "200":
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lead"
+    post:
+      operationId: createLead
+      tags: [leads]
+      summary: Create a lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLeadBody"
+      responses:
+        "201":
+          description: Lead created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /leads/{id}:
+    get:
+      operationId: getLead
+      tags: [leads]
+      summary: Get a lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+    patch:
+      operationId: updateLead
+      tags: [leads]
+      summary: Update a lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLeadBody"
+      responses:
+        "200":
+          description: Updated lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List products
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: active
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductBody"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List orders
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: customerId
+          schema:
+            type: integer
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderBody"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get an order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateOrder
+      tags: [orders]
+      summary: Update an order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderBody"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /deliveries:
+    get:
+      operationId: listDeliveries
+      tags: [deliveries]
+      summary: List deliveries
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: driverId
+          schema:
+            type: integer
+        - in: query
+          name: dateRange
+          schema:
+            type: string
+        - in: query
+          name: channel
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of deliveries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Delivery"
+    post:
+      operationId: createDelivery
+      tags: [deliveries]
+      summary: Create a delivery from an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeliveryBody"
+      responses:
+        "201":
+          description: Delivery created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Delivery"
+
+  /deliveries/{id}:
+    get:
+      operationId: getDelivery
+      tags: [deliveries]
+      summary: Get a delivery
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Delivery detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateDelivery
+      tags: [deliveries]
+      summary: Update a delivery
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeliveryBody"
+      responses:
+        "200":
+          description: Updated delivery
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Delivery"
+
+  /deliveries/{id}/documents:
+    post:
+      operationId: uploadDeliveryDocument
+      tags: [deliveries]
+      summary: Upload delivery document/proof
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadDocumentBody"
+      responses:
+        "201":
+          description: Document uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryDocument"
+
+  /deliveries/driver/{driverId}:
+    get:
+      operationId: getDriverDeliveries
+      tags: [deliveries]
+      summary: Get deliveries for a specific driver
+      parameters:
+        - in: path
+          name: driverId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Driver deliveries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Delivery"
+
+  /accounting/approvals:
+    get:
+      operationId: listAccountingApprovals
+      tags: [accounting]
+      summary: List deliveries awaiting accounting approval
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approval queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountingApproval"
+
+  /accounting/approvals/{deliveryId}/approve:
+    post:
+      operationId: approveDelivery
+      tags: [accounting]
+      summary: Approve a delivery for invoicing
+      parameters:
+        - in: path
+          name: deliveryId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveBody"
+      responses:
+        "200":
+          description: Approval result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountingApproval"
+
+  /accounting/approvals/{deliveryId}/reject:
+    post:
+      operationId: rejectDelivery
+      tags: [accounting]
+      summary: Reject a delivery approval
+      parameters:
+        - in: path
+          name: deliveryId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectBody"
+      responses:
+        "200":
+          description: Rejection result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountingApproval"
+
+  /activity-logs:
+    get:
+      operationId: listActivityLogs
+      tags: [activity]
+      summary: List activity logs
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: entityType
+          schema:
+            type: string
+        - in: query
+          name: entityId
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Activity logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityLog"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/recent-deliveries:
+    get:
+      operationId: getRecentDeliveries
+      tags: [dashboard]
+      summary: Get recent delivery activity
+      responses:
+        "200":
+          description: Recent deliveries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Delivery"
+
+  /dashboard/deviations:
+    get:
+      operationId: getDeliveryDeviations
+      tags: [dashboard]
+      summary: Get deliveries with deviations
+      responses:
+        "200":
+          description: Delivery deviations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Delivery"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +781,805 @@ components:
       required:
         - status
 
+    LoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, operations, sales, driver, accounting]
+        active:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - username
+        - fullName
+        - email
+        - role
+        - active
+        - createdAt
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyName:
+          type: string
+        contactPerson:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        customerChannel:
+          type: string
+        segment:
+          type: string
+        priorityClass:
+          type: string
+          enum: [A, B, C]
+        paymentTerms:
+          type: string
+        discountLevel:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+        active:
+          type: boolean
+        businessChannel:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyName
+        - contactPerson
+        - phone
+        - email
+        - customerChannel
+        - segment
+        - priorityClass
+        - paymentTerms
+        - active
+        - businessChannel
+        - createdAt
+        - updatedAt
+
+    CustomerDetail:
+      allOf:
+        - $ref: "#/components/schemas/Customer"
+        - type: object
+          properties:
+            addresses:
+              type: array
+              items:
+                $ref: "#/components/schemas/CustomerAddress"
+          required:
+            - addresses
+
+    CustomerAddress:
+      type: object
+      properties:
+        id:
+          type: integer
+        customerId:
+          type: integer
+        addressType:
+          type: string
+          enum: [billing, delivery]
+        label:
+          type: ["string", "null"]
+        street:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        isDefault:
+          type: boolean
+      required:
+        - id
+        - customerId
+        - addressType
+        - street
+        - city
+        - postalCode
+        - country
+        - isDefault
+
+    CreateCustomerBody:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactPerson:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        customerChannel:
+          type: string
+        segment:
+          type: string
+        priorityClass:
+          type: string
+          enum: [A, B, C]
+        paymentTerms:
+          type: string
+        discountLevel:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+        active:
+          type: boolean
+        businessChannel:
+          type: string
+      required:
+        - companyName
+        - contactPerson
+        - phone
+        - email
+        - customerChannel
+        - segment
+        - priorityClass
+        - paymentTerms
+        - businessChannel
+
+    UpdateCustomerBody:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactPerson:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        customerChannel:
+          type: string
+        segment:
+          type: string
+        priorityClass:
+          type: string
+          enum: [A, B, C]
+        paymentTerms:
+          type: string
+        discountLevel:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+        active:
+          type: boolean
+        businessChannel:
+          type: string
+
+    CreateCustomerAddressBody:
+      type: object
+      properties:
+        addressType:
+          type: string
+          enum: [billing, delivery]
+        label:
+          type: ["string", "null"]
+        street:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        isDefault:
+          type: boolean
+      required:
+        - addressType
+        - street
+        - city
+        - postalCode
+        - country
+
+    Lead:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyName:
+          type: string
+        contactPerson:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        businessChannel:
+          type: string
+        businessType:
+          type: string
+        estimatedMonthlyConsumption:
+          type: ["string", "null"]
+        preferredCoffeeType:
+          type: ["string", "null"]
+        requestedMachineType:
+          type: ["string", "null"]
+        requestedPaymentTerms:
+          type: ["string", "null"]
+        extraNotes:
+          type: ["string", "null"]
+        qualificationStatus:
+          type: string
+          enum: [qualified, manual_review, pending]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyName
+        - contactPerson
+        - phone
+        - email
+        - businessChannel
+        - businessType
+        - qualificationStatus
+        - createdAt
+        - updatedAt
+
+    CreateLeadBody:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactPerson:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        businessChannel:
+          type: string
+        businessType:
+          type: string
+        estimatedMonthlyConsumption:
+          type: ["string", "null"]
+        preferredCoffeeType:
+          type: ["string", "null"]
+        requestedMachineType:
+          type: ["string", "null"]
+        requestedPaymentTerms:
+          type: ["string", "null"]
+        extraNotes:
+          type: ["string", "null"]
+      required:
+        - companyName
+        - contactPerson
+        - phone
+        - email
+        - businessChannel
+        - businessType
+
+    UpdateLeadBody:
+      type: object
+      properties:
+        qualificationStatus:
+          type: string
+          enum: [qualified, manual_review, pending]
+        extraNotes:
+          type: ["string", "null"]
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        productName:
+          type: string
+        sku:
+          type: string
+        category:
+          type: string
+        unitPrice:
+          type: number
+        stockStatus:
+          type: string
+          enum: [in_stock, low_stock, out_of_stock]
+        active:
+          type: boolean
+        businessChannel:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - productName
+        - sku
+        - category
+        - unitPrice
+        - stockStatus
+        - active
+        - businessChannel
+        - createdAt
+
+    CreateProductBody:
+      type: object
+      properties:
+        productName:
+          type: string
+        sku:
+          type: string
+        category:
+          type: string
+        unitPrice:
+          type: number
+        stockStatus:
+          type: string
+          enum: [in_stock, low_stock, out_of_stock]
+        active:
+          type: boolean
+        businessChannel:
+          type: string
+      required:
+        - productName
+        - sku
+        - category
+        - unitPrice
+        - stockStatus
+        - businessChannel
+
+    UpdateProductBody:
+      type: object
+      properties:
+        productName:
+          type: string
+        sku:
+          type: string
+        category:
+          type: string
+        unitPrice:
+          type: number
+        stockStatus:
+          type: string
+          enum: [in_stock, low_stock, out_of_stock]
+        active:
+          type: boolean
+        businessChannel:
+          type: string
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        customerId:
+          type: integer
+        customerName:
+          type: string
+        businessChannel:
+          type: string
+        orderSource:
+          type: string
+          enum: [phone, whatsapp, web, sales_rep]
+        requestedDeliveryDate:
+          type: ["string", "null"]
+        urgency:
+          type: string
+          enum: [low, normal, high, critical]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, confirmed, in_progress, delivered, cancelled]
+        totalAmount:
+          type: number
+        createdByName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - customerId
+        - customerName
+        - businessChannel
+        - orderSource
+        - urgency
+        - status
+        - totalAmount
+        - createdAt
+        - updatedAt
+
+    OrderDetail:
+      allOf:
+        - $ref: "#/components/schemas/Order"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/OrderItem"
+            customer:
+              $ref: "#/components/schemas/Customer"
+          required:
+            - items
+            - customer
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+        unitPriceSnapshot:
+          type: number
+        lineTotal:
+          type: number
+      required:
+        - id
+        - orderId
+        - productId
+        - productName
+        - quantity
+        - unitPriceSnapshot
+        - lineTotal
+
+    CreateOrderBody:
+      type: object
+      properties:
+        customerId:
+          type: integer
+        businessChannel:
+          type: string
+        orderSource:
+          type: string
+          enum: [phone, whatsapp, web, sales_rep]
+        requestedDeliveryDate:
+          type: ["string", "null"]
+        urgency:
+          type: string
+          enum: [low, normal, high, critical]
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateOrderItemBody"
+      required:
+        - customerId
+        - businessChannel
+        - orderSource
+        - urgency
+        - items
+
+    CreateOrderItemBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+        unitPriceSnapshot:
+          type: number
+      required:
+        - productId
+        - quantity
+        - unitPriceSnapshot
+
+    UpdateOrderBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [draft, confirmed, in_progress, delivered, cancelled]
+        requestedDeliveryDate:
+          type: ["string", "null"]
+        urgency:
+          type: string
+          enum: [low, normal, high, critical]
+        notes:
+          type: ["string", "null"]
+
+    Delivery:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        customerId:
+          type: integer
+        customerName:
+          type: string
+        customerPriority:
+          type: string
+          enum: [A, B, C]
+        driverId:
+          type: ["integer", "null"]
+        driverName:
+          type: ["string", "null"]
+        scheduledDate:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [unassigned, assigned, in_transit, arrived, completed, awaiting_accounting_approval, approved, rejected]
+        urgency:
+          type: string
+          enum: [low, normal, high, critical]
+        businessChannel:
+          type: string
+        deviationType:
+          type: ["string", "null"]
+        deviationNote:
+          type: ["string", "null"]
+        hasDocument:
+          type: boolean
+        invoiceTriggered:
+          type: boolean
+        invoiceTriggeredAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - orderId
+        - customerId
+        - customerName
+        - customerPriority
+        - scheduledDate
+        - status
+        - urgency
+        - businessChannel
+        - hasDocument
+        - invoiceTriggered
+        - createdAt
+        - updatedAt
+
+    DeliveryDetail:
+      allOf:
+        - $ref: "#/components/schemas/Delivery"
+        - type: object
+          properties:
+            documents:
+              type: array
+              items:
+                $ref: "#/components/schemas/DeliveryDocument"
+            order:
+              $ref: "#/components/schemas/Order"
+            customer:
+              $ref: "#/components/schemas/Customer"
+          required:
+            - documents
+            - order
+            - customer
+
+    DeliveryDocument:
+      type: object
+      properties:
+        id:
+          type: integer
+        deliveryId:
+          type: integer
+        documentType:
+          type: string
+        fileUrl:
+          type: string
+        notes:
+          type: ["string", "null"]
+        uploadedByName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - deliveryId
+        - documentType
+        - fileUrl
+        - createdAt
+
+    CreateDeliveryBody:
+      type: object
+      properties:
+        orderId:
+          type: integer
+        scheduledDate:
+          type: ["string", "null"]
+        driverId:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - orderId
+
+    UpdateDeliveryBody:
+      type: object
+      properties:
+        driverId:
+          type: ["integer", "null"]
+        scheduledDate:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [unassigned, assigned, in_transit, arrived, completed, awaiting_accounting_approval, approved, rejected]
+        deviationType:
+          type: ["string", "null"]
+        deviationNote:
+          type: ["string", "null"]
+
+    UploadDocumentBody:
+      type: object
+      properties:
+        documentType:
+          type: string
+        fileUrl:
+          type: string
+        notes:
+          type: ["string", "null"]
+        deviationType:
+          type: ["string", "null"]
+        deviationNote:
+          type: ["string", "null"]
+      required:
+        - documentType
+        - fileUrl
+
+    AccountingApproval:
+      type: object
+      properties:
+        id:
+          type: integer
+        deliveryId:
+          type: integer
+        customerName:
+          type: string
+        customerPriority:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        reviewedByName:
+          type: ["string", "null"]
+        reviewNotes:
+          type: ["string", "null"]
+        invoiceTriggered:
+          type: boolean
+        invoiceTriggeredAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - deliveryId
+        - customerName
+        - customerPriority
+        - status
+        - invoiceTriggered
+        - createdAt
+        - updatedAt
+
+    ApproveBody:
+      type: object
+      properties:
+        reviewNotes:
+          type: ["string", "null"]
+
+    RejectBody:
+      type: object
+      properties:
+        reviewNotes:
+          type: string
+      required:
+        - reviewNotes
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: ["integer", "null"]
+        description:
+          type: string
+        performedByName:
+          type: ["string", "null"]
+        metadata:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - action
+        - entityType
+        - description
+        - createdAt
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalCustomers:
+          type: integer
+        openOrders:
+          type: integer
+        plannedDeliveries:
+          type: integer
+        outForDelivery:
+          type: integer
+        delayedDeliveries:
+          type: integer
+        awaitingAccountingApproval:
+          type: integer
+        approvedToday:
+          type: integer
+        priorityDistribution:
+          type: object
+          properties:
+            A:
+              type: integer
+            B:
+              type: integer
+            C:
+              type: integer
+          required:
+            - A
+            - B
+            - C
+      required:
+        - totalCustomers
+        - openOrders
+        - plannedDeliveries
+        - outForDelivery
+        - delayedDeliveries
+        - awaitingAccountingApproval
+        - approvedToday
+        - priorityDistribution

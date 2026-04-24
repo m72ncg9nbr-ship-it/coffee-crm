@@ -1,0 +1,269 @@
+Build a clean, modular MVP CRM web app for a coffee distribution business.
+
+This is an internal operational CRM, not a full ERP. The main workflow is:
+
+customer -> order/request -> planning -> delivery -> documentation -> accounting approval -> invoicing basis
+
+Important principles:
+- keep it simple and practical
+- prioritize usability, traceability, and reduction of manual work
+- use English in the UI
+- use realistic demo data only
+- make it responsive
+- make the driver flow mobile-friendly
+- keep the code modular and easy to extend
+- use a lightweight stack suitable for Replit
+- do not overbuild advanced enterprise logic
+
+Roles:
+- admin
+- operations
+- sales
+- driver
+- accounting
+
+Role behavior:
+- admin has full access
+- operations handles planning and delivery management
+- sales creates customers, orders, and lead/request entries
+- driver only sees assigned deliveries and uploads delivery proof
+- accounting gives the final approval
+
+Main modules required:
+1. Authentication and role-based access
+2. Customer management
+3. Lead / request intake form
+4. Product catalog
+5. Order management
+6. Delivery planning board
+7. Driver mobile delivery view
+8. Delivery documentation upload
+9. Accounting approval queue
+10. Dashboard and activity log
+
+Customer management:
+Each customer should have:
+- company name
+- contact person
+- phone
+- email
+- customer channel
+- segment
+- priority class
+- payment terms
+- discount level
+- notes
+- active/inactive
+- business channel
+
+Important:
+Customer priority must use A / B / C and this must be visible in the UI and used in planning logic.
+
+Also support separate customer addresses:
+- billing address
+- delivery address
+- multiple delivery addresses
+
+Lead / request form:
+Include a separate intake form for potential customers asking for machines or commercial offers.
+
+Fields:
+- company name
+- contact person
+- phone
+- email
+- business channel
+- business type
+- estimated monthly consumption
+- preferred coffee type
+- requested machine type
+- requested payment terms
+- extra notes
+
+Add simple rule-based qualification:
+- qualified
+- manual review
+
+Product catalog:
+Fields:
+- product name
+- SKU / product code
+- category
+- unit price
+- stock status
+- active/inactive
+- business channel
+
+Important:
+Do NOT build advanced inventory logic.
+Use only a simple stock visibility field:
+- in_stock
+- low_stock
+- out_of_stock
+
+Order management:
+Orders should include:
+- customer
+- business channel
+- order source
+- requested delivery date
+- urgency
+- notes
+- status
+
+Order sources:
+- phone
+- whatsapp
+- web
+- sales_rep
+
+Urgency:
+- low
+- normal
+- high
+- critical
+
+Each order should have multiple order items:
+- product
+- quantity
+- unit price snapshot
+- line total
+
+Important:
+Orders and deliveries must be separate entities.
+Order is the commercial record.
+Delivery is the operational record.
+
+Delivery planning:
+Build a simple planning board for operations.
+Show:
+- today’s deliveries
+- this week’s deliveries
+- unassigned deliveries
+- assigned deliveries
+- status filters
+- channel filters
+- driver assignment
+
+Important:
+This is NOT advanced route optimization.
+Do NOT build:
+- maps
+- GPS tracking
+- traffic-based routing
+- advanced vehicle planning
+
+Use simple prioritization based on:
+- customer priority A/B/C
+- requested delivery date
+- urgency
+
+Allow manual override.
+
+Driver mobile view:
+Driver should be able to:
+- see assigned stops
+- open delivery details
+- mark Arrived
+- upload delivery proof photo
+- add a deviation note
+
+Deviation examples:
+- damaged goods
+- missing items
+- delayed delivery
+- not delivered
+- other
+
+Important:
+A delivery must not be completed without documentation upload.
+
+Approval flow:
+Final approval is given by accounting, not operations.
+
+Use this exact flow:
+1. driver uploads documentation
+2. record moves to awaiting_accounting_approval
+3. accounting reviews it
+4. if accounting approves, status becomes approved
+5. approved records become ready for invoicing
+6. set invoice_triggered = true and invoice_triggered_at timestamp
+
+Important:
+Do NOT build real accounting software integration.
+This MVP only needs invoicing-basis logic.
+
+Activity log:
+Log key actions such as:
+- order created
+- delivery assigned
+- driver arrived
+- documentation uploaded
+- accounting approved
+- invoice triggered
+
+Show timestamps and responsible user.
+
+Dashboard:
+Create a clean dashboard with:
+- total customers
+- open orders
+- planned deliveries
+- out for delivery
+- delayed deliveries
+- awaiting accounting approval
+- approved today
+
+Also include:
+- recent deliveries
+- delivery deviations
+- driver activity log
+- status history
+
+Main screens:
+- Login
+- Dashboard
+- Customer List
+- Customer Detail
+- Lead / Request Form
+- Product List
+- Order List
+- Order Detail / Create
+- Delivery Planning Board
+- Driver Mobile View
+- Accounting Approval Queue
+
+Data model should include:
+- users
+- customers
+- customer_addresses
+- lead_requests
+- products
+- orders
+- order_items
+- deliveries
+- delivery_documents
+- accounting_approvals
+- activity_logs
+
+Important modeling rules:
+- customer addresses separate from customers
+- orders separate from deliveries
+- delivery documents belong to deliveries
+- accounting approval must be traceable
+- A/B/C priority must be stored and used in planning
+
+Seed with realistic demo data:
+- at least 15 customers
+- at least 20 products
+- multiple orders and deliveries
+- 2 drivers
+- 1 admin
+- 2 operations users
+- 3 sales users
+- 1 accounting user
+- several records awaiting accounting approval
+- several delivery deviations
+- customers with A/B/C priority distribution
+
+Please first create a solid plan and architecture, then build the MVP step by step in a clean, modular way suitable for Replit.

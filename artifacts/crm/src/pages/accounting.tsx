@@ -1,0 +1,166 @@
+import { useListAccountingApprovals, useApproveDelivery, useRejectDelivery } from "@workspace/api-client-react";
+import { StatusBadge } from "@/components/priority-badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { formatDate, formatDateTime } from "@/lib/utils";
+import { CheckCircle, XCircle, FileText } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+
+export default function AccountingPage() {
+  const { data: approvals, isLoading, refetch } = useListAccountingApprovals();
+  const { toast } = useToast();
+  const [notes, setNotes] = useState<Record<number, string>>({});
+
+  const approveDelivery = useApproveDelivery({
+    mutation: {
+      onSuccess: () => { refetch(); toast({ title: "Delivery approved" }); },
+      onError: () => toast({ title: "Failed to approve", variant: "destructive" })
+    }
+  });
+
+  const rejectDelivery = useRejectDelivery({
+    mutation: {
+      onSuccess: () => { refetch(); toast({ title: "Delivery rejected" }); },
+      onError: () => toast({ title: "Failed to reject", variant: "destructive" })
+    }
+  });
+
+  const handleApprove = (deliveryId: number) => {
+    approveDelivery.mutate({ deliveryId, data: { reviewNotes: notes[deliveryId] } });
+  };
+  const handleReject = (deliveryId: number) => {
+    rejectDelivery.mutate({ deliveryId, data: { reviewNotes: notes[deliveryId] ?? "Rejected" } });
+  };
+
+  const pending = (approvals ?? []).filter((a: any) => a.status === "pending");
+  const reviewed = (approvals ?? []).filter((a: any) => a.status !== "pending");
+  const isBusy = approveDelivery.isPending || rejectDelivery.isPending;
+
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Accounting Approvals</h1>
+        <p className="text-muted-foreground text-sm">{pending.length} pending approval{pending.length !== 1 ? "s" : ""}</p>
+      </div>
+
+      {isLoading && <div className="text-muted-foreground text-sm py-8 text-center">Loading...</div>}
+
+      {!isLoading && (
+        <div className="space-y-6">
+          {pending.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-amber-700 uppercase tracking-wider">Pending Review</h2>
+              {pending.map((a: any) => (
+                <ApprovalCard
+                  key={a.id}
+                  approval={a}
+                  note={notes[a.deliveryId] ?? ""}
+                  onNoteChange={n => setNotes(prev => ({ ...prev, [a.deliveryId]: n }))}
+                  onApprove={() => handleApprove(a.deliveryId)}
+                  onReject={() => handleReject(a.deliveryId)}
+                  isPending={isBusy}
+                />
+              ))}
+            </div>
+          )}
+
+          {reviewed.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Reviewed</h2>
+              {reviewed.map((a: any) => (
+                <ApprovalCard key={a.id} approval={a} readonly />
+              ))}
+            </div>
+          )}
+
+          {(approvals ?? []).length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              <CheckCircle className="h-12 w-12 mx-auto mb-3 opacity-20" />
+              <p>No approval requests</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, isPending, readonly }: {
+  approval: any;
+  note?: string;
+  onNoteChange?: (n: string) => void;
+  onApprove?: () => void;
+  onReject?: () => void;
+  isPending?: boolean;
+  readonly?: boolean;
+}) {
+  return (
+    <Card className={a.status === "approved" ? "border-green-200" : a.status === "rejected" ? "border-red-200" : "border-amber-200"}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-1.5 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-sm">{a.customerName}</span>
+              <StatusBadge status={a.status} />
+            </div>
+            <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
+              <span>Delivery #{a.deliveryId}</span>
+              <span>Scheduled: {formatDate(a.scheduledDate)}</span>
+              <span>Driver: {a.driverName ?? "—"}</span>
+              {a.hasDocument && (
+                <span className="flex items-center gap-1 text-green-700">
+                  <FileText className="h-3 w-3" />
+                  Document uploaded
+                </span>
+              )}
+            </div>
+            {a.deviationNote && (
+              <div className="text-xs text-orange-700 bg-orange-50 rounded px-2 py-1.5">
+                <span className="font-medium capitalize">{a.deviationType?.replace(/_/g, " ")}: </span>
+                {a.deviationNote}
+              </div>
+            )}
+            {readonly && a.reviewNotes && (
+              <p className="text-xs text-muted-foreground italic">"{a.reviewNotes}"</p>
+            )}
+            {readonly && a.reviewedAt && (
+              <p className="text-xs text-muted-foreground">Reviewed: {formatDateTime(a.reviewedAt)}</p>
+            )}
+          </div>
+          {!readonly && (
+            <div className="flex flex-col gap-2 min-w-52">
+              <textarea
+                className="w-full text-xs border rounded p-2 resize-none h-16 bg-background"
+                placeholder="Review notes (optional)..."
+                value={note ?? ""}
+                onChange={e => onNoteChange?.(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={onApprove}
+                  disabled={isPending}
+                >
+                  <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                  Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={onReject}
+                  disabled={isPending}
+                >
+                  <XCircle className="h-3.5 w-3.5 mr-1" />
+                  Reject
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
