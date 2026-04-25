@@ -1,0 +1,534 @@
+1. Ana iş akışı
+
+Sistemde temel zincir şöyle çalışacak:
+
+Lead / Request
+veya
+Customer → Order → Delivery → Delivery Document → Accounting Approval → Invoice Trigger
+
+Burada kritik mimari karar şu:
+
+Order ticari kayıt
+Delivery operasyon kaydı
+Approval muhasebe onayı
+Invoice trigger muhasebe onayı sonrası oluşan işaret / event
+2. Ana tablolar
+users
+
+Sistemdeki tüm kullanıcılar.
+
+Alanlar:
+
+id
+full_name
+email
+phone
+role
+channel_scope
+is_active
+created_at
+updated_at
+
+Açıklama:
+
+role: admin, operations, sales, driver, accounting
+channel_scope: all, coffee, cosmetics, supplement
+
+Not:
+Bu alan önemli, çünkü kanal müdürleri sadece kendi kanalını görsün isteyebilirsiniz.
+Muhasebe ve üst yönetim için all olur.
+
+customers
+
+Müşteri ana kartı.
+
+Alanlar:
+
+id
+business_channel
+company_name
+contact_person
+phone
+email
+customer_channel
+segment
+priority_class
+payment_terms
+discount_level
+notes
+is_active
+created_by_user_id
+created_at
+updated_at
+
+Açıklama:
+
+business_channel: coffee / cosmetics / supplement
+customer_channel: direct, distributor, horeca, retail gibi iş kanalınız neyse
+priority_class: A / B / C
+customer_addresses
+
+Müşterinin adresleri.
+
+Bunu ayrı tablo yapıyoruz. Bu önemli.
+
+Alanlar:
+
+id
+customer_id
+label
+address_line
+district
+city
+postal_code
+country
+is_delivery_address
+is_billing_address
+is_default
+notes
+
+Neden ayrı?
+Çünkü tek müşteri için:
+
+fatura adresi
+ana adres
+teslimat adresi
+ikinci teslimat noktası
+
+olabilir.
+
+lead_requests
+
+Yeni müşteri / makine / teklif talep formu.
+
+Alanlar:
+
+id
+business_channel
+company_name
+contact_person
+phone
+email
+business_type
+estimated_monthly_consumption
+preferred_coffee_type
+requested_machine_type
+requested_payment_terms
+extra_notes
+qualification_result
+qualification_reason
+status
+created_at
+
+Önerilen durumlar:
+
+new
+qualified
+manual_review
+converted_to_customer
+rejected
+
+Not:
+Burada form önemli dediğin için bunu v1’e net koyuyoruz.
+
+products
+
+Ürün kataloğu.
+
+Alanlar:
+
+id
+business_channel
+product_name
+sku
+category
+unit_price
+stock_status
+is_active
+created_at
+updated_at
+
+stock_status için önerim:
+
+in_stock
+low_stock
+out_of_stock
+
+Burada bilinçli olarak:
+
+gerçek stok hareketi yok
+depo motoru yok
+lot yok
+rezervasyon yok
+
+Sadece görünürlük var.
+
+orders
+
+Sipariş ana kaydı.
+
+Alanlar:
+
+id
+order_number
+customer_id
+business_channel
+source
+requested_delivery_date
+urgency
+status
+notes
+created_by_user_id
+approved_by_accounting_user_id
+approved_at
+invoice_triggered_at
+created_at
+updated_at
+
+source:
+
+phone
+whatsapp
+web
+sales_rep
+
+urgency:
+
+low
+normal
+high
+critical
+
+status için önerim:
+
+new
+planned
+out_for_delivery
+awaiting_accounting_approval
+approved
+cancelled
+
+Not:
+Burada approved artık muhasebe onayı demek.
+
+order_items
+
+Sipariş satırları.
+
+Alanlar:
+
+id
+order_id
+product_id
+quantity
+unit_price_snapshot
+line_total
+
+Neden unit_price_snapshot?
+Çünkü ürün fiyatı sonra değişse bile siparişteki fiyat sabit kalmalı.
+
+deliveries
+
+Teslimat kaydı.
+
+Bu tablo order’dan ayrı olacak.
+
+Alanlar:
+
+id
+delivery_number
+order_id
+customer_id
+delivery_address_id
+assigned_driver_user_id
+planned_date
+planned_sequence
+status
+arrival_marked_at
+documentation_uploaded_at
+deviation_type
+deviation_note
+planned_by_user_id
+created_at
+updated_at
+
+status için önerim:
+
+unassigned
+assigned
+arrived
+documentation_uploaded
+awaiting_accounting_approval
+approved
+issue_reported
+
+deviation_type için örnek:
+
+damaged_goods
+missing_items
+delayed_delivery
+not_delivered
+other
+
+Not:
+İlk sürümde araç tablosu koymuyoruz.
+Sadece driver assignment var.
+
+delivery_documents
+
+Teslimat kanıtları.
+
+Alanlar:
+
+id
+delivery_id
+document_type
+file_url
+uploaded_by_user_id
+uploaded_at
+
+document_type için:
+
+delivery_note_photo
+proof_photo
+other
+
+İş kuralı:
+Bir teslimatın awaiting_accounting_approval durumuna geçebilmesi için burada en az 1 kayıt olmalı.
+
+accounting_approvals
+
+Muhasebe onay kaydı.
+
+Bunu ayrı tablo yapmak iyi olur; çünkü kim, ne zaman, hangi notla onay verdi net tutulur.
+
+Alanlar:
+
+id
+order_id
+delivery_id
+status
+approved_by_user_id
+approval_note
+invoice_triggered
+invoice_triggered_at
+created_at
+updated_at
+
+status:
+
+pending
+approved
+rejected
+
+İş mantığı:
+
+muhasebe onay verirse:
+orders.status = approved
+deliveries.status = approved
+invoice_triggered = true
+invoice_triggered_at dolar
+activity_logs
+
+İzlenebilirlik için.
+
+Alanlar:
+
+id
+entity_type
+entity_id
+action_type
+action_label
+performed_by_user_id
+performed_at
+metadata_json
+
+Örnek action_type:
+
+order_created
+delivery_assigned
+driver_arrived
+document_uploaded
+accounting_approved
+invoice_triggered
+
+Bu tablo dashboard ve audit için çok değerli olacak.
+
+3. Rol matrisi
+Admin
+
+Görür:
+
+tüm kanallar
+tüm müşteriler
+tüm siparişler
+tüm teslimatlar
+tüm raporlar
+
+Yapar:
+
+kullanıcı yönetimi
+sistem ayarları
+tam görünürlük
+gerekirse override
+Operations
+
+Kimler:
+
+tüm kanallardan sorumlu müdür
+kanal müdürleri
+
+Yapar:
+
+müşteri görür / yönetir
+siparişleri görür
+teslimat planlar
+şoför atar
+planning board yönetir
+sapmaları takip eder
+
+Yapmaz:
+
+final accounting approval vermez
+invoice trigger başlatmaz
+
+Not:
+Ops kullanıcıları channel_scope ile sınırlandırılabilir.
+
+Sales
+
+Yapar:
+
+müşteri oluşturur
+lead/request oluşturur
+sipariş girer
+kendi kanalındaki kayıtları takip eder
+
+Yapmaz:
+
+planlama yapmaz
+muhasebe onayı vermez
+Driver
+
+Yapar:
+
+kendi teslimatlarını görür
+arrived işaretler
+belge yükler
+sapma notu yazar
+
+Yapmaz:
+
+sipariş düzenlemez
+onay vermez
+dashboard yönetmez
+Accounting
+
+Yapar:
+
+awaiting_accounting_approval kayıtlarını görür
+belgeyi kontrol eder
+approve / reject verir
+invoice trigger başlatır
+
+Not:
+Bu rol tüm şirkete baktığı için channel_scope = all olabilir.
+
+4. Durum akışları
+Lead / request akışı
+
+new → qualified / manual_review → converted_to_customer veya rejected
+
+Order akışı
+
+new → planned → out_for_delivery → awaiting_accounting_approval → approved
+
+Opsiyonel:
+cancelled
+
+Delivery akışı
+
+unassigned → assigned → arrived → documentation_uploaded → awaiting_accounting_approval → approved
+
+Sapma varsa:
+issue_reported
+
+5. İş kuralları
+
+Bunlar önemli; promptta da aynen yer almalı.
+
+Kural 1
+
+Belge yüklenmeden teslimat tamamlanmış sayılmaz.
+
+Kural 2
+
+Şoför belge yüklediğinde teslimat doğrudan:
+awaiting_accounting_approval
+durumuna gider.
+
+Kural 3
+
+Final onay yalnızca Accounting rolü tarafından verilir.
+
+Kural 4
+
+Accounting onayı sonrası:
+
+order approved olur
+delivery approved olur
+invoice_triggered_at set edilir
+Kural 5
+
+İlk sürümde “invoice trigger” sadece sistem içi işaret / queue mantığıdır.
+Dış muhasebe sistemine gerçek entegrasyon v1 dışındadır.
+
+Kural 6
+
+Planning board harita bazlı akıllı rota motoru değildir.
+Sadece önceliklendirme + manuel atama ekranıdır.
+
+Kural 7
+
+Stock yalnızca görünürlük alanıdır; inventory engine değildir.
+
+6. Dashboard metrikleri
+
+Dashboard’da ilk sürümde bunları gösteririm:
+
+total customers
+new orders
+planned deliveries
+out for delivery
+awaiting accounting approval
+approved today
+delayed deliveries
+recent deviations
+7. Seed demo data
+
+Demo için en az şu veriler olmalı:
+
+15 müşteri
+20 ürün
+8–10 sipariş
+2 şoför
+3 sales user
+2 operations user
+1 admin
+1 accounting user
+birkaç deviation senaryosu
+birkaç awaiting approval kaydı
+
+Bu demo için çok iyi olur.
+
+8. Bir kritik öneri daha
+
+Sizin organizasyon yapınız yüzünden ben şunu da eklerim:
+
+channel_scope mantığı
+
+Bu alanı hem users hem customers/products/orders/lead_requests içinde tutarsak ileride:
+
+kahve kanal müdürü sadece kahveyi görür
+supplement kanal müdürü supplement’i görür
+üst yönetici hepsini görür
