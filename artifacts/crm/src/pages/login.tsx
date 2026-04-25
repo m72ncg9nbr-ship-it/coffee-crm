@@ -95,13 +95,26 @@ export default function LoginPage() {
               </Button>
             </form>
             <div className="mt-5 pt-4 border-t">
-              <p className="text-xs text-muted-foreground font-medium mb-2">Demo accounts:</p>
-              <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-                <span>admin / admin123</span>
-                <span>ops1 / ops123</span>
-                <span>sales1 / sales123</span>
-                <span>driver1 / driver123</span>
-                <span>acct1 / acct123</span>
+              <p className="text-xs text-muted-foreground font-medium mb-2">Demo accounts (click to fill):</p>
+              <div className="grid grid-cols-2 gap-1.5 text-xs">
+                {[
+                  { u: "admin", p: "admin123", label: "Admin" },
+                  { u: "ops1", p: "ops123", label: "Operations" },
+                  { u: "sales1", p: "sales123", label: "Sales" },
+                  { u: "driver1", p: "driver123", label: "Driver" },
+                  { u: "acct1", p: "acct123", label: "Accounting" },
+                ].map(acc => (
+                  <button
+                    key={acc.u}
+                    type="button"
+                    onClick={() => { setUsername(acc.u); setPassword(acc.p); setError(""); }}
+                    className="text-left px-2 py-1 rounded hover-elevate active-elevate-2 border border-transparent hover:border-border text-muted-foreground transition-colors"
+                    data-testid={`button-demo-${acc.u}`}
+                  >
+                    <span className="font-mono">{acc.u}</span>
+                    <span className="text-[10px] block opacity-70">{acc.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </CardContent>
