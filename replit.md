@@ -65,6 +65,23 @@ Session-based auth using express-session + Node.js crypto (scrypt). No bcrypt.
 
 Tables: users, customers, customer_addresses, leads, products, orders, order_items, deliveries, delivery_documents, accounting_approvals, activity_logs
 
+### Key fields per spec (Wave 1 + 2)
+- `users`: phone, channel_scope (`all`/`horeca`/`retail`)
+- `customers`: created_by_user_id
+- `customer_addresses`: district, notes, is_delivery_address, is_billing_address (no `address_type`)
+- `leads`: status (`new`/`qualified`/`manual_review`/`converted_to_customer`/`rejected`), qualification_result, qualification_reason
+- `orders`: order_number (`ORD-NNNN`), status (`new`/`planned`/`out_for_delivery`/`awaiting_accounting_approval`/`approved`/`cancelled`), approved_by_accounting_user_id, approved_at, invoice_triggered_at
+- `deliveries`: delivery_number (`DEL-NNNN`), delivery_address_id, planned_sequence, planned_by_user_id, status (`unassigned`/`assigned`/`arrived`/`awaiting_accounting_approval`/`approved`/`issue_reported`), arrival_marked_at, documentation_uploaded_at
+- `accounting_approvals`: order_id (in addition to delivery_id)
+- `activity_logs`: action_type, action_label, metadata_json
+
+### Order/Delivery flow
+1. Sales creates order → status `new`, auto-numbered ORD-NNNN
+2. Ops assigns delivery → status `assigned` on delivery, `out_for_delivery` on order, auto-numbered DEL-NNNN, `planned_by_user_id` set
+3. Driver marks `arrived` → `arrival_marked_at` set
+4. Driver uploads documentation → delivery status `awaiting_accounting_approval`, `documentation_uploaded_at` set, accounting approval row created with both `delivery_id` and `order_id`, order status `awaiting_accounting_approval`
+5. Accounting approves at `POST /api/accounting/approvals/:deliveryId/approve` → delivery `approved`, `invoice_triggered`/`invoice_triggered_at` set, order `approved` with `approved_by_accounting_user_id`/`approved_at`/`invoice_triggered_at`
+
 ## API Notes
 
 - `lib/api-spec/openapi.yaml` — OpenAPI spec (source of truth)

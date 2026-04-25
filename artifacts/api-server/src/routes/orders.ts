@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, ordersTable, orderItemsTable, customersTable, usersTable, productsTable } from "@workspace/db";
-import { eq, and, ilike, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import {
@@ -20,9 +20,22 @@ function serializeOrder(order: typeof ordersTable.$inferSelect, customerName?: s
     createdByName: createdByName ?? null,
     totalAmount: parseFloat(order.totalAmount),
     requestedDeliveryDate: order.requestedDeliveryDate ?? null,
+    approvedAt: order.approvedAt?.toISOString() ?? null,
+    invoiceTriggeredAt: order.invoiceTriggeredAt?.toISOString() ?? null,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
   };
+}
+
+async function nextOrderNumber(): Promise<string> {
+  // Atomic-ish: parse highest existing ORD-NNNN and add 1. Unique constraint on order_number
+  // catches any race; caller may retry if needed.
+  const rows = await db.execute<{ next: number }>(sql`
+    SELECT COALESCE(MAX(NULLIF(regexp_replace(order_number, '[^0-9]', '', 'g'), '')::int), 0) + 1 AS next
+    FROM orders
+  `);
+  const n = Number((rows as any).rows?.[0]?.next ?? (rows as any)[0]?.next ?? 1);
+  return `ORD-${String(n).padStart(4, "0")}`;
 }
 
 router.get("/orders", requireAuth as any, async (req, res): Promise<void> => {
@@ -50,7 +63,8 @@ router.get("/orders", requireAuth as any, async (req, res): Promise<void> => {
     const s = search.toLowerCase();
     filtered = filtered.filter(o =>
       (customerMap[o.customerId] ?? "").toLowerCase().includes(s) ||
-      o.id.toString().includes(s)
+      o.id.toString().includes(s) ||
+      (o.orderNumber ?? "").toLowerCase().includes(s)
     );
   }
 
@@ -66,15 +80,17 @@ router.post("/orders", requireAuth as any, async (req, res): Promise<void> => {
 
   const user = (req as any).user;
   const totalAmount = parsed.data.items.reduce((sum, item) => sum + item.quantity * item.unitPriceSnapshot, 0);
+  const orderNumber = await nextOrderNumber();
 
   const [order] = await db.insert(ordersTable).values({
+    orderNumber,
     customerId: parsed.data.customerId,
     businessChannel: parsed.data.businessChannel,
     orderSource: parsed.data.orderSource,
     requestedDeliveryDate: parsed.data.requestedDeliveryDate ?? null,
     urgency: parsed.data.urgency,
     notes: parsed.data.notes ?? null,
-    status: "confirmed",
+    status: "new",
     totalAmount: totalAmount.toString(),
     createdBy: user.id,
   }).returning();
@@ -93,10 +109,10 @@ router.post("/orders", requireAuth as any, async (req, res): Promise<void> => {
 
   const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, order.customerId));
   await logActivity({
-    action: "order_created",
+    actionType: "order_created",
     entityType: "order",
     entityId: order.id,
-    description: `Order #${order.id} created for "${customer?.companyName}"`,
+    description: `Order ${order.orderNumber} created for "${customer?.companyName}"`,
     performedBy: user.id,
   });
 

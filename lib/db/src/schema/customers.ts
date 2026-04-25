@@ -1,6 +1,7 @@
 import { pgTable, text, serial, boolean, timestamp, numeric, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { usersTable } from "./users";
 
 export const customersTable = pgTable("customers", {
   id: serial("id").primaryKey(),
@@ -16,6 +17,7 @@ export const customersTable = pgTable("customers", {
   notes: text("notes"),
   active: boolean("active").notNull().default(true),
   businessChannel: text("business_channel").notNull(),
+  createdByUserId: integer("created_by_user_id").references(() => usersTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -26,10 +28,14 @@ export const customerAddressesTable = pgTable("customer_addresses", {
   addressType: text("address_type").notNull().default("delivery"),
   label: text("label"),
   street: text("street").notNull(),
+  district: text("district"),
   city: text("city").notNull(),
   postalCode: text("postal_code").notNull(),
   country: text("country").notNull(),
+  isDeliveryAddress: boolean("is_delivery_address").notNull().default(true),
+  isBillingAddress: boolean("is_billing_address").notNull().default(false),
   isDefault: boolean("is_default").notNull().default(false),
+  notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

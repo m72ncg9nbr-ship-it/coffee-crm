@@ -11,7 +11,7 @@ router.get("/dashboard/summary", requireAuth as any, async (req, res): Promise<v
   const totalCustomers = Number(totalCustomersResult?.count ?? 0);
 
   const openOrders = await db.select().from(ordersTable).where(
-    inArray(ordersTable.status, ["draft", "confirmed", "in_progress"])
+    inArray(ordersTable.status, ["new", "planned", "out_for_delivery", "awaiting_accounting_approval"])
   );
 
   const plannedDeliveries = await db.select().from(deliveriesTable).where(
@@ -19,7 +19,7 @@ router.get("/dashboard/summary", requireAuth as any, async (req, res): Promise<v
   );
 
   const outForDelivery = await db.select().from(deliveriesTable).where(
-    inArray(deliveriesTable.status, ["in_transit", "arrived"])
+    inArray(deliveriesTable.status, ["arrived", "awaiting_accounting_approval"])
   );
 
   const today = new Date().toISOString().split("T")[0];

@@ -10,12 +10,20 @@ const router: IRouter = Router();
 function qualifyLead(data: {
   estimatedMonthlyConsumption?: string | null;
   businessType?: string;
-}) {
+}): { status: string; result: string; reason: string } {
   const consumption = parseInt(data.estimatedMonthlyConsumption ?? "0", 10);
   if (consumption >= 50) {
-    return "qualified";
+    return {
+      status: "qualified",
+      result: "auto_qualified",
+      reason: `Monthly consumption ${consumption}kg meets qualification threshold (>= 50kg).`,
+    };
   }
-  return "manual_review";
+  return {
+    status: "manual_review",
+    result: "needs_review",
+    reason: `Monthly consumption ${consumption}kg below auto-qualify threshold; requires sales review.`,
+  };
 }
 
 router.get("/leads", requireAuth as any, async (req, res): Promise<void> => {
@@ -34,7 +42,7 @@ router.post("/leads", requireAuth as any, async (req, res): Promise<void> => {
     return;
   }
 
-  const status = qualifyLead({
+  const q = qualifyLead({
     estimatedMonthlyConsumption: parsed.data.estimatedMonthlyConsumption,
     businessType: parsed.data.businessType,
   });
@@ -42,14 +50,16 @@ router.post("/leads", requireAuth as any, async (req, res): Promise<void> => {
   const user = (req as any).user;
   const [lead] = await db.insert(leadsTable).values({
     ...parsed.data,
-    qualificationStatus: status,
+    status: q.status,
+    qualificationResult: q.result,
+    qualificationReason: q.reason,
   }).returning();
 
   await logActivity({
-    action: "lead_created",
+    actionType: "lead_created",
     entityType: "lead",
     entityId: lead.id,
-    description: `Lead from "${lead.companyName}" submitted — status: ${status}`,
+    description: `Lead from "${lead.companyName}" submitted — status: ${q.status}`,
     performedBy: user?.id,
   });
 

@@ -905,14 +905,22 @@ components:
           type: ["string", "null"]
         street:
           type: string
+        district:
+          type: ["string", "null"]
         city:
           type: string
         postalCode:
           type: string
         country:
           type: string
+        isDeliveryAddress:
+          type: boolean
+        isBillingAddress:
+          type: boolean
         isDefault:
           type: boolean
+        notes:
+          type: ["string", "null"]
       required:
         - id
         - customerId
@@ -921,6 +929,8 @@ components:
         - city
         - postalCode
         - country
+        - isDeliveryAddress
+        - isBillingAddress
         - isDefault
 
     CreateCustomerBody:
@@ -1001,16 +1011,23 @@ components:
           type: ["string", "null"]
         street:
           type: string
+        district:
+          type: ["string", "null"]
         city:
           type: string
         postalCode:
           type: string
         country:
           type: string
+        isDeliveryAddress:
+          type: boolean
+        isBillingAddress:
+          type: boolean
         isDefault:
           type: boolean
+        notes:
+          type: ["string", "null"]
       required:
-        - addressType
         - street
         - city
         - postalCode
@@ -1043,9 +1060,13 @@ components:
           type: ["string", "null"]
         extraNotes:
           type: ["string", "null"]
-        qualificationStatus:
+        status:
           type: string
-          enum: [qualified, manual_review, pending]
+          enum: [new, qualified, manual_review, converted_to_customer, rejected]
+        qualificationResult:
+          type: ["string", "null"]
+        qualificationReason:
+          type: ["string", "null"]
         createdAt:
           type: string
         updatedAt:
@@ -1058,7 +1079,7 @@ components:
         - email
         - businessChannel
         - businessType
-        - qualificationStatus
+        - status
         - createdAt
         - updatedAt
 
@@ -1098,9 +1119,13 @@ components:
     UpdateLeadBody:
       type: object
       properties:
-        qualificationStatus:
+        status:
           type: string
-          enum: [qualified, manual_review, pending]
+          enum: [new, qualified, manual_review, converted_to_customer, rejected]
+        qualificationResult:
+          type: ["string", "null"]
+        qualificationReason:
+          type: ["string", "null"]
         extraNotes:
           type: ["string", "null"]
 
@@ -1187,6 +1212,8 @@ components:
       properties:
         id:
           type: integer
+        orderNumber:
+          type: ["string", "null"]
         customerId:
           type: integer
         customerName:
@@ -1205,10 +1232,16 @@ components:
           type: ["string", "null"]
         status:
           type: string
-          enum: [draft, confirmed, in_progress, delivered, cancelled]
+          enum: [new, planned, out_for_delivery, awaiting_accounting_approval, approved, cancelled]
         totalAmount:
           type: number
         createdByName:
+          type: ["string", "null"]
+        approvedByAccountingUserId:
+          type: ["integer", "null"]
+        approvedAt:
+          type: ["string", "null"]
+        invoiceTriggeredAt:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -1314,7 +1347,7 @@ components:
       properties:
         status:
           type: string
-          enum: [draft, confirmed, in_progress, delivered, cancelled]
+          enum: [new, planned, out_for_delivery, awaiting_accounting_approval, approved, cancelled]
         requestedDeliveryDate:
           type: ["string", "null"]
         urgency:
@@ -1328,6 +1361,8 @@ components:
       properties:
         id:
           type: integer
+        deliveryNumber:
+          type: ["string", "null"]
         orderId:
           type: integer
         customerId:
@@ -1337,15 +1372,21 @@ components:
         customerPriority:
           type: string
           enum: [A, B, C]
+        deliveryAddressId:
+          type: ["integer", "null"]
         driverId:
           type: ["integer", "null"]
         driverName:
           type: ["string", "null"]
         scheduledDate:
           type: ["string", "null"]
+        plannedSequence:
+          type: ["integer", "null"]
+        plannedByUserId:
+          type: ["integer", "null"]
         status:
           type: string
-          enum: [unassigned, assigned, in_transit, arrived, completed, awaiting_accounting_approval, approved, rejected]
+          enum: [unassigned, assigned, arrived, awaiting_accounting_approval, approved, issue_reported]
         urgency:
           type: string
           enum: [low, normal, high, critical]
@@ -1357,6 +1398,10 @@ components:
           type: ["string", "null"]
         hasDocument:
           type: boolean
+        arrivalMarkedAt:
+          type: ["string", "null"]
+        documentationUploadedAt:
+          type: ["string", "null"]
         invoiceTriggered:
           type: boolean
         invoiceTriggeredAt:
@@ -1427,9 +1472,13 @@ components:
       properties:
         orderId:
           type: integer
+        deliveryAddressId:
+          type: ["integer", "null"]
         scheduledDate:
           type: ["string", "null"]
         driverId:
+          type: ["integer", "null"]
+        plannedSequence:
           type: ["integer", "null"]
         notes:
           type: ["string", "null"]
@@ -1443,9 +1492,11 @@ components:
           type: ["integer", "null"]
         scheduledDate:
           type: ["string", "null"]
+        plannedSequence:
+          type: ["integer", "null"]
         status:
           type: string
-          enum: [unassigned, assigned, in_transit, arrived, completed, awaiting_accounting_approval, approved, rejected]
+          enum: [unassigned, assigned, arrived, awaiting_accounting_approval, approved, issue_reported]
         deviationType:
           type: ["string", "null"]
         deviationNote:
@@ -1475,6 +1526,10 @@ components:
           type: integer
         deliveryId:
           type: integer
+        deliveryNumber:
+          type: ["string", "null"]
+        orderId:
+          type: ["integer", "null"]
         customerName:
           type: string
         customerPriority:
@@ -1523,8 +1578,10 @@ components:
       properties:
         id:
           type: integer
-        action:
+        actionType:
           type: string
+        actionLabel:
+          type: ["string", "null"]
         entityType:
           type: string
         entityId:
@@ -1533,13 +1590,13 @@ components:
           type: string
         performedByName:
           type: ["string", "null"]
-        metadata:
+        metadataJson:
           type: ["string", "null"]
         createdAt:
           type: string
       required:
         - id
-        - action
+        - actionType
         - entityType
         - description
         - createdAt

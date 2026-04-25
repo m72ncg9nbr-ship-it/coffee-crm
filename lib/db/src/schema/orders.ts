@@ -1,4 +1,4 @@
-import { pgTable, text, serial, boolean, timestamp, numeric, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, numeric, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { customersTable } from "./customers";
@@ -7,15 +7,19 @@ import { productsTable } from "./products";
 
 export const ordersTable = pgTable("orders", {
   id: serial("id").primaryKey(),
+  orderNumber: text("order_number").unique(),
   customerId: integer("customer_id").notNull().references(() => customersTable.id),
   businessChannel: text("business_channel").notNull(),
   orderSource: text("order_source").notNull().default("phone"),
   requestedDeliveryDate: text("requested_delivery_date"),
   urgency: text("urgency").notNull().default("normal"),
   notes: text("notes"),
-  status: text("status").notNull().default("draft"),
+  status: text("status").notNull().default("new"),
   totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull().default("0"),
   createdBy: integer("created_by").references(() => usersTable.id),
+  approvedByAccountingUserId: integer("approved_by_accounting_user_id").references(() => usersTable.id),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  invoiceTriggeredAt: timestamp("invoice_triggered_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

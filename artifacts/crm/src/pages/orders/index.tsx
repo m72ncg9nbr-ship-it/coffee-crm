@@ -50,10 +50,11 @@ export default function OrdersPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="confirmed">Confirmed</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="delivered">Delivered</SelectItem>
+            <SelectItem value="new">New</SelectItem>
+            <SelectItem value="planned">Planned</SelectItem>
+            <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+            <SelectItem value="awaiting_accounting_approval">Awaiting Approval</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
@@ -79,7 +80,7 @@ export default function OrdersPage() {
               )}
               {!isLoading && (orders ?? []).map((o: any) => (
                 <tr key={o.id} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 text-sm font-mono text-muted-foreground">#{o.id}</td>
+                  <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{o.orderNumber ?? `#${o.id}`}</td>
                   <td className="px-4 py-3">
                     <Link href={`/orders/${o.id}`}>
                       <span className="text-sm font-medium text-primary hover:underline cursor-pointer">{o.customerName}</span>

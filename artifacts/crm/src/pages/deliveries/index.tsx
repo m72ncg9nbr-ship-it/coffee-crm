@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
 const BOARD_COLUMNS = [
   { status: "unassigned", label: "Unassigned", color: "border-gray-300 bg-gray-50" },
   { status: "assigned", label: "Assigned", color: "border-blue-300 bg-blue-50" },
-  { status: "in_transit", label: "In Transit", color: "border-yellow-300 bg-yellow-50" },
   { status: "arrived", label: "Arrived", color: "border-purple-300 bg-purple-50" },
   { status: "awaiting_accounting_approval", label: "Awaiting Approval", color: "border-amber-300 bg-amber-50" },
   { status: "approved", label: "Approved", color: "border-green-300 bg-green-50" },
+  { status: "issue_reported", label: "Issue Reported", color: "border-red-300 bg-red-50" },
 ];
 
 export default function DeliveriesPage() {
@@ -91,7 +91,7 @@ export default function DeliveriesPage() {
               <tbody className="divide-y">
                 {(deliveries ?? []).map((d: any) => (
                   <tr key={d.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 text-sm font-mono text-muted-foreground">#{d.id}</td>
+                    <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{d.deliveryNumber ?? `#${d.id}`}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <PriorityBadge priority={d.customerPriority} />

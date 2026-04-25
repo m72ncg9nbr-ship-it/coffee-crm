@@ -135,7 +135,7 @@ export default function LeadsPage() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm">{lead.companyName}</span>
-                    <StatusBadge status={lead.qualificationStatus} />
+                    <StatusBadge status={lead.status} />
                     <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full capitalize">{lead.businessChannel}</span>
                   </div>
                   <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">

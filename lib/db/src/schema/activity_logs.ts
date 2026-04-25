@@ -5,12 +5,13 @@ import { usersTable } from "./users";
 
 export const activityLogsTable = pgTable("activity_logs", {
   id: serial("id").primaryKey(),
-  action: text("action").notNull(),
+  actionType: text("action_type").notNull(),
+  actionLabel: text("action_label"),
   entityType: text("entity_type").notNull(),
   entityId: integer("entity_id"),
   description: text("description").notNull(),
   performedBy: integer("performed_by").references(() => usersTable.id),
-  metadata: text("metadata"),
+  metadataJson: text("metadata_json"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

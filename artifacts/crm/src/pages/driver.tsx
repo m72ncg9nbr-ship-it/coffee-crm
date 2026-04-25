@@ -1,4 +1,4 @@
-import { useListDeliveries, useUpdateDelivery } from "@workspace/api-client-react";
+import { useListDeliveries, useUpdateDelivery, useUploadDeliveryDocument } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
 import { StatusBadge, UrgencyBadge } from "@/components/priority-badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,9 +8,7 @@ import { MapPin, Truck, CheckCircle, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_TRANSITIONS: Record<string, { next: string; label: string; className: string }> = {
-  assigned: { next: "in_transit", label: "Start Delivery", className: "bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500" },
-  in_transit: { next: "arrived", label: "Mark Arrived", className: "bg-purple-600 hover:bg-purple-700 text-white border-purple-600" },
-  arrived: { next: "awaiting_accounting_approval", label: "Complete Delivery", className: "bg-green-600 hover:bg-green-700 text-white border-green-600" },
+  assigned: { next: "arrived", label: "Mark Arrived", className: "bg-purple-600 hover:bg-purple-700 text-white border-purple-600" },
 };
 
 export default function DriverPage() {
@@ -28,8 +26,18 @@ export default function DriverPage() {
     }
   });
 
+  const uploadDoc = useUploadDeliveryDocument({
+    mutation: {
+      onSuccess: () => {
+        refetch();
+        toast({ title: "Documentation uploaded" });
+      },
+      onError: () => toast({ title: "Upload failed", variant: "destructive" })
+    }
+  });
+
   const myDeliveries = (deliveries ?? []).filter((d: any) =>
-    d.driverId === user?.id && !["approved", "rejected", "unassigned"].includes(d.status)
+    d.driverId === user?.id && !["approved", "issue_reported", "unassigned"].includes(d.status)
   );
 
   const today = new Date().toISOString().split("T")[0];
@@ -70,8 +78,9 @@ export default function DriverPage() {
                   <DriverDeliveryCard
                     key={d.id}
                     delivery={d}
-                    onAdvance={next => updateDelivery.mutate({ id: d.id, data: { status: next } })}
-                    isPending={updateDelivery.isPending}
+                    onAdvance={next => updateDelivery.mutate({ id: d.id, data: { status: next as any } })}
+                    onUpload={() => uploadDoc.mutate({ id: d.id, data: { documentType: "delivery_proof", fileUrl: `/uploads/delivery-${d.id}-${Date.now()}.pdf`, notes: "Uploaded from driver app" } })}
+                    isPending={updateDelivery.isPending || uploadDoc.isPending}
                   />
                 ))}
               </div>
@@ -102,9 +111,10 @@ export default function DriverPage() {
   );
 }
 
-function DriverDeliveryCard({ delivery: d, onAdvance, isPending, upcoming }: {
+function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, isPending, upcoming }: {
   delivery: any;
   onAdvance?: (next: string) => void;
+  onUpload?: () => void;
   isPending?: boolean;
   upcoming?: boolean;
 }) {
@@ -154,6 +164,16 @@ function DriverDeliveryCard({ delivery: d, onAdvance, isPending, upcoming }: {
             disabled={isPending}
           >
             {transition.label}
+          </Button>
+        )}
+
+        {!upcoming && d.status === "arrived" && (
+          <Button
+            className="w-full font-semibold bg-green-600 hover:bg-green-700 text-white border-green-600"
+            onClick={() => onUpload?.()}
+            disabled={isPending}
+          >
+            Upload Documentation
           </Button>
         )}
 

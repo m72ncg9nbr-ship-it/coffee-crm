@@ -1,9 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db, activityLogsTable, usersTable } from "@workspace/db";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { ListActivityLogsQueryParams } from "@workspace/api-zod";
-import { desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -11,18 +10,15 @@ router.get("/activity-logs", requireAuth as any, async (req, res): Promise<void>
   const qp = ListActivityLogsQueryParams.safeParse(req.query);
   const { limit, entityType, entityId } = qp.success ? qp.data : {} as any;
 
-  let query = db.select().from(activityLogsTable).$dynamic();
-  const conditions = [];
-
-  if (entityType) {
-    conditions.push(eq(activityLogsTable.entityType, entityType as string));
-  }
-  if (entityId) {
-    conditions.push(eq(activityLogsTable.entityId, Number(entityId)));
+  let baseQ = db.select().from(activityLogsTable).$dynamic();
+  const conds = [] as any[];
+  if (entityType) conds.push(eq(activityLogsTable.entityType, entityType as string));
+  if (entityId) conds.push(eq(activityLogsTable.entityId, Number(entityId)));
+  if (conds.length > 0) {
+    baseQ = baseQ.where(conds.length === 1 ? conds[0] : (await import("drizzle-orm")).and(...conds)!);
   }
 
-  const logs = await db.select()
-    .from(activityLogsTable)
+  const logs = await baseQ
     .orderBy(desc(activityLogsTable.createdAt))
     .limit(limit ? Number(limit) : 100);
 

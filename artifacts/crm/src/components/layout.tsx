@@ -87,7 +87,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             variant="ghost"
             size="sm"
             className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={() => logout.mutate({})}
+            onClick={() => logout.mutate(undefined as any)}
           >
             <LogOut className="h-4 w-4 mr-2" />
             Sign out

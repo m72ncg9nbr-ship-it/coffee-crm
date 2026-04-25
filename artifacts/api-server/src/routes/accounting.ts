@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
-import { db, accountingApprovalsTable, deliveriesTable, customersTable, usersTable } from "@workspace/db";
+import { db, accountingApprovalsTable, deliveriesTable, ordersTable, customersTable, usersTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireRole } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import {
   ListAccountingApprovalsQueryParams,
@@ -38,6 +38,7 @@ async function enrichApprovals(approvals: (typeof accountingApprovalsTable.$infe
     const customer = delivery ? customerMap[delivery.customerId] : null;
     return {
       ...a,
+      deliveryNumber: delivery?.deliveryNumber ?? null,
       customerName: customer?.name ?? "Unknown",
       customerPriority: customer?.priority ?? "C",
       reviewedByName: a.reviewedBy ? (reviewerMap[a.reviewedBy] ?? null) : null,
@@ -53,16 +54,13 @@ router.get("/accounting/approvals", requireAuth as any, async (req, res): Promis
   const { status } = qp.success ? qp.data : {} as any;
 
   let query = db.select().from(accountingApprovalsTable).$dynamic();
-  if (status) {
-    query = query.where(eq(accountingApprovalsTable.status, status as string));
-  }
+  if (status) query = query.where(eq(accountingApprovalsTable.status, status as string));
 
   const approvals = await query.orderBy(accountingApprovalsTable.createdAt);
-  const enriched = await enrichApprovals(approvals);
-  res.json(enriched);
+  res.json(await enrichApprovals(approvals));
 });
 
-router.post("/accounting/approvals/:deliveryId/approve", requireAuth as any, async (req, res): Promise<void> => {
+router.post("/accounting/approvals/:deliveryId/approve", requireRole("admin", "accounting") as any, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.deliveryId) ? req.params.deliveryId[0] : req.params.deliveryId;
   const params = ApproveDeliveryParams.safeParse({ deliveryId: rawId });
   if (!params.success) {
@@ -79,6 +77,17 @@ router.post("/accounting/approvals/:deliveryId/approve", requireAuth as any, asy
   const user = (req as any).user;
   const now = new Date();
 
+  const [existing] = await db.select().from(accountingApprovalsTable)
+    .where(eq(accountingApprovalsTable.deliveryId, params.data.deliveryId));
+  if (!existing) {
+    res.status(404).json({ error: "Approval record not found" });
+    return;
+  }
+  if (existing.status !== "pending") {
+    res.status(409).json({ error: `Approval already ${existing.status}` });
+    return;
+  }
+
   const [approval] = await db.update(accountingApprovalsTable)
     .set({
       status: "approved",
@@ -90,28 +99,37 @@ router.post("/accounting/approvals/:deliveryId/approve", requireAuth as any, asy
     .where(eq(accountingApprovalsTable.deliveryId, params.data.deliveryId))
     .returning();
 
-  if (!approval) {
-    res.status(404).json({ error: "Approval record not found" });
-    return;
+  // Update delivery
+  const [delivery] = await db.update(deliveriesTable)
+    .set({ status: "approved", invoiceTriggered: true, invoiceTriggeredAt: now })
+    .where(eq(deliveriesTable.id, params.data.deliveryId))
+    .returning();
+
+  // Update the linked order
+  if (delivery) {
+    await db.update(ordersTable)
+      .set({
+        status: "approved",
+        approvedByAccountingUserId: user.id,
+        approvedAt: now,
+        invoiceTriggeredAt: now,
+      })
+      .where(eq(ordersTable.id, delivery.orderId));
   }
 
-  await db.update(deliveriesTable)
-    .set({ status: "approved", invoiceTriggered: true, invoiceTriggeredAt: now })
-    .where(eq(deliveriesTable.id, params.data.deliveryId));
-
   await logActivity({
-    action: "accounting_approved",
+    actionType: "accounting_approved",
     entityType: "delivery",
     entityId: params.data.deliveryId,
-    description: `Delivery #${params.data.deliveryId} approved by accounting`,
+    description: `Delivery ${delivery?.deliveryNumber ?? `#${params.data.deliveryId}`} approved by accounting`,
     performedBy: user.id,
   });
 
   await logActivity({
-    action: "invoice_triggered",
+    actionType: "invoice_triggered",
     entityType: "delivery",
     entityId: params.data.deliveryId,
-    description: `Invoice triggered for delivery #${params.data.deliveryId}`,
+    description: `Invoice triggered for delivery ${delivery?.deliveryNumber ?? `#${params.data.deliveryId}`}`,
     performedBy: user.id,
   });
 
@@ -119,7 +137,7 @@ router.post("/accounting/approvals/:deliveryId/approve", requireAuth as any, asy
   res.json(enriched[0]);
 });
 
-router.post("/accounting/approvals/:deliveryId/reject", requireAuth as any, async (req, res): Promise<void> => {
+router.post("/accounting/approvals/:deliveryId/reject", requireRole("admin", "accounting") as any, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.deliveryId) ? req.params.deliveryId[0] : req.params.deliveryId;
   const params = RejectDeliveryParams.safeParse({ deliveryId: rawId });
   if (!params.success) {
@@ -135,6 +153,17 @@ router.post("/accounting/approvals/:deliveryId/reject", requireAuth as any, asyn
 
   const user = (req as any).user;
 
+  const [existing] = await db.select().from(accountingApprovalsTable)
+    .where(eq(accountingApprovalsTable.deliveryId, params.data.deliveryId));
+  if (!existing) {
+    res.status(404).json({ error: "Approval record not found" });
+    return;
+  }
+  if (existing.status !== "pending") {
+    res.status(409).json({ error: `Approval already ${existing.status}` });
+    return;
+  }
+
   const [approval] = await db.update(accountingApprovalsTable)
     .set({
       status: "rejected",
@@ -144,17 +173,12 @@ router.post("/accounting/approvals/:deliveryId/reject", requireAuth as any, asyn
     .where(eq(accountingApprovalsTable.deliveryId, params.data.deliveryId))
     .returning();
 
-  if (!approval) {
-    res.status(404).json({ error: "Approval record not found" });
-    return;
-  }
-
   await db.update(deliveriesTable)
-    .set({ status: "rejected" })
+    .set({ status: "issue_reported" })
     .where(eq(deliveriesTable.id, params.data.deliveryId));
 
   await logActivity({
-    action: "accounting_rejected",
+    actionType: "accounting_rejected",
     entityType: "delivery",
     entityId: params.data.deliveryId,
     description: `Delivery #${params.data.deliveryId} rejected by accounting: ${parsed.data.reviewNotes}`,

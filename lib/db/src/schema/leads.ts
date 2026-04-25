@@ -15,7 +15,9 @@ export const leadsTable = pgTable("leads", {
   requestedMachineType: text("requested_machine_type"),
   requestedPaymentTerms: text("requested_payment_terms"),
   extraNotes: text("extra_notes"),
-  qualificationStatus: text("qualification_status").notNull().default("pending"),
+  qualificationResult: text("qualification_result"),
+  qualificationReason: text("qualification_reason"),
+  status: text("status").notNull().default("new"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

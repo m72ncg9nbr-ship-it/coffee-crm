@@ -83,10 +83,16 @@ export interface CustomerAddress {
   /** @nullable */
   label?: string | null;
   street: string;
+  /** @nullable */
+  district?: string | null;
   city: string;
   postalCode: string;
   country: string;
+  isDeliveryAddress: boolean;
+  isBillingAddress: boolean;
   isDefault: boolean;
+  /** @nullable */
+  notes?: string | null;
 }
 
 export type CustomerDetail = Customer & {
@@ -154,23 +160,30 @@ export const CreateCustomerAddressBodyAddressType = {
 } as const;
 
 export interface CreateCustomerAddressBody {
-  addressType: CreateCustomerAddressBodyAddressType;
+  addressType?: CreateCustomerAddressBodyAddressType;
   /** @nullable */
   label?: string | null;
   street: string;
+  /** @nullable */
+  district?: string | null;
   city: string;
   postalCode: string;
   country: string;
+  isDeliveryAddress?: boolean;
+  isBillingAddress?: boolean;
   isDefault?: boolean;
+  /** @nullable */
+  notes?: string | null;
 }
 
-export type LeadQualificationStatus =
-  (typeof LeadQualificationStatus)[keyof typeof LeadQualificationStatus];
+export type LeadStatus = (typeof LeadStatus)[keyof typeof LeadStatus];
 
-export const LeadQualificationStatus = {
+export const LeadStatus = {
+  new: "new",
   qualified: "qualified",
   manual_review: "manual_review",
-  pending: "pending",
+  converted_to_customer: "converted_to_customer",
+  rejected: "rejected",
 } as const;
 
 export interface Lead {
@@ -191,7 +204,11 @@ export interface Lead {
   requestedPaymentTerms?: string | null;
   /** @nullable */
   extraNotes?: string | null;
-  qualificationStatus: LeadQualificationStatus;
+  status: LeadStatus;
+  /** @nullable */
+  qualificationResult?: string | null;
+  /** @nullable */
+  qualificationReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -215,17 +232,23 @@ export interface CreateLeadBody {
   extraNotes?: string | null;
 }
 
-export type UpdateLeadBodyQualificationStatus =
-  (typeof UpdateLeadBodyQualificationStatus)[keyof typeof UpdateLeadBodyQualificationStatus];
+export type UpdateLeadBodyStatus =
+  (typeof UpdateLeadBodyStatus)[keyof typeof UpdateLeadBodyStatus];
 
-export const UpdateLeadBodyQualificationStatus = {
+export const UpdateLeadBodyStatus = {
+  new: "new",
   qualified: "qualified",
   manual_review: "manual_review",
-  pending: "pending",
+  converted_to_customer: "converted_to_customer",
+  rejected: "rejected",
 } as const;
 
 export interface UpdateLeadBody {
-  qualificationStatus?: UpdateLeadBodyQualificationStatus;
+  status?: UpdateLeadBodyStatus;
+  /** @nullable */
+  qualificationResult?: string | null;
+  /** @nullable */
+  qualificationReason?: string | null;
   /** @nullable */
   extraNotes?: string | null;
 }
@@ -311,15 +334,18 @@ export const OrderUrgency = {
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const OrderStatus = {
-  draft: "draft",
-  confirmed: "confirmed",
-  in_progress: "in_progress",
-  delivered: "delivered",
+  new: "new",
+  planned: "planned",
+  out_for_delivery: "out_for_delivery",
+  awaiting_accounting_approval: "awaiting_accounting_approval",
+  approved: "approved",
   cancelled: "cancelled",
 } as const;
 
 export interface Order {
   id: number;
+  /** @nullable */
+  orderNumber?: string | null;
   customerId: number;
   customerName: string;
   businessChannel: string;
@@ -333,6 +359,12 @@ export interface Order {
   totalAmount: number;
   /** @nullable */
   createdByName?: string | null;
+  /** @nullable */
+  approvedByAccountingUserId?: number | null;
+  /** @nullable */
+  approvedAt?: string | null;
+  /** @nullable */
+  invoiceTriggeredAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -394,10 +426,11 @@ export type UpdateOrderBodyStatus =
   (typeof UpdateOrderBodyStatus)[keyof typeof UpdateOrderBodyStatus];
 
 export const UpdateOrderBodyStatus = {
-  draft: "draft",
-  confirmed: "confirmed",
-  in_progress: "in_progress",
-  delivered: "delivered",
+  new: "new",
+  planned: "planned",
+  out_for_delivery: "out_for_delivery",
+  awaiting_accounting_approval: "awaiting_accounting_approval",
+  approved: "approved",
   cancelled: "cancelled",
 } as const;
 
@@ -435,12 +468,10 @@ export type DeliveryStatus =
 export const DeliveryStatus = {
   unassigned: "unassigned",
   assigned: "assigned",
-  in_transit: "in_transit",
   arrived: "arrived",
-  completed: "completed",
   awaiting_accounting_approval: "awaiting_accounting_approval",
   approved: "approved",
-  rejected: "rejected",
+  issue_reported: "issue_reported",
 } as const;
 
 export type DeliveryUrgency =
@@ -455,16 +486,24 @@ export const DeliveryUrgency = {
 
 export interface Delivery {
   id: number;
+  /** @nullable */
+  deliveryNumber?: string | null;
   orderId: number;
   customerId: number;
   customerName: string;
   customerPriority: DeliveryCustomerPriority;
+  /** @nullable */
+  deliveryAddressId?: number | null;
   /** @nullable */
   driverId?: number | null;
   /** @nullable */
   driverName?: string | null;
   /** @nullable */
   scheduledDate: string | null;
+  /** @nullable */
+  plannedSequence?: number | null;
+  /** @nullable */
+  plannedByUserId?: number | null;
   status: DeliveryStatus;
   urgency: DeliveryUrgency;
   businessChannel: string;
@@ -473,6 +512,10 @@ export interface Delivery {
   /** @nullable */
   deviationNote?: string | null;
   hasDocument: boolean;
+  /** @nullable */
+  arrivalMarkedAt?: string | null;
+  /** @nullable */
+  documentationUploadedAt?: string | null;
   invoiceTriggered: boolean;
   /** @nullable */
   invoiceTriggeredAt?: string | null;
@@ -501,9 +544,13 @@ export type DeliveryDetail = Delivery & {
 export interface CreateDeliveryBody {
   orderId: number;
   /** @nullable */
+  deliveryAddressId?: number | null;
+  /** @nullable */
   scheduledDate?: string | null;
   /** @nullable */
   driverId?: number | null;
+  /** @nullable */
+  plannedSequence?: number | null;
   /** @nullable */
   notes?: string | null;
 }
@@ -514,12 +561,10 @@ export type UpdateDeliveryBodyStatus =
 export const UpdateDeliveryBodyStatus = {
   unassigned: "unassigned",
   assigned: "assigned",
-  in_transit: "in_transit",
   arrived: "arrived",
-  completed: "completed",
   awaiting_accounting_approval: "awaiting_accounting_approval",
   approved: "approved",
-  rejected: "rejected",
+  issue_reported: "issue_reported",
 } as const;
 
 export interface UpdateDeliveryBody {
@@ -527,6 +572,8 @@ export interface UpdateDeliveryBody {
   driverId?: number | null;
   /** @nullable */
   scheduledDate?: string | null;
+  /** @nullable */
+  plannedSequence?: number | null;
   status?: UpdateDeliveryBodyStatus;
   /** @nullable */
   deviationType?: string | null;
@@ -557,6 +604,10 @@ export const AccountingApprovalStatus = {
 export interface AccountingApproval {
   id: number;
   deliveryId: number;
+  /** @nullable */
+  deliveryNumber?: string | null;
+  /** @nullable */
+  orderId?: number | null;
   customerName: string;
   customerPriority: string;
   status: AccountingApprovalStatus;
@@ -582,7 +633,9 @@ export interface RejectBody {
 
 export interface ActivityLog {
   id: number;
-  action: string;
+  actionType: string;
+  /** @nullable */
+  actionLabel?: string | null;
   entityType: string;
   /** @nullable */
   entityId?: number | null;
@@ -590,7 +643,7 @@ export interface ActivityLog {
   /** @nullable */
   performedByName?: string | null;
   /** @nullable */
-  metadata?: string | null;
+  metadataJson?: string | null;
   createdAt: string;
 }
 

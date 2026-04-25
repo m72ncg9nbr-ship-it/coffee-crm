@@ -32,8 +32,8 @@ export default function ActivityPage() {
         {!isLoading && (logs ?? []).map((log: any) => (
           <Card key={log.id}>
             <CardContent className="p-3.5 flex items-start gap-3">
-              <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-0.5 ${ACTION_COLORS[log.action] ?? "bg-gray-100 text-gray-600"}`}>
-                {log.action.replace(/_/g, " ")}
+              <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-0.5 ${ACTION_COLORS[log.actionType] ?? "bg-gray-100 text-gray-600"}`}>
+                {log.actionLabel ?? log.actionType.replace(/_/g, " ")}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm">{log.description}</p>

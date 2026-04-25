@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, ordersTable, customersTable, usersTable } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { db, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, ordersTable, customersTable, customerAddressesTable, usersTable } from "@workspace/db";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import {
@@ -15,6 +15,15 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+async function nextDeliveryNumber(): Promise<string> {
+  const rows = await db.execute<{ next: number }>(sql`
+    SELECT COALESCE(MAX(NULLIF(regexp_replace(delivery_number, '[^0-9]', '', 'g'), '')::int), 0) + 1 AS next
+    FROM deliveries
+  `);
+  const n = Number((rows as any).rows?.[0]?.next ?? (rows as any)[0]?.next ?? 1);
+  return `DEL-${String(n).padStart(4, "0")}`;
+}
 
 async function enrichDeliveries(deliveries: (typeof deliveriesTable.$inferSelect)[]) {
   if (deliveries.length === 0) return [];
@@ -37,6 +46,8 @@ async function enrichDeliveries(deliveries: (typeof deliveriesTable.$inferSelect
     customerName: customerMap[d.customerId]?.name ?? "Unknown",
     customerPriority: customerMap[d.customerId]?.priority ?? "C",
     driverName: d.driverId ? (driverMap[d.driverId] ?? null) : null,
+    arrivalMarkedAt: d.arrivalMarkedAt?.toISOString() ?? null,
+    documentationUploadedAt: d.documentationUploadedAt?.toISOString() ?? null,
     invoiceTriggeredAt: d.invoiceTriggeredAt?.toISOString() ?? null,
     createdAt: d.createdAt.toISOString(),
     updatedAt: d.updatedAt.toISOString(),
@@ -45,28 +56,19 @@ async function enrichDeliveries(deliveries: (typeof deliveriesTable.$inferSelect
 
 router.get("/deliveries", requireAuth as any, async (req, res): Promise<void> => {
   const qp = ListDeliveriesQueryParams.safeParse(req.query);
-  const { status, driverId, dateRange, channel } = qp.success ? qp.data : {} as any;
+  const { status, driverId, channel } = qp.success ? qp.data : {} as any;
 
   let query = db.select().from(deliveriesTable).$dynamic();
   const conditions = [];
 
-  if (status) {
-    conditions.push(eq(deliveriesTable.status, status as string));
-  }
-  if (driverId) {
-    conditions.push(eq(deliveriesTable.driverId, Number(driverId)));
-  }
-  if (channel) {
-    conditions.push(eq(deliveriesTable.businessChannel, channel as string));
-  }
+  if (status) conditions.push(eq(deliveriesTable.status, status as string));
+  if (driverId) conditions.push(eq(deliveriesTable.driverId, Number(driverId)));
+  if (channel) conditions.push(eq(deliveriesTable.businessChannel, channel as string));
 
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions));
-  }
+  if (conditions.length > 0) query = query.where(and(...conditions));
 
-  const deliveries = await query.orderBy(deliveriesTable.scheduledDate, deliveriesTable.createdAt);
-  const enriched = await enrichDeliveries(deliveries);
-  res.json(enriched);
+  const deliveries = await query.orderBy(deliveriesTable.scheduledDate, deliveriesTable.plannedSequence, deliveriesTable.createdAt);
+  res.json(await enrichDeliveries(deliveries));
 });
 
 router.post("/deliveries", requireAuth as any, async (req, res): Promise<void> => {
@@ -83,21 +85,39 @@ router.post("/deliveries", requireAuth as any, async (req, res): Promise<void> =
     return;
   }
 
+  // Pick delivery address: explicit, or customer's default delivery address
+  let deliveryAddressId = (parsed.data as any).deliveryAddressId ?? null;
+  if (!deliveryAddressId) {
+    const addrs = await db.select().from(customerAddressesTable)
+      .where(eq(customerAddressesTable.customerId, order.customerId));
+    const def = addrs.find(a => a.isDefault && a.isDeliveryAddress) ?? addrs.find(a => a.isDeliveryAddress) ?? addrs[0];
+    deliveryAddressId = def?.id ?? null;
+  }
+
+  const deliveryNumber = await nextDeliveryNumber();
   const [delivery] = await db.insert(deliveriesTable).values({
+    deliveryNumber,
     orderId: parsed.data.orderId,
     customerId: order.customerId,
+    deliveryAddressId,
     driverId: parsed.data.driverId ?? null,
     scheduledDate: parsed.data.scheduledDate ?? null,
+    plannedByUserId: user.id,
     status: parsed.data.driverId ? "assigned" : "unassigned",
     urgency: order.urgency,
     businessChannel: order.businessChannel,
   }).returning();
 
+  // Move the order to "planned" once a delivery is created
+  if (order.status === "new") {
+    await db.update(ordersTable).set({ status: "planned" }).where(eq(ordersTable.id, order.id));
+  }
+
   await logActivity({
-    action: "delivery_created",
+    actionType: "delivery_created",
     entityType: "delivery",
     entityId: delivery.id,
-    description: `Delivery #${delivery.id} created for order #${order.id}`,
+    description: `Delivery ${delivery.deliveryNumber} created for order ${order.orderNumber ?? `#${order.id}`}`,
     performedBy: user.id,
   });
 
@@ -116,12 +136,11 @@ router.get("/deliveries/driver/:driverId", requireAuth as any, async (req, res):
   const deliveries = await db.select().from(deliveriesTable)
     .where(and(
       eq(deliveriesTable.driverId, params.data.driverId),
-      inArray(deliveriesTable.status, ["assigned", "in_transit", "arrived"])
+      inArray(deliveriesTable.status, ["assigned", "arrived"])
     ))
-    .orderBy(deliveriesTable.scheduledDate);
+    .orderBy(deliveriesTable.scheduledDate, deliveriesTable.plannedSequence);
 
-  const enriched = await enrichDeliveries(deliveries);
-  res.json(enriched);
+  res.json(await enrichDeliveries(deliveries));
 });
 
 router.get("/deliveries/:id", requireAuth as any, async (req, res): Promise<void> => {
@@ -163,6 +182,8 @@ router.get("/deliveries/:id", requireAuth as any, async (req, res): Promise<void
     order: order ? {
       ...order,
       totalAmount: parseFloat(order.totalAmount),
+      approvedAt: order.approvedAt?.toISOString() ?? null,
+      invoiceTriggeredAt: order.invoiceTriggeredAt?.toISOString() ?? null,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
       customerName: customer?.companyName ?? "Unknown",
@@ -192,8 +213,20 @@ router.patch("/deliveries/:id", requireAuth as any, async (req, res): Promise<vo
   }
 
   const user = (req as any).user;
+  const updateValues: any = { ...parsed.data };
+
+  if (parsed.data.status === "arrived") {
+    updateValues.arrivalMarkedAt = new Date();
+  }
+  if (parsed.data.driverId) {
+    updateValues.plannedByUserId = user.id;
+    if (!parsed.data.status) {
+      updateValues.status = "assigned";
+    }
+  }
+
   const [delivery] = await db.update(deliveriesTable)
-    .set(parsed.data)
+    .set(updateValues)
     .where(eq(deliveriesTable.id, params.data.id))
     .returning();
 
@@ -202,22 +235,30 @@ router.patch("/deliveries/:id", requireAuth as any, async (req, res): Promise<vo
     return;
   }
 
+  // Order status transition: when delivery moves to "arrived" or "documentation_uploaded"
+  // mark order as out_for_delivery
+  if (parsed.data.status === "arrived") {
+    await db.update(ordersTable)
+      .set({ status: "out_for_delivery" })
+      .where(eq(ordersTable.id, delivery.orderId));
+  }
+
   if (parsed.data.driverId) {
     await logActivity({
-      action: "delivery_assigned",
+      actionType: "delivery_assigned",
       entityType: "delivery",
       entityId: delivery.id,
-      description: `Delivery #${delivery.id} assigned to driver`,
+      description: `Delivery ${delivery.deliveryNumber ?? `#${delivery.id}`} assigned to driver`,
       performedBy: user.id,
     });
   }
 
   if (parsed.data.status === "arrived") {
     await logActivity({
-      action: "driver_arrived",
+      actionType: "driver_arrived",
       entityType: "delivery",
       entityId: delivery.id,
-      description: `Driver arrived for delivery #${delivery.id}`,
+      description: `Driver arrived for delivery ${delivery.deliveryNumber ?? `#${delivery.id}`}`,
       performedBy: user.id,
     });
   }
@@ -241,6 +282,17 @@ router.post("/deliveries/:id/documents", requireAuth as any, async (req, res): P
   }
 
   const user = (req as any).user;
+  const now = new Date();
+
+  const [current] = await db.select().from(deliveriesTable).where(eq(deliveriesTable.id, params.data.id));
+  if (!current) {
+    res.status(404).json({ error: "Delivery not found" });
+    return;
+  }
+  if (current.status !== "arrived") {
+    res.status(409).json({ error: `Cannot upload documentation: delivery status is "${current.status}", expected "arrived"` });
+    return;
+  }
 
   const [doc] = await db.insert(deliveryDocumentsTable).values({
     deliveryId: params.data.id,
@@ -250,25 +302,33 @@ router.post("/deliveries/:id/documents", requireAuth as any, async (req, res): P
     uploadedBy: user.id,
   }).returning();
 
-  await db.update(deliveriesTable)
+  const [delivery] = await db.update(deliveriesTable)
     .set({
       hasDocument: true,
       status: "awaiting_accounting_approval",
+      documentationUploadedAt: now,
       deviationType: parsed.data.deviationType ?? null,
       deviationNote: parsed.data.deviationNote ?? null,
     })
-    .where(eq(deliveriesTable.id, params.data.id));
+    .where(eq(deliveriesTable.id, params.data.id))
+    .returning();
 
-  await accountingApprovalsTable && await db.insert(accountingApprovalsTable).values({
+  // Move order to awaiting_accounting_approval, link approval to order
+  await db.update(ordersTable)
+    .set({ status: "awaiting_accounting_approval" })
+    .where(eq(ordersTable.id, delivery.orderId));
+
+  await db.insert(accountingApprovalsTable).values({
     deliveryId: params.data.id,
+    orderId: delivery.orderId,
     status: "pending",
   }).onConflictDoNothing();
 
   await logActivity({
-    action: "documentation_uploaded",
+    actionType: "documentation_uploaded",
     entityType: "delivery",
     entityId: params.data.id,
-    description: `Delivery proof uploaded for delivery #${params.data.id}`,
+    description: `Delivery proof uploaded for delivery ${delivery.deliveryNumber ?? `#${params.data.id}`}`,
     performedBy: user.id,
   });
 

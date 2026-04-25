@@ -9,7 +9,7 @@ import { formatDate } from "@/lib/utils";
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const { data: customer, isLoading } = useGetCustomer(Number(id), {
-    query: { enabled: !!id }
+    query: { enabled: !!id } as any,
   });
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading...</div>;
@@ -97,7 +97,9 @@ export default function CustomerDetailPage() {
                     <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold capitalize">{addr.addressType}</span>
+                        <span className="text-xs font-semibold capitalize">
+                          {[addr.isDeliveryAddress && "delivery", addr.isBillingAddress && "billing"].filter(Boolean).join(" / ") || addr.addressType}
+                        </span>
                         {addr.label && <span className="text-xs text-muted-foreground">· {addr.label}</span>}
                         {addr.isDefault && <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">Default</span>}
                       </div>

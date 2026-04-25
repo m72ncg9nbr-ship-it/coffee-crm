@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextType>({ user: null, isLoading: true
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data, isLoading, refetch } = useGetCurrentUser({
-    query: { retry: false, refetchOnWindowFocus: false }
+    query: { retry: false, refetchOnWindowFocus: false } as any,
   });
 
   return (

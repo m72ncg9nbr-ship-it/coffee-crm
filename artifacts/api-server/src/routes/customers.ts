@@ -64,7 +64,7 @@ router.post("/customers", requireAuth as any, async (req, res): Promise<void> =>
   }).returning();
 
   await logActivity({
-    action: "customer_created",
+    actionType: "customer_created",
     entityType: "customer",
     entityId: customer.id,
     description: `Customer "${customer.companyName}" created`,

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useGetCurrentUser, useLogin, useLogout } from "@workspace/api-client-react";
-import type { User, LoginBody } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { User, LoginBody } from "@workspace/api-client-react";
 
 interface AuthContextType {
   user: User | null;
@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: user, isLoading: isQueryLoading, refetch } = useGetCurrentUser({
     query: {
       retry: false,
-    }
+    } as any,
   });
 
   const loginMutation = useLogin();
