@@ -137,6 +137,34 @@ router.patch("/customers/:id", requireAuth as any, async (req, res): Promise<voi
   });
 });
 
+router.post("/customers/check-duplicates", requireAuth as any, async (req, res): Promise<void> => {
+  const { companyName, phone, email } = (req.body ?? {}) as { companyName?: string; phone?: string; email?: string };
+  const conditions: any[] = [];
+  if (companyName && companyName.trim().length >= 3) {
+    conditions.push(ilike(customersTable.companyName, `%${companyName.trim()}%`));
+  }
+  if (phone && phone.trim().length >= 4) {
+    conditions.push(ilike(customersTable.phone, `%${phone.trim()}%`));
+  }
+  if (email && email.trim().length >= 3) {
+    conditions.push(ilike(customersTable.email, `%${email.trim()}%`));
+  }
+  if (conditions.length === 0) { res.json({ matches: [] }); return; }
+
+  const matches = await db.select().from(customersTable).where(or(...conditions)).limit(10);
+  res.json({
+    matches: matches.map(c => ({
+      id: c.id,
+      companyName: c.companyName,
+      contactPerson: c.contactPerson,
+      phone: c.phone,
+      email: c.email,
+      priorityClass: c.priorityClass,
+      active: c.active,
+    })),
+  });
+});
+
 router.get("/customers/:id/addresses", requireAuth as any, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = ListCustomerAddressesParams.safeParse({ id: rawId });

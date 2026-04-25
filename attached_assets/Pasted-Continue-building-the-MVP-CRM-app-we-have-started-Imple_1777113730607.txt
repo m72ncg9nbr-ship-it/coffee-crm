@@ -1,0 +1,455 @@
+Continue building the MVP CRM app we have started.
+
+Implement the complete operational workflow and the lightweight automations described below.
+
+This CRM is for a coffee distribution business. It is an internal operational CRM, not a full ERP. Keep the system simple, practical, modular, and demo-ready.
+
+Core workflow:
+
+customer -> lead/request -> order -> delivery planning -> driver delivery -> documentation upload -> accounting approval -> ready for invoicing
+
+Important principles:
+- Keep this as an MVP
+- Do not overbuild
+- Do not add advanced ERP logic
+- Do not add GPS tracking
+- Do not add map-based route optimization
+- Do not add real accounting integration
+- Do not add advanced inventory management
+- Use demo data only
+- Use English in the UI
+- Make the app responsive
+- Make the driver view mobile-friendly
+- Keep the code modular and easy to extend
+
+Roles:
+- admin
+- operations
+- sales
+- driver
+- accounting
+
+Role behavior:
+- admin has full access
+- operations manages delivery planning and driver assignment
+- sales creates customers, leads, and orders
+- driver only sees assigned deliveries and can update delivery status/documentation
+- accounting gives final approval and marks records as ready for invoicing
+
+Customer priority:
+Customers must have priority class:
+- A
+- B
+- C
+
+This A/B/C priority must be visible in the UI and used in planning, dashboards, and sorting logic.
+
+==================================================
+IMPLEMENT THESE CORE WORKFLOWS
+==================================================
+
+1. Customer workflow
+
+Customer records should include:
+- company name
+- contact person
+- phone
+- email
+- customer channel
+- segment
+- priority class A/B/C
+- payment terms
+- discount level
+- notes
+- business channel
+- active/inactive status
+
+Customer addresses must be stored separately from customers.
+
+Support:
+- billing address
+- delivery address
+- multiple delivery addresses
+
+Customer detail page should show:
+- profile
+- A/B/C priority
+- payment terms
+- discount level
+- notes
+- addresses
+- recent orders
+- recent deliveries
+
+2. Lead / request workflow
+
+Create or improve the lead/request intake form.
+
+Fields:
+- company name
+- contact person
+- phone
+- email
+- business channel
+- business type
+- estimated monthly consumption
+- preferred coffee type
+- requested machine type
+- requested payment terms
+- extra notes
+
+Add simple rule-based qualification:
+- qualified
+- manual_review
+
+If the lead is qualified, allow it to be converted into a customer.
+
+Also automatically create a follow-up task or follow-up flag for new lead requests so they do not get forgotten.
+
+3. Product workflow
+
+Products should include:
+- product name
+- SKU / product code
+- category
+- unit price
+- stock status
+- active/inactive
+- business channel
+
+Important:
+Use only simple stock visibility:
+- in_stock
+- low_stock
+- out_of_stock
+
+Do not build advanced stock movement, warehouse, reservation, or inventory logic.
+
+4. Order workflow
+
+Orders and deliveries must be separate entities.
+
+Order = commercial record.
+Delivery = operational record.
+
+Order fields:
+- customer
+- business channel
+- order source
+- requested delivery date
+- urgency
+- notes
+- status
+
+Order source:
+- phone
+- whatsapp
+- web
+- sales_rep
+
+Urgency:
+- low
+- normal
+- high
+- critical
+
+Order items:
+- product
+- quantity
+- unit price snapshot
+- line total
+
+Order statuses:
+- new
+- incomplete
+- blocked
+- planned
+- out_for_delivery
+- awaiting_accounting_approval
+- approved
+- cancelled
+
+Add automatic validation:
+An order should be marked incomplete/blocked if it is missing:
+- customer
+- delivery address
+- at least one product
+- requested delivery date
+
+Blocked/incomplete orders must not be moved to planning until required fields are completed.
+
+5. Delivery planning workflow
+
+Build or improve the delivery planning board.
+
+It should show:
+- today’s deliveries
+- this week’s deliveries
+- unassigned deliveries
+- assigned deliveries
+- delayed deliveries
+- status filters
+- business channel filters
+- driver assignment
+
+Important:
+This is not route optimization.
+
+Do not build:
+- maps
+- GPS
+- traffic logic
+- vehicle capacity planning
+- advanced routing engine
+
+There are only two vehicles in real life, but vehicle management should not be a major feature. Driver assignment is enough for MVP.
+
+Add simple prioritization based on:
+- customer priority A/B/C
+- urgency
+- requested delivery date
+
+A customers should automatically appear higher in planning views and dashboards.
+
+Allow manual override at all times.
+
+6. Driver workflow
+
+Build a mobile-friendly driver view.
+
+Driver can:
+- see assigned deliveries
+- open delivery detail
+- mark “Arrived”
+- upload delivery proof photo / delivery note photo
+- add deviation note
+- submit documentation
+
+Deviation options:
+- damaged_goods
+- missing_items
+- delayed_delivery
+- not_delivered
+- other
+
+Important:
+A delivery cannot be considered complete without documentation upload.
+
+When documentation is uploaded:
+- validate that a file exists
+- store upload timestamp
+- store uploading user
+- link the document to the delivery
+- automatically move the delivery/order to awaiting_accounting_approval
+- create an activity log entry
+
+7. Accounting approval workflow
+
+Final approval is given by accounting, not operations or manager.
+
+Use this exact flow:
+1. driver uploads documentation
+2. delivery/order moves to awaiting_accounting_approval
+3. accounting reviews the documentation
+4. accounting can approve or reject
+5. if approved:
+   - order status becomes approved
+   - delivery status becomes approved
+   - invoice_triggered = true
+   - invoice_triggered_at is set
+   - record appears in Ready for Invoicing list
+6. if rejected:
+   - status becomes rejected or needs_review
+   - accounting can add a rejection note
+   - operations can follow up
+
+Important:
+Do not build real accounting software integration.
+This is only invoicing basis logic.
+
+Add an accounting summary panel for each approval item showing:
+- customer
+- order number
+- products
+- quantities
+- delivery date
+- driver
+- uploaded documentation
+- deviation note if any
+- current status
+
+8. Ready for invoicing workflow
+
+Create a “Ready for Invoicing” list.
+
+It should show records approved by accounting:
+- customer
+- order number
+- delivery date
+- total amount
+- invoice_triggered status
+- invoice_triggered_at
+- documentation link
+- accounting approval user
+
+This is not actual invoicing. It is only a clean list for accounting to use as invoicing basis.
+
+9. Activity log / traceability
+
+Automatically log important actions:
+- customer created
+- lead created
+- lead qualified
+- lead converted to customer
+- order created
+- order marked incomplete/blocked
+- order moved to planning
+- delivery assigned
+- driver arrived
+- documentation uploaded
+- deviation reported
+- moved to awaiting accounting approval
+- accounting approved
+- accounting rejected
+- invoice triggered
+
+Each activity log must include:
+- timestamp
+- responsible user
+- action type
+- action label
+- related entity
+
+10. Dashboard automations
+
+Improve the dashboard to show:
+- total customers
+- A customers
+- open orders
+- incomplete/blocked orders
+- planned deliveries
+- out for delivery
+- delayed deliveries
+- awaiting accounting approval
+- approved today
+- ready for invoicing
+- unresolved deviations
+
+Add a “Today’s Priorities” section showing:
+- A customers waiting for delivery
+- urgent orders
+- delayed deliveries
+- unassigned deliveries
+- items awaiting accounting approval
+- unresolved deviations
+
+==================================================
+ADDITIONAL LIGHTWEIGHT AUTOMATIONS
+==================================================
+
+Implement these simple automations:
+
+1. Duplicate customer check
+When creating a customer, warn if another customer exists with similar:
+- company name
+- phone
+- email
+- address
+
+Do not block creation completely; just show a warning.
+
+2. Auto-fill order from customer profile
+When a customer is selected in an order:
+- auto-fill default delivery address
+- show payment terms
+- show discount level
+- show priority class A/B/C
+- show contact person
+
+3. Auto-create delivery from order
+When an order is valid and ready for planning, automatically create a delivery record in the unassigned planning queue.
+
+4. Automatic delayed status
+If planned delivery date has passed and the delivery is not approved, mark or flag it as delayed.
+
+5. Automatic deviation follow-up
+If driver reports a deviation, automatically flag the delivery for operations follow-up.
+
+6. Automatic accounting summary
+When a delivery reaches awaiting_accounting_approval, generate a clean summary for accounting.
+
+7. Automatic archive behavior
+Once an order is approved and invoice_triggered is true, remove it from active operational lists and keep it available in history / ready for invoicing.
+
+==================================================
+DATA MODEL
+==================================================
+
+Ensure the data model supports these entities:
+
+- users
+- customers
+- customer_addresses
+- lead_requests
+- products
+- orders
+- order_items
+- deliveries
+- delivery_documents
+- accounting_approvals
+- activity_logs
+
+Optional if needed:
+- follow_up_tasks
+
+Important modeling rules:
+- customers and addresses are separate
+- orders and deliveries are separate
+- delivery documents belong to deliveries
+- accounting approvals are traceable
+- customer priority A/B/C must be stored
+- invoice_triggered and invoice_triggered_at must be stored
+- deviation status must be stored
+
+==================================================
+SEED DATA
+==================================================
+
+Update or create demo data with:
+- at least 15 customers
+- A/B/C priority distribution
+- at least 20 products
+- multiple orders
+- multiple deliveries
+- 2 drivers
+- 1 admin
+- 2 operations users
+- 3 sales users
+- 1 accounting user
+- several awaiting accounting approval cases
+- several delayed deliveries
+- several deviation cases
+- several ready for invoicing cases
+
+Use realistic coffee distribution examples.
+
+==================================================
+FINAL EXPECTATION
+==================================================
+
+Please implement this as a clean MVP workflow.
+
+Before making major changes, briefly explain the implementation plan.
+
+Then implement step by step:
+1. data model updates
+2. seed data updates
+3. workflow/status logic
+4. UI updates
+5. dashboard updates
+6. driver view
+7. accounting approval queue
+8. ready for invoicing list
+9. activity log
+
+Keep the design polished, simple, and demo-ready.

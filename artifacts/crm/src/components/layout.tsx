@@ -11,6 +11,7 @@ import {
   Truck,
   ClipboardCheck,
   FileText,
+  Receipt,
   Activity,
   LogOut,
   Coffee,
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/orders", label: "Orders", icon: ShoppingCart, roles: ["admin", "operations", "sales"] },
   { href: "/deliveries", label: "Deliveries", icon: Truck, roles: ["admin", "operations"] },
   { href: "/accounting", label: "Approvals", icon: ClipboardCheck, roles: ["admin", "accounting"] },
+  { href: "/invoicing", label: "Ready for Invoicing", icon: Receipt, roles: ["admin", "accounting"] },
   { href: "/activity", label: "Activity", icon: Activity, roles: ["admin", "operations"] },
 ];
 

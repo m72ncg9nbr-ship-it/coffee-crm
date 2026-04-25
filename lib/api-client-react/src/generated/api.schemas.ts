@@ -671,6 +671,26 @@ export type ListCustomersParams = {
   channel?: string;
 };
 
+export type CheckCustomerDuplicatesBody = {
+  companyName?: string;
+  phone?: string;
+  email?: string;
+};
+
+export type CheckCustomerDuplicates200MatchesItem = {
+  id?: number;
+  companyName?: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  priorityClass?: string;
+  active?: boolean;
+};
+
+export type CheckCustomerDuplicates200 = {
+  matches?: CheckCustomerDuplicates200MatchesItem[];
+};
+
 export type ListProductsParams = {
   search?: string;
   category?: string;
@@ -699,3 +719,7 @@ export type ListActivityLogsParams = {
   entityType?: string;
   entityId?: number;
 };
+
+export type GetTodayPriorities200 = { [key: string]: unknown };
+
+export type GetReadyForInvoicing200Item = { [key: string]: unknown };

@@ -1,8 +1,13 @@
+import { useState } from "react";
 import { useListDeliveries, useUpdateDelivery, useUploadDeliveryDocument } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
 import { StatusBadge, UrgencyBadge } from "@/components/priority-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDate } from "@/lib/utils";
 import { MapPin, Truck, CheckCircle, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -11,10 +16,22 @@ const STATUS_TRANSITIONS: Record<string, { next: string; label: string; classNam
   assigned: { next: "arrived", label: "Mark Arrived", className: "bg-purple-600 hover:bg-purple-700 text-white border-purple-600" },
 };
 
+const DEVIATION_OPTIONS = [
+  { value: "none", label: "No deviation" },
+  { value: "damaged_goods", label: "Damaged goods" },
+  { value: "missing_items", label: "Missing items" },
+  { value: "delayed_delivery", label: "Delayed delivery" },
+  { value: "not_delivered", label: "Not delivered" },
+  { value: "other", label: "Other" },
+];
+
 export default function DriverPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: deliveries, isLoading, refetch } = useListDeliveries();
+  const [uploadFor, setUploadFor] = useState<any | null>(null);
+  const [deviationType, setDeviationType] = useState<string>("none");
+  const [deviationNote, setDeviationNote] = useState<string>("");
 
   const updateDelivery = useUpdateDelivery({
     mutation: {
@@ -31,6 +48,9 @@ export default function DriverPage() {
       onSuccess: () => {
         refetch();
         toast({ title: "Documentation uploaded" });
+        setUploadFor(null);
+        setDeviationType("none");
+        setDeviationNote("");
       },
       onError: () => toast({ title: "Upload failed", variant: "destructive" })
     }
@@ -43,6 +63,20 @@ export default function DriverPage() {
   const today = new Date().toISOString().split("T")[0];
   const todayDeliveries = myDeliveries.filter((d: any) => d.scheduledDate?.startsWith(today));
   const upcomingDeliveries = myDeliveries.filter((d: any) => d.scheduledDate > today);
+
+  const submitUpload = () => {
+    if (!uploadFor) return;
+    const body: any = {
+      documentType: "delivery_proof",
+      fileUrl: `/uploads/delivery-${uploadFor.id}-${Date.now()}.pdf`,
+      notes: "Uploaded from driver app",
+    };
+    if (deviationType !== "none") {
+      body.deviationType = deviationType;
+      body.deviationNote = deviationNote || null;
+    }
+    uploadDoc.mutate({ id: uploadFor.id, data: body });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,7 +113,7 @@ export default function DriverPage() {
                     key={d.id}
                     delivery={d}
                     onAdvance={next => updateDelivery.mutate({ id: d.id, data: { status: next as any } })}
-                    onUpload={() => uploadDoc.mutate({ id: d.id, data: { documentType: "delivery_proof", fileUrl: `/uploads/delivery-${d.id}-${Date.now()}.pdf`, notes: "Uploaded from driver app" } })}
+                    onUpload={() => setUploadFor(d)}
                     isPending={updateDelivery.isPending || uploadDoc.isPending}
                   />
                 ))}
@@ -107,6 +141,61 @@ export default function DriverPage() {
           </>
         )}
       </div>
+
+      <Dialog open={!!uploadFor} onOpenChange={(open) => { if (!open) setUploadFor(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Documentation</DialogTitle>
+            <DialogDescription>
+              Attach a signed delivery note. If anything went wrong, log it as a deviation so operations can follow up.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-muted/40 rounded-md p-3 text-sm">
+              <p className="font-medium">{uploadFor?.customerName}</p>
+              <p className="text-muted-foreground text-xs mt-0.5">{uploadFor?.deliveryNumber}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Deviation</Label>
+              <Select value={deviationType} onValueChange={setDeviationType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {DEVIATION_OPTIONS.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {deviationType !== "none" && (
+              <div className="space-y-1.5">
+                <Label>Deviation note</Label>
+                <Textarea
+                  placeholder="Describe what happened..."
+                  value={deviationNote}
+                  onChange={e => setDeviationNote(e.target.value)}
+                  rows={3}
+                />
+                <p className="text-xs text-orange-700">
+                  Operations will be notified to follow up.
+                </p>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              A signed delivery note will be attached and the delivery moves to accounting review.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadFor(null)}>Cancel</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={uploadDoc.isPending}
+              onClick={submitUpload}
+            >
+              {uploadDoc.isPending ? "Uploading..." : "Submit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

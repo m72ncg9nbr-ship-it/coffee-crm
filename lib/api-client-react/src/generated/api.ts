@@ -20,6 +20,8 @@ import type {
   AccountingApproval,
   ActivityLog,
   ApproveBody,
+  CheckCustomerDuplicates200,
+  CheckCustomerDuplicatesBody,
   CreateCustomerAddressBody,
   CreateCustomerBody,
   CreateDeliveryBody,
@@ -33,6 +35,8 @@ import type {
   Delivery,
   DeliveryDetail,
   DeliveryDocument,
+  GetReadyForInvoicing200Item,
+  GetTodayPriorities200,
   HealthStatus,
   Lead,
   ListAccountingApprovalsParams,
@@ -795,6 +799,96 @@ export const useUpdateCustomer = <
   TContext
 > => {
   return useMutation(getUpdateCustomerMutationOptions(options));
+};
+
+/**
+ * @summary Check for potential duplicate customers
+ */
+export const getCheckCustomerDuplicatesUrl = () => {
+  return `/api/customers/check-duplicates`;
+};
+
+export const checkCustomerDuplicates = async (
+  checkCustomerDuplicatesBody: CheckCustomerDuplicatesBody,
+  options?: RequestInit,
+): Promise<CheckCustomerDuplicates200> => {
+  return customFetch<CheckCustomerDuplicates200>(
+    getCheckCustomerDuplicatesUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(checkCustomerDuplicatesBody),
+    },
+  );
+};
+
+export const getCheckCustomerDuplicatesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkCustomerDuplicates>>,
+    TError,
+    { data: BodyType<CheckCustomerDuplicatesBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof checkCustomerDuplicates>>,
+  TError,
+  { data: BodyType<CheckCustomerDuplicatesBody> },
+  TContext
+> => {
+  const mutationKey = ["checkCustomerDuplicates"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof checkCustomerDuplicates>>,
+    { data: BodyType<CheckCustomerDuplicatesBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return checkCustomerDuplicates(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckCustomerDuplicatesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkCustomerDuplicates>>
+>;
+export type CheckCustomerDuplicatesMutationBody =
+  BodyType<CheckCustomerDuplicatesBody>;
+export type CheckCustomerDuplicatesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Check for potential duplicate customers
+ */
+export const useCheckCustomerDuplicates = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkCustomerDuplicates>>,
+    TError,
+    { data: BodyType<CheckCustomerDuplicatesBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof checkCustomerDuplicates>>,
+  TError,
+  { data: BodyType<CheckCustomerDuplicatesBody> },
+  TContext
+> => {
+  return useMutation(getCheckCustomerDuplicatesMutationOptions(options));
 };
 
 /**
@@ -1820,6 +1914,90 @@ export const useCreateOrder = <
   TContext
 > => {
   return useMutation(getCreateOrderMutationOptions(options));
+};
+
+/**
+ * @summary Re-evaluate order completeness and create unassigned delivery
+ */
+export const getSendOrderToPlanningUrl = (id: number) => {
+  return `/api/orders/${id}/send-to-planning`;
+};
+
+export const sendOrderToPlanning = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Order> => {
+  return customFetch<Order>(getSendOrderToPlanningUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSendOrderToPlanningMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendOrderToPlanning>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendOrderToPlanning>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["sendOrderToPlanning"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendOrderToPlanning>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return sendOrderToPlanning(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendOrderToPlanningMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendOrderToPlanning>>
+>;
+
+export type SendOrderToPlanningMutationError = ErrorType<void>;
+
+/**
+ * @summary Re-evaluate order completeness and create unassigned delivery
+ */
+export const useSendOrderToPlanning = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendOrderToPlanning>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendOrderToPlanning>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getSendOrderToPlanningMutationOptions(options));
 };
 
 /**
@@ -3115,6 +3293,159 @@ export function useGetDeliveryDeviations<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetDeliveryDeviationsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get today's prioritized work items
+ */
+export const getGetTodayPrioritiesUrl = () => {
+  return `/api/dashboard/today-priorities`;
+};
+
+export const getTodayPriorities = async (
+  options?: RequestInit,
+): Promise<GetTodayPriorities200> => {
+  return customFetch<GetTodayPriorities200>(getGetTodayPrioritiesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTodayPrioritiesQueryKey = () => {
+  return [`/api/dashboard/today-priorities`] as const;
+};
+
+export const getGetTodayPrioritiesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTodayPriorities>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTodayPriorities>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTodayPrioritiesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTodayPriorities>>
+  > = ({ signal }) => getTodayPriorities({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTodayPriorities>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTodayPrioritiesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTodayPriorities>>
+>;
+export type GetTodayPrioritiesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get today's prioritized work items
+ */
+
+export function useGetTodayPriorities<
+  TData = Awaited<ReturnType<typeof getTodayPriorities>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTodayPriorities>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTodayPrioritiesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Orders approved by accounting and ready for invoicing
+ */
+export const getGetReadyForInvoicingUrl = () => {
+  return `/api/invoicing/ready`;
+};
+
+export const getReadyForInvoicing = async (
+  options?: RequestInit,
+): Promise<GetReadyForInvoicing200Item[]> => {
+  return customFetch<GetReadyForInvoicing200Item[]>(
+    getGetReadyForInvoicingUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetReadyForInvoicingQueryKey = () => {
+  return [`/api/invoicing/ready`] as const;
+};
+
+export const getGetReadyForInvoicingQueryOptions = <
+  TData = Awaited<ReturnType<typeof getReadyForInvoicing>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getReadyForInvoicing>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetReadyForInvoicingQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getReadyForInvoicing>>
+  > = ({ signal }) => getReadyForInvoicing({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getReadyForInvoicing>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetReadyForInvoicingQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getReadyForInvoicing>>
+>;
+export type GetReadyForInvoicingQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Orders approved by accounting and ready for invoicing
+ */
+
+export function useGetReadyForInvoicing<
+  TData = Awaited<ReturnType<typeof getReadyForInvoicing>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getReadyForInvoicing>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetReadyForInvoicingQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

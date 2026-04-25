@@ -1,23 +1,37 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useListOrders } from "@workspace/api-client-react";
+import { useListOrders, useSendOrderToPlanning, getListOrdersQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { StatusBadge, UrgencyBadge } from "@/components/priority-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Send } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OrdersPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const params: Record<string, string> = {};
   if (search) params.search = search;
   if (status !== "all") params.status = status;
 
   const { data: orders, isLoading } = useListOrders(params as any);
+
+  const sendToPlanning = useSendOrderToPlanning({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+        toast({ title: "Order sent to planning" });
+      },
+      onError: (e: any) => toast({ title: "Cannot plan order", description: e?.error ?? "Order is still incomplete", variant: "destructive" }),
+    },
+  });
 
   return (
     <div className="p-6 space-y-5">
@@ -51,6 +65,8 @@ export default function OrdersPage() {
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="new">New</SelectItem>
+            <SelectItem value="incomplete">Incomplete</SelectItem>
+            <SelectItem value="blocked">Blocked</SelectItem>
             <SelectItem value="planned">Planned</SelectItem>
             <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
             <SelectItem value="awaiting_accounting_approval">Awaiting Approval</SelectItem>
@@ -72,11 +88,12 @@ export default function OrdersPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Urgency</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Total</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {isLoading && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">Loading...</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground text-sm">Loading...</td></tr>
               )}
               {!isLoading && (orders ?? []).map((o: any) => (
                 <tr key={o.id} className="hover:bg-muted/20 transition-colors">
@@ -91,10 +108,23 @@ export default function OrdersPage() {
                   <td className="px-4 py-3"><UrgencyBadge urgency={o.urgency} /></td>
                   <td className="px-4 py-3 text-sm font-medium">{formatCurrency(o.totalAmount)}</td>
                   <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
+                  <td className="px-4 py-3 text-right">
+                    {(o.status === "incomplete" || o.status === "blocked" || o.status === "new") && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={sendToPlanning.isPending}
+                        onClick={() => sendToPlanning.mutate({ id: o.id })}
+                      >
+                        <Send className="h-3.5 w-3.5 mr-1" />
+                        Send to planning
+                      </Button>
+                    )}
+                  </td>
                 </tr>
               ))}
               {!isLoading && (orders ?? []).length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">No orders found</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground text-sm">No orders found</td></tr>
               )}
             </tbody>
           </table>

@@ -197,6 +197,31 @@ export const UpdateCustomerResponse = zod.object({
 });
 
 /**
+ * @summary Check for potential duplicate customers
+ */
+export const CheckCustomerDuplicatesBody = zod.object({
+  companyName: zod.string().optional(),
+  phone: zod.string().optional(),
+  email: zod.string().optional(),
+});
+
+export const CheckCustomerDuplicatesResponse = zod.object({
+  matches: zod
+    .array(
+      zod.object({
+        id: zod.number().optional(),
+        companyName: zod.string().optional(),
+        contactPerson: zod.string().optional(),
+        phone: zod.string().optional(),
+        email: zod.string().optional(),
+        priorityClass: zod.string().optional(),
+        active: zod.boolean().optional(),
+      }),
+    )
+    .optional(),
+});
+
+/**
  * @summary List customer addresses
  */
 export const ListCustomerAddressesParams = zod.object({
@@ -508,6 +533,40 @@ export const CreateOrderBody = zod.object({
       unitPriceSnapshot: zod.number(),
     }),
   ),
+});
+
+/**
+ * @summary Re-evaluate order completeness and create unassigned delivery
+ */
+export const SendOrderToPlanningParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SendOrderToPlanningResponse = zod.object({
+  id: zod.number(),
+  orderNumber: zod.string().nullish(),
+  customerId: zod.number(),
+  customerName: zod.string(),
+  businessChannel: zod.string(),
+  orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep"]),
+  requestedDeliveryDate: zod.string().nullish(),
+  urgency: zod.enum(["low", "normal", "high", "critical"]),
+  notes: zod.string().nullish(),
+  status: zod.enum([
+    "new",
+    "planned",
+    "out_for_delivery",
+    "awaiting_accounting_approval",
+    "approved",
+    "cancelled",
+  ]),
+  totalAmount: zod.number(),
+  createdByName: zod.string().nullish(),
+  approvedByAccountingUserId: zod.number().nullish(),
+  approvedAt: zod.string().nullish(),
+  invoiceTriggeredAt: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
 });
 
 /**
@@ -1100,4 +1159,23 @@ export const GetDeliveryDeviationsResponseItem = zod.object({
 });
 export const GetDeliveryDeviationsResponse = zod.array(
   GetDeliveryDeviationsResponseItem,
+);
+
+/**
+ * @summary Get today's prioritized work items
+ */
+export const GetTodayPrioritiesResponse = zod.record(
+  zod.string(),
+  zod.unknown(),
+);
+
+/**
+ * @summary Orders approved by accounting and ready for invoicing
+ */
+export const GetReadyForInvoicingResponseItem = zod.record(
+  zod.string(),
+  zod.unknown(),
+);
+export const GetReadyForInvoicingResponse = zod.array(
+  GetReadyForInvoicingResponseItem,
 );

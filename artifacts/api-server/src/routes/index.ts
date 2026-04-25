@@ -10,6 +10,7 @@ import deliveriesRouter from "./deliveries";
 import accountingRouter from "./accounting";
 import activityRouter from "./activity";
 import dashboardRouter from "./dashboard";
+import invoicingRouter from "./invoicing";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(deliveriesRouter);
 router.use(accountingRouter);
 router.use(activityRouter);
 router.use(dashboardRouter);
+router.use(invoicingRouter);
 
 export default router;

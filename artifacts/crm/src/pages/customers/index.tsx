@@ -1,17 +1,23 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useListCustomers } from "@workspace/api-client-react";
-import { PriorityBadge, StatusBadge } from "@/components/priority-badge";
+import { useListCustomers, useCheckCustomerDuplicates } from "@workspace/api-client-react";
+import { PriorityBadge } from "@/components/priority-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Search } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Plus, Search, AlertTriangle } from "lucide-react";
 
 export default function CustomersPage() {
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState("all");
   const [activeFilter, setActiveFilter] = useState("all");
+  const [dupeOpen, setDupeOpen] = useState(false);
+  const [dupeForm, setDupeForm] = useState({ companyName: "", phone: "", email: "" });
+  const [dupeMatches, setDupeMatches] = useState<any[]>([]);
+  const [dupeChecked, setDupeChecked] = useState(false);
 
   const params: Record<string, string> = {};
   if (search) params.search = search;
@@ -20,6 +26,20 @@ export default function CustomersPage() {
 
   const { data: customers, isLoading } = useListCustomers(params as any);
 
+  const checkDupes = useCheckCustomerDuplicates({
+    mutation: {
+      onSuccess: (res: any) => {
+        setDupeMatches(res?.matches ?? []);
+        setDupeChecked(true);
+      },
+    },
+  });
+
+  const runDupeCheck = () => {
+    setDupeChecked(false);
+    checkDupes.mutate({ data: dupeForm });
+  };
+
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
@@ -27,13 +47,74 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-bold">Customers</h1>
           <p className="text-muted-foreground text-sm">{customers?.length ?? 0} records</p>
         </div>
-        <Link href="/customers/new">
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-1.5" />
-            New Customer
-          </Button>
-        </Link>
+        <Button size="sm" onClick={() => { setDupeOpen(true); setDupeChecked(false); setDupeMatches([]); setDupeForm({ companyName: "", phone: "", email: "" }); }}>
+          <Plus className="h-4 w-4 mr-1.5" />
+          New Customer
+        </Button>
       </div>
+
+      <Dialog open={dupeOpen} onOpenChange={setDupeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Customer — Duplicate Check</DialogTitle>
+            <DialogDescription>
+              Enter at least one identifier and we'll check whether a similar customer already exists.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Company name</Label>
+              <Input value={dupeForm.companyName} onChange={e => setDupeForm({ ...dupeForm, companyName: e.target.value })} placeholder="e.g. Bean & Brew" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Phone</Label>
+                <Input value={dupeForm.phone} onChange={e => setDupeForm({ ...dupeForm, phone: e.target.value })} placeholder="+1 555 ..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input value={dupeForm.email} onChange={e => setDupeForm({ ...dupeForm, email: e.target.value })} placeholder="contact@..." />
+              </div>
+            </div>
+
+            {dupeChecked && dupeMatches.length > 0 && (
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-amber-800 text-sm font-medium">
+                  <AlertTriangle className="h-4 w-4" />
+                  {dupeMatches.length} possible duplicate{dupeMatches.length === 1 ? "" : "s"} found
+                </div>
+                <div className="space-y-1">
+                  {dupeMatches.slice(0, 5).map(m => (
+                    <Link key={m.id} href={`/customers/${m.id}`}>
+                      <div className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-amber-100 cursor-pointer">
+                        <PriorityBadge priority={m.priorityClass} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{m.companyName}</p>
+                          <p className="text-xs text-muted-foreground truncate">{m.contactPerson} · {m.phone} · {m.email}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                <p className="text-xs text-amber-800">
+                  Review existing records before creating a new one.
+                </p>
+              </div>
+            )}
+            {dupeChecked && dupeMatches.length === 0 && (
+              <div className="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+                No similar customers found. Safe to create.
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDupeOpen(false)}>Cancel</Button>
+            <Button onClick={runDupeCheck} disabled={checkDupes.isPending || (!dupeForm.companyName && !dupeForm.phone && !dupeForm.email)}>
+              {checkDupes.isPending ? "Checking..." : "Check for duplicates"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-48">

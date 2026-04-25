@@ -197,6 +197,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/Customer"
 
+  /customers/check-duplicates:
+    post:
+      operationId: checkCustomerDuplicates
+      tags: [customers]
+      summary: Check for potential duplicate customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                companyName: { type: string }
+                phone: { type: string }
+                email: { type: string }
+      responses:
+        "200":
+          description: Possible duplicate matches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matches:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        companyName: { type: string }
+                        contactPerson: { type: string }
+                        phone: { type: string }
+                        email: { type: string }
+                        priorityClass: { type: string }
+                        active: { type: boolean }
+
   /customers/{id}/addresses:
     get:
       operationId: listCustomerAddresses
@@ -446,6 +482,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Order"
+
+  /orders/{id}/send-to-planning:
+    post:
+      operationId: sendOrderToPlanning
+      tags: [orders]
+      summary: Re-evaluate order completeness and create unassigned delivery
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "409":
+          description: Order is still incomplete
 
   /orders/{id}:
     get:
@@ -770,6 +826,36 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Delivery"
+
+  /dashboard/today-priorities:
+    get:
+      operationId: getTodayPriorities
+      tags: [dashboard]
+      summary: Get today's prioritized work items
+      responses:
+        "200":
+          description: Today's priorities
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /invoicing/ready:
+    get:
+      operationId: getReadyForInvoicing
+      tags: [invoicing]
+      summary: Orders approved by accounting and ready for invoicing
+      responses:
+        "200":
+          description: Ready-for-invoicing list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
 
 components:
   schemas:

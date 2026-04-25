@@ -13,6 +13,7 @@ import DeliveriesPage from "@/pages/deliveries/index";
 import LeadsPage from "@/pages/leads";
 import ProductsPage from "@/pages/products";
 import AccountingPage from "@/pages/accounting";
+import InvoicingPage from "@/pages/invoicing";
 import ActivityPage from "@/pages/activity";
 import DriverPage from "@/pages/driver";
 import NotFound from "@/pages/not-found";
@@ -106,6 +107,12 @@ function AppRoutes() {
       <Route path="/accounting">
         <ProtectedRoute roles={["admin", "accounting"]}>
           <Layout><AccountingPage /></Layout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/invoicing">
+        <ProtectedRoute roles={["admin", "accounting"]}>
+          <Layout><InvoicingPage /></Layout>
         </ProtectedRoute>
       </Route>
 
