@@ -1,0 +1,218 @@
+5. Kolay Otomasyonlarla Yüksek Değer Yaratılabilecek Alanlar
+
+Sistemde bazı basit otomasyonlar yüksek değer yaratabilir. Bunlar karmaşık yapay zekâ, GPS veya entegrasyon gerektirmez.
+
+5.1. Otomatik Önceliklendirme
+
+Sistem teslimatları şu bilgilere göre sıralayabilir:
+
+müşteri önceliği A / B / C
+teslim tarihi
+sipariş aciliyeti
+
+Bu, gelişmiş rota optimizasyonu değildir. Sadece operasyon ekibine yardımcı olan basit bir sıralama mantığıdır.
+
+Değeri yüksektir çünkü önemli müşterilerin ve acil siparişlerin gözden kaçmasını engeller.
+
+5.2. Talep Formunda Otomatik Ön Değerlendirme
+
+Yeni müşteri veya makine talepleri sistem tarafından basit kurallara göre işaretlenebilir:
+
+uygun görünüyor
+manuel inceleme gerekli
+
+Örneğin aylık tüketim belirli bir seviyenin üzerindeyse sistem talebi daha öncelikli gösterebilir.
+
+Bu, satış ekibinin zamanını daha verimli kullanmasını sağlar.
+
+5.3. Belge Yüklenince Otomatik Statü Değişimi
+
+Şoför belge yüklediğinde sistem otomatik olarak:
+
+teslimatı muhasebe onayına gönderir
+zamanı kaydeder
+belgeyi ilgili teslimata bağlar
+aktivite logu oluşturur
+
+Bu, manuel takip ihtiyacını ciddi şekilde azaltır.
+
+5.4. Belgesiz Teslimatın Tamamlanmaması
+
+Sistem basit bir kural koyar:
+
+Belge yoksa teslimat tamamlanmaz.
+
+Bu küçük kural, teslimat disiplinini ve ispat gücünü ciddi şekilde artırır.
+
+5.5. Muhasebe Onayı Sonrası Faturaya Hazır Hale Getirme
+
+Muhasebe onay verdiğinde sistem otomatik olarak:
+
+siparişi onaylı yapar
+teslimatı onaylı yapar
+faturaya hazır olarak işaretler
+zaman damgası oluşturur
+
+Bu, muhasebenin hangi kayıtların faturaya hazır olduğunu kolayca görmesini sağlar.
+
+5.6. Otomatik Aktivite Logu
+
+Sistem önemli hareketleri otomatik olarak kaydeder.
+
+Örneğin:
+
+sipariş açıldı
+teslimat atandı
+şoför varış yaptı
+belge yüklendi
+muhasebe onayladı
+
+Bu düşük maliyetli ama yüksek değerli bir otomasyondur.
+
+5.7. Sapma Bildirimlerinin Otomatik Öne Çıkması
+
+Şoför şu tip bir sorun bildirirse:
+
+hasarlı ürün
+eksik ürün
+gecikme
+teslim edilemedi
+
+sistem bunu otomatik olarak operasyon ekranında öne çıkarır.
+
+Bu sayede sorunlar kaybolmaz ve takip edilebilir hale gelir.
+
+5.8. Günlük Öncelikler Ekranı
+
+Dashboard’da sistem otomatik olarak şunları öne çıkarabilir:
+
+bugün teslim edilecek işler
+atanmamış teslimatlar
+A müşterilere ait bekleyen işler
+geciken teslimatlar
+muhasebe onayı bekleyen kayıtlar
+açık sapmalar
+
+Bu, yöneticilerin güne hızlı başlamasını sağlar.
+
+6. Ek Olarak Otomatikleştirilebilecek Alanlar
+
+Yukarıdaki temel otomasyonlara ek olarak, MVP’yi çok büyütmeden eklenebilecek bazı değerli otomasyonlar da vardır.
+
+6.1. Mükerrer Müşteri Kontrolü
+
+Yeni müşteri oluşturulurken sistem benzer kayıtları kontrol edebilir:
+
+aynı şirket adı
+aynı telefon
+aynı e-posta
+benzer adres
+
+Sistem kullanıcıyı uyarır ama kaydı tamamen engellemez.
+
+Bu, müşteri veri tabanının temiz kalmasına yardımcı olur.
+
+6.2. Müşteri Kartından Otomatik Bilgi Çekme
+
+Sipariş oluşturulurken müşteri seçildiğinde sistem otomatik olarak şu bilgileri gösterebilir:
+
+varsayılan teslimat adresi
+ödeme şartı
+indirim seviyesi
+müşteri önceliği A / B / C
+iletişim kişisi
+
+Bu, satış ekibinin tekrar tekrar aynı bilgileri girmesini önler.
+
+6.3. Eksik Siparişlerin Planlamaya Alınmaması
+
+Bir sipariş şu bilgiler eksikse planlamaya alınmaz:
+
+müşteri
+teslimat adresi
+ürün
+teslim tarihi
+
+Sistem bu siparişi:
+
+eksik / blokeli
+
+olarak işaretler.
+
+Bu, hatalı veya yarım siparişlerin operasyona düşmesini engeller.
+
+6.4. Otomatik Gecikme İşareti
+
+Planlanan teslim tarihi geçmişse ve teslimat hâlâ onaylanmamışsa sistem bunu otomatik olarak:
+
+gecikmiş
+
+olarak işaretler.
+
+Bu işlem için GPS veya gelişmiş takip gerekmez. Sadece tarih ve statü kontrolü yeterlidir.
+
+6.5. Sapma Durumunda Otomatik Takip Kaydı
+
+Şoför bir sapma bildirirse sistem otomatik olarak operasyon için takip kaydı oluşturabilir.
+
+Örnek:
+
+“Hasarlı ürün bildirimi – müşteri X için takip gerekli.”
+
+Bu, sorunların unutulmasını engeller.
+
+6.6. Muhasebe İçin Otomatik Özet
+
+Bir kayıt muhasebe onayına düştüğünde sistem otomatik olarak kısa bir özet oluşturabilir:
+
+müşteri
+sipariş numarası
+ürünler
+adetler
+teslim tarihi
+şoför
+yüklenen belge
+varsa sapma notu
+
+Muhasebe böylece farklı ekranlar arasında dolaşmadan kararı daha hızlı verebilir.
+
+6.7. Faturaya Hazır Liste
+
+Muhasebe onayından sonra sistem kayıtları otomatik olarak ayrı bir listede toplar:
+
+Faturaya Hazır Kayıtlar
+
+Bu listede:
+
+müşteri
+sipariş numarası
+teslim tarihi
+tutar
+belge linki
+onaylayan muhasebe kullanıcısı
+
+görülebilir.
+
+Bu, otomatik fatura kesme değildir. Ancak manuel faturalandırmayı çok daha düzenli hale getirir.
+
+6.8. A Müşterilerin Otomatik Öne Çıkması
+
+A sınıfı müşterilere ait sipariş ve teslimatlar sistemde otomatik olarak daha görünür hale getirilebilir.
+
+Örneğin:
+
+planlama ekranında üstte görünür
+dashboard’da ayrıca listelenir
+gecikmişse daha kritik işaretlenir
+
+Bu, önemli müşterilerin gözden kaçmasını önler.
+
+6.9. Yeni Lead İçin Otomatik Takip Hatırlatması
+
+Yeni bir talep formu geldiğinde sistem otomatik olarak satış ekibi için takip görevi oluşturabilir.
+
+Örneğin:
+
+“Yeni makine talebi – 24 saat içinde takip et.”
+
+Bu, gelen taleplerin unutulmasını engeller.
