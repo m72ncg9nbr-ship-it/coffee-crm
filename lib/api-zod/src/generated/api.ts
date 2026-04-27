@@ -687,6 +687,27 @@ export const UpdateOrderResponse = zod.object({
 });
 
 /**
+ * @summary Add an item to an order
+ */
+export const AddOrderItemParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AddOrderItemBody = zod.object({
+  productId: zod.number(),
+  quantity: zod.number(),
+  unitPriceSnapshot: zod.number(),
+});
+
+/**
+ * @summary Remove an item from an order
+ */
+export const DeleteOrderItemParams = zod.object({
+  id: zod.coerce.number(),
+  itemId: zod.coerce.number(),
+});
+
+/**
  * @summary List deliveries
  */
 export const ListDeliveriesQueryParams = zod.object({

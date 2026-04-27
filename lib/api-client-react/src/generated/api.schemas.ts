@@ -422,6 +422,12 @@ export interface CreateOrderBody {
   items: CreateOrderItemBody[];
 }
 
+export interface AddOrderItemBody {
+  productId: number;
+  quantity: number;
+  unitPriceSnapshot: number;
+}
+
 export type UpdateOrderBodyStatus =
   (typeof UpdateOrderBodyStatus)[keyof typeof UpdateOrderBodyStatus];
 

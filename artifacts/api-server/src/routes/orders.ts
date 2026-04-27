@@ -9,6 +9,8 @@ import {
   GetOrderParams,
   UpdateOrderParams,
   ListOrdersQueryParams,
+  AddOrderItemBody,
+  DeleteOrderItemParams,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -319,6 +321,117 @@ router.patch("/orders/:id", requireAuth as any, async (req, res): Promise<void> 
 
   const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, finalOrder.customerId));
   res.json(serializeOrder(finalOrder, customer?.companyName, null));
+});
+
+const ITEM_EDITABLE_STATUSES = new Set(["new", "incomplete"]);
+
+router.post("/orders/:id/items", requireAuth as any, async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = GetOrderParams.safeParse({ id: rawId });
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const parsed = AddOrderItemBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const lineTotal = parsed.data.quantity * parsed.data.unitPriceSnapshot;
+  const user = (req as any).user;
+
+  let item: typeof orderItemsTable.$inferSelect | undefined;
+  let order: typeof ordersTable.$inferSelect | undefined;
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${params.data.id})`);
+      [order] = await tx.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
+      if (!order) throw new Error("NOT_FOUND");
+      if (!ITEM_EDITABLE_STATUSES.has(order.status)) throw new Error(`NOT_EDITABLE:${order.status}`);
+
+      [item] = await tx.insert(orderItemsTable).values({
+        orderId: order.id,
+        productId: parsed.data.productId,
+        quantity: parsed.data.quantity,
+        unitPriceSnapshot: parsed.data.unitPriceSnapshot.toString(),
+        lineTotal: lineTotal.toString(),
+      }).returning();
+
+      const items = await tx.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+      const total = items.reduce((sum, i) => sum + parseFloat(i.lineTotal), 0);
+      const evaluated = await evaluateOrderCompleteness(order.id, order.customerId, order.requestedDeliveryDate);
+      const nextStatus = order.status === "incomplete" && evaluated === "new" ? "new" : order.status;
+      await tx.update(ordersTable).set({ totalAmount: total.toString(), status: nextStatus }).where(eq(ordersTable.id, order.id));
+    });
+  } catch (err: any) {
+    if (err?.message === "NOT_FOUND") { res.status(404).json({ error: "Order not found" }); return; }
+    if (err?.message?.startsWith("NOT_EDITABLE:")) {
+      res.status(409).json({ error: `Cannot edit items on a ${err.message.split(":")[1]} order` });
+      return;
+    }
+    throw err;
+  }
+
+  await logActivity({
+    actionType: "order_item_added",
+    entityType: "order",
+    entityId: order!.id,
+    description: `Item added to order ${order!.orderNumber ?? `#${order!.id}`}`,
+    performedBy: user.id,
+  });
+
+  res.status(201).json({
+    ...item!,
+    unitPriceSnapshot: parseFloat(item!.unitPriceSnapshot),
+    lineTotal: parseFloat(item!.lineTotal),
+    createdAt: item!.createdAt.toISOString(),
+  });
+});
+
+router.delete("/orders/:id/items/:itemId", requireAuth as any, async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const rawItemId = Array.isArray(req.params.itemId) ? req.params.itemId[0] : req.params.itemId;
+  const parsed = DeleteOrderItemParams.safeParse({ id: rawId, itemId: rawItemId });
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const user = (req as any).user;
+  let order: typeof ordersTable.$inferSelect | undefined;
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${parsed.data.id})`);
+      [order] = await tx.select().from(ordersTable).where(eq(ordersTable.id, parsed.data.id));
+      if (!order) throw new Error("NOT_FOUND");
+      if (!ITEM_EDITABLE_STATUSES.has(order.status)) throw new Error(`NOT_EDITABLE:${order.status}`);
+
+      const deleted = await tx
+        .delete(orderItemsTable)
+        .where(and(eq(orderItemsTable.id, parsed.data.itemId), eq(orderItemsTable.orderId, parsed.data.id)))
+        .returning();
+      if (deleted.length === 0) throw new Error("ITEM_NOT_FOUND");
+
+      const items = await tx.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+      const total = items.reduce((sum, i) => sum + parseFloat(i.lineTotal), 0);
+      const evaluated = await evaluateOrderCompleteness(order.id, order.customerId, order.requestedDeliveryDate);
+      const nextStatus = order.status === "new" && evaluated === "incomplete" ? "incomplete" : order.status;
+      await tx.update(ordersTable).set({ totalAmount: total.toString(), status: nextStatus }).where(eq(ordersTable.id, order.id));
+    });
+  } catch (err: any) {
+    if (err?.message === "NOT_FOUND") { res.status(404).json({ error: "Order not found" }); return; }
+    if (err?.message === "ITEM_NOT_FOUND") { res.status(404).json({ error: "Item not found" }); return; }
+    if (err?.message?.startsWith("NOT_EDITABLE:")) {
+      res.status(409).json({ error: `Cannot edit items on a ${err.message.split(":")[1]} order` });
+      return;
+    }
+    throw err;
+  }
+
+  await logActivity({
+    actionType: "order_item_removed",
+    entityType: "order",
+    entityId: order!.id,
+    description: `Item removed from order ${order!.orderNumber ?? `#${order!.id}`}`,
+    performedBy: user.id,
+  });
+
+  res.status(204).end();
 });
 
 export default router;

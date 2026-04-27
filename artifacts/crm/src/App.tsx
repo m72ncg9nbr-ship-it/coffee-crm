@@ -9,6 +9,7 @@ import DashboardPage from "@/pages/dashboard";
 import CustomersPage from "@/pages/customers/index";
 import CustomerDetailPage from "@/pages/customers/detail";
 import OrdersPage from "@/pages/orders/index";
+import OrderDetailPage from "@/pages/orders/detail";
 import DeliveriesPage from "@/pages/deliveries/index";
 import LeadsPage from "@/pages/leads";
 import ProductsPage from "@/pages/products";
@@ -77,6 +78,12 @@ function AppRoutes() {
       <Route path="/customers">
         <ProtectedRoute roles={["admin", "operations", "sales"]}>
           <Layout><CustomersPage /></Layout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/orders/:id">
+        <ProtectedRoute roles={["admin", "operations", "sales"]}>
+          <Layout><OrderDetailPage /></Layout>
         </ProtectedRoute>
       </Route>
 
