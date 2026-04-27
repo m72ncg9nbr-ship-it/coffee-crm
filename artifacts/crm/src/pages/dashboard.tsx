@@ -43,7 +43,8 @@ export default function DashboardPage() {
     + (p.delayedDeliveries?.length ?? 0)
     + (p.unassignedDeliveries?.length ?? 0)
     + (p.awaitingApproval?.length ?? 0)
-    + (p.unresolvedDeviations?.length ?? 0);
+    + (p.unresolvedDeviations?.length ?? 0)
+    + (p.overdueLeadFollowUps?.length ?? 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -129,6 +130,13 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium">{it.customerName}</p>
                 <p className="text-xs text-red-700 capitalize">{it.deviationType?.replace(/_/g, " ")}</p>
                 {it.deviationNote && <p className="text-xs text-muted-foreground line-clamp-1">{it.deviationNote}</p>}
+              </div></Link>
+            )} />
+
+            <PriorityList title="Lead follow-ups due" empty="No follow-ups due" items={p.overdueLeadFollowUps ?? []} render={(it: any) => (
+              <Link href="/leads"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md">
+                <p className="text-sm font-medium">{it.companyName}</p>
+                <p className="text-xs text-muted-foreground">{it.contactPerson} · <span className="text-amber-700">due {formatDate(it.followUpDueAt)}</span></p>
               </div></Link>
             )} />
           </div>

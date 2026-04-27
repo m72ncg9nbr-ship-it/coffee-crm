@@ -89,8 +89,10 @@ export default function DeliveriesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {(deliveries ?? []).map((d: any) => (
-                  <tr key={d.id} className="hover:bg-muted/20 transition-colors">
+                {(deliveries ?? []).map((d: any) => {
+                  const overdue = isOverdue(d);
+                  return (
+                  <tr key={d.id} className={`hover:bg-muted/20 transition-colors ${overdue ? "bg-red-50/50" : ""}`}>
                     <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{d.deliveryNumber ?? `#${d.id}`}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -98,7 +100,12 @@ export default function DeliveriesPage() {
                         <span className="text-sm font-medium">{d.customerName}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm">{formatDate(d.scheduledDate)}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span>{formatDate(d.scheduledDate)}</span>
+                        {overdue && <OverdueBadge />}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-sm">{d.driverName ?? <span className="text-muted-foreground">Unassigned</span>}</td>
                     <td className="px-4 py-3"><UrgencyBadge urgency={d.urgency} /></td>
                     <td className="px-4 py-3">
@@ -111,7 +118,8 @@ export default function DeliveriesPage() {
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={d.status} /></td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -121,9 +129,25 @@ export default function DeliveriesPage() {
   );
 }
 
-function DeliveryCard({ delivery: d }: { delivery: any }) {
+function isOverdue(d: any): boolean {
+  if (!d.scheduledDate) return false;
+  if (["approved", "cancelled"].includes(d.status)) return false;
+  const today = new Date().toISOString().split("T")[0];
+  return d.scheduledDate < today;
+}
+
+function OverdueBadge() {
   return (
-    <div className="bg-white rounded-md shadow-sm border p-3 space-y-2">
+    <span className="text-[10px] font-bold uppercase tracking-wider bg-red-600 text-white px-1.5 py-0.5 rounded">
+      Forsinket
+    </span>
+  );
+}
+
+function DeliveryCard({ delivery: d }: { delivery: any }) {
+  const overdue = isOverdue(d);
+  return (
+    <div className={`bg-white rounded-md shadow-sm border p-3 space-y-2 ${overdue ? "border-red-400 border-2" : ""}`}>
       <div className="flex items-start justify-between gap-1">
         <div className="flex items-center gap-1.5 min-w-0">
           <PriorityBadge priority={d.customerPriority} />
@@ -135,7 +159,10 @@ function DeliveryCard({ delivery: d }: { delivery: any }) {
         <Truck className="h-3 w-3" />
         {d.driverName ?? "No driver"}
       </div>
-      <div className="text-xs text-muted-foreground">{formatDate(d.scheduledDate)}</div>
+      <div className="text-xs text-muted-foreground flex items-center gap-2">
+        <span>{formatDate(d.scheduledDate)}</span>
+        {overdue && <OverdueBadge />}
+      </div>
       {d.deviationType && (
         <div className="flex items-center gap-1 text-orange-700 text-xs">
           <AlertCircle className="h-3 w-3 shrink-0" />

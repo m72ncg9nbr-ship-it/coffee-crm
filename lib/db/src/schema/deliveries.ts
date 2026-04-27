@@ -45,6 +45,7 @@ export const accountingApprovalsTable = pgTable("accounting_approvals", {
   orderId: integer("order_id").references(() => ordersTable.id),
   status: text("status").notNull().default("pending"),
   reviewedBy: integer("reviewed_by").references(() => usersTable.id),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   reviewNotes: text("review_notes"),
   invoiceTriggered: boolean("invoice_triggered").notNull().default(false),
   invoiceTriggeredAt: timestamp("invoice_triggered_at", { withTimezone: true }),

@@ -32,6 +32,8 @@ router.get("/leads", requireAuth as any, async (req, res): Promise<void> => {
     ...l,
     createdAt: l.createdAt.toISOString(),
     updatedAt: l.updatedAt.toISOString(),
+    followUpDueAt: l.followUpDueAt?.toISOString() ?? null,
+    followUpCompletedAt: l.followUpCompletedAt?.toISOString() ?? null,
   })));
 });
 
@@ -48,11 +50,13 @@ router.post("/leads", requireAuth as any, async (req, res): Promise<void> => {
   });
 
   const user = (req as any).user;
+  const followUpDueAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const [lead] = await db.insert(leadsTable).values({
     ...parsed.data,
     status: q.status,
     qualificationResult: q.result,
     qualificationReason: q.reason,
+    followUpDueAt,
   }).returning();
 
   await logActivity({
@@ -67,6 +71,8 @@ router.post("/leads", requireAuth as any, async (req, res): Promise<void> => {
     ...lead,
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
+    followUpDueAt: lead.followUpDueAt?.toISOString() ?? null,
+    followUpCompletedAt: lead.followUpCompletedAt?.toISOString() ?? null,
   });
 });
 

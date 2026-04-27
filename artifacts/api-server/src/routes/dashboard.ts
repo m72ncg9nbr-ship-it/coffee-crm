@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, customersTable, ordersTable, deliveriesTable, accountingApprovalsTable, usersTable } from "@workspace/db";
+import { db, customersTable, ordersTable, deliveriesTable, accountingApprovalsTable, usersTable, leadsTable } from "@workspace/db";
 import { eq, and, gte, inArray, isNotNull } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { sql } from "drizzle-orm";
@@ -169,6 +169,20 @@ router.get("/dashboard/today-priorities", requireAuth as any, async (_req, res):
       deviationNote: d.deviationNote,
     }));
 
+  // Lead follow-ups due (6.9)
+  const allLeads = await db.select().from(leadsTable);
+  const nowMs = Date.now();
+  const overdueLeadFollowUps = allLeads
+    .filter(l => !l.followUpCompletedAt && l.followUpDueAt && l.followUpDueAt.getTime() <= nowMs)
+    .map(l => ({
+      kind: "lead_follow_up" as const,
+      leadId: l.id,
+      companyName: l.companyName,
+      contactPerson: l.contactPerson,
+      qualificationResult: l.qualificationResult,
+      followUpDueAt: l.followUpDueAt!.toISOString(),
+    }));
+
   res.json({
     aCustomerDeliveries,
     urgentOrders,
@@ -176,6 +190,7 @@ router.get("/dashboard/today-priorities", requireAuth as any, async (_req, res):
     unassignedDeliveries,
     awaitingApproval,
     unresolvedDeviations,
+    overdueLeadFollowUps,
   });
 });
 

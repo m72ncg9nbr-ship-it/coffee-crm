@@ -128,14 +128,20 @@ export default function LeadsPage() {
 
       <div className="space-y-3">
         {isLoading && <div className="text-muted-foreground text-sm py-8 text-center">Loading...</div>}
-        {!isLoading && (leads ?? []).map((lead: any) => (
-          <Card key={lead.id}>
+        {!isLoading && (leads ?? []).map((lead: any) => {
+          const isQualified = lead.qualificationResult === "auto_qualified";
+          const followUpOverdue = lead.followUpDueAt && !lead.followUpCompletedAt && new Date(lead.followUpDueAt).getTime() <= Date.now();
+          return (
+          <Card key={lead.id} className={followUpOverdue ? "border-amber-300" : ""}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                <div className="space-y-1.5 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-sm">{lead.companyName}</span>
                     <StatusBadge status={lead.status} />
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${isQualified ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
+                      {isQualified ? "Auto-qualified" : "Needs review"}
+                    </span>
                     <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full capitalize">{lead.businessChannel}</span>
                   </div>
                   <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
@@ -145,13 +151,22 @@ export default function LeadsPage() {
                     {lead.businessType && <span className="capitalize">{lead.businessType}</span>}
                     {lead.estimatedMonthlyConsumption && <span>{lead.estimatedMonthlyConsumption} kg/mo est.</span>}
                   </div>
+                  {lead.qualificationReason && (
+                    <p className="text-xs text-muted-foreground"><span className="font-medium">Scoring:</span> {lead.qualificationReason}</p>
+                  )}
                   {lead.extraNotes && <p className="text-xs text-muted-foreground italic">"{lead.extraNotes}"</p>}
+                  {followUpOverdue && (
+                    <div className="text-xs text-amber-800 bg-amber-50 rounded px-2 py-1.5 border border-amber-200 inline-flex items-center gap-1.5">
+                      ⏰ Follow-up due since {formatDateTime(lead.followUpDueAt)}
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground shrink-0">{formatDateTime(lead.createdAt)}</p>
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
         {!isLoading && (leads ?? []).length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
             <UserPlus className="h-12 w-12 mx-auto mb-3 opacity-20" />

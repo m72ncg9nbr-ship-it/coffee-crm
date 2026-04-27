@@ -99,22 +99,48 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, is
     <Card className={a.status === "approved" ? "border-green-200" : a.status === "rejected" ? "border-red-200" : "border-amber-200"}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="space-y-1.5 flex-1">
+          <div className="space-y-2 flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-sm">{a.customerName}</span>
               <StatusBadge status={a.status} />
+              {a.orderNumber && <span className="text-xs font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded">{a.orderNumber}</span>}
+              {a.deliveryNumber && <span className="text-xs font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded">{a.deliveryNumber}</span>}
+              {typeof a.orderTotalAmount === "number" && (
+                <span className="text-xs font-semibold text-foreground">
+                  {new Intl.NumberFormat("nb-NO", { style: "currency", currency: "NOK" }).format(a.orderTotalAmount)}
+                </span>
+              )}
             </div>
             <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
-              <span>Delivery #{a.deliveryId}</span>
               <span>Scheduled: {formatDate(a.scheduledDate)}</span>
               <span>Driver: {a.driverName ?? "—"}</span>
-              {a.hasDocument && (
+              {a.hasDocument && a.documentUrl && (
+                <a href={a.documentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-green-700 hover:underline">
+                  <FileText className="h-3 w-3" />
+                  View document
+                </a>
+              )}
+              {a.hasDocument && !a.documentUrl && (
                 <span className="flex items-center gap-1 text-green-700">
                   <FileText className="h-3 w-3" />
                   Document uploaded
                 </span>
               )}
+              {!a.hasDocument && (
+                <span className="text-amber-700">No document</span>
+              )}
             </div>
+            {Array.isArray(a.orderItems) && a.orderItems.length > 0 && (
+              <div className="text-xs bg-muted/30 rounded px-2 py-1.5 border">
+                <span className="font-medium text-muted-foreground">Items: </span>
+                {a.orderItems.map((it: any, idx: number) => (
+                  <span key={idx}>
+                    {idx > 0 && <span className="text-muted-foreground"> · </span>}
+                    <span>{it.productName} <span className="text-muted-foreground">×{it.quantity}</span></span>
+                  </span>
+                ))}
+              </div>
+            )}
             {a.deviationNote && (
               <div className="text-xs text-orange-700 bg-orange-50 rounded px-2 py-1.5">
                 <span className="font-medium capitalize">{a.deviationType?.replace(/_/g, " ")}: </span>
@@ -125,7 +151,7 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, is
               <p className="text-xs text-muted-foreground italic">"{a.reviewNotes}"</p>
             )}
             {readonly && a.reviewedAt && (
-              <p className="text-xs text-muted-foreground">Reviewed: {formatDateTime(a.reviewedAt)}</p>
+              <p className="text-xs text-muted-foreground">Reviewed: {formatDateTime(a.reviewedAt)} {a.reviewedByName ? `by ${a.reviewedByName}` : ""}</p>
             )}
           </div>
           {!readonly && (

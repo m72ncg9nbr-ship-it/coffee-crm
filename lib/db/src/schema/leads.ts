@@ -18,6 +18,8 @@ export const leadsTable = pgTable("leads", {
   qualificationResult: text("qualification_result"),
   qualificationReason: text("qualification_reason"),
   status: text("status").notNull().default("new"),
+  followUpDueAt: timestamp("follow_up_due_at", { withTimezone: true }),
+  followUpCompletedAt: timestamp("follow_up_completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

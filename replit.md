@@ -89,3 +89,11 @@ Tables: users, customers, customer_addresses, leads, products, orders, order_ite
 - `lib/api-zod/src/index.ts` — must only export `./generated/api` (codegen overwrites it)
 - CORS configured with `credentials: true`
 - Frontend overrides `window.fetch` to always include `credentials: "include"`
+
+## Recent Changes — Spec Gap Closures
+
+- **5.2 Lead auto-scoring**: leads list shows green "Auto-qualified" or amber "Needs review" badge per `qualificationResult`, plus the scoring reason text. POST /leads also seeds `followUpDueAt = now + 24h`.
+- **6.2 Order create auto-fill**: new page `/orders/new` (`artifacts/crm/src/pages/orders/new.tsx`). Selecting customer surfaces payment terms, discount, channel, default delivery address, priority. Live completeness sidebar (4 checks) reflects backend `evaluateOrderCompleteness` (items + delivery address + date) and predicts `planned` vs `incomplete`.
+- **6.4 Forsinket badge**: deliveries board cards (red double border) and list rows (red row tint) show red "Forsinket" badge when `scheduledDate < today` and status not in (approved, cancelled).
+- **6.5 / 6.9 Auto follow-ups**: leads schema has `followUpDueAt` + `followUpCompletedAt` columns. New `overdueLeadFollowUps` panel in `/dashboard/today-priorities` and inline overdue banner on each lead card. Deviations remain surfaced via existing "Open deviations" panel.
+- **6.6 Compact accounting summary**: `enrichApprovals` (accounting.ts) now joins orders, order_items, products, delivery_documents, drivers. Approval card shows ORD/DEL number badges, NOK total, items list, "View document" link, deviation note, reviewer + reviewedAt. Added `reviewedAt` column on `accounting_approvals`.
