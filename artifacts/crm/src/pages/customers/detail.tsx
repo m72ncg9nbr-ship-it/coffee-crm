@@ -1,15 +1,26 @@
 import { useParams, Link } from "wouter";
-import { useGetCustomer } from "@workspace/api-client-react";
+import { useGetCustomer, useUpdateCustomer } from "@workspace/api-client-react";
 import { PriorityBadge } from "@/components/priority-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Mail, Phone, MapPin, Building2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building2, Power } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
-  const { data: customer, isLoading } = useGetCustomer(Number(id), {
+  const { toast } = useToast();
+  const { data: customer, isLoading, refetch } = useGetCustomer(Number(id), {
     query: { enabled: !!id } as any,
+  });
+  const updateCustomer = useUpdateCustomer({
+    mutation: {
+      onSuccess: () => {
+        refetch();
+        toast({ title: "Customer updated" });
+      },
+      onError: () => toast({ title: "Failed to update customer", variant: "destructive" }),
+    },
   });
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading...</div>;
@@ -19,13 +30,23 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="p-6 space-y-5 max-w-4xl">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <Link href="/customers">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1.5" />
             Customers
           </Button>
         </Link>
+        <Button
+          variant={c.active ? "outline" : "default"}
+          size="sm"
+          onClick={() => updateCustomer.mutate({ id: Number(id), data: { active: !c.active } })}
+          disabled={updateCustomer.isPending}
+          data-testid="button-toggle-customer-active"
+        >
+          <Power className="h-4 w-4 mr-1.5" />
+          {c.active ? "Deactivate" : "Activate"}
+        </Button>
       </div>
 
       <div className="flex items-start gap-4">
