@@ -1,0 +1,115 @@
+Driver Functions
+1. Kendi teslimatlarını görme
+
+Şoför sadece kendisine atanmış teslimatları görür.
+
+Göreceği bilgiler:
+
+müşteri adı
+teslimat adresi
+iletişim kişisi
+telefon
+planlanan teslim tarihi
+teslimat sırası
+sipariş özeti
+varsa özel notlar
+
+Şoför diğer şoförlerin teslimatlarını, müşteri finansal bilgilerini veya tüm şirket verisini görmez.
+
+2. Teslimat detayını açma
+
+Her teslimat için detay sayfası olur.
+
+Bu sayfada:
+
+müşteri bilgisi
+teslimat adresi
+ürün listesi
+adetler
+notlar
+teslimat durumu
+
+görünür.
+
+Ama şoför burada sipariş düzenleyemez. Sadece teslimatla ilgili aksiyon alır.
+
+3. “Arrived” / “Varıldı” işaretleme
+
+Şoför teslimat noktasına geldiğinde:
+
+Arrived / Varıldı
+
+butonuna basar.
+
+Sistem otomatik olarak:
+
+zamanı kaydeder
+kullanıcıyı kaydeder
+teslimat durumunu günceller
+activity log oluşturur
+
+Bu, “şoför gerçekten sahada bu noktaya ulaştı mı?” sorusuna basit bir kayıt sağlar.
+
+4. Teslimat belgesi / fotoğraf yükleme
+
+Şoför teslimat sonrası belge veya fotoğraf yükler.
+
+Yüklenebilecek belgeler:
+
+irsaliye fotoğrafı
+teslimat belgesi fotoğrafı
+ürün teslim fotoğrafı
+imzalı belge fotoğrafı
+diğer kanıt fotoğrafı
+
+Kritik kural:
+
+Belge yüklenmeden teslimat tamamlanmış sayılmaz.
+
+5. Sapma / sorun notu girme
+
+Teslimatta bir problem varsa şoför bunu işaretler.
+
+Sapma seçenekleri:
+
+hasarlı ürün
+eksik ürün
+gecikmeli teslimat
+teslim edilemedi
+müşteri yerinde yok
+yanlış adres
+diğer
+
+Ayrıca kısa açıklama notu yazabilir.
+
+Örnek:
+
+“Müşteri 2 koli eksik teslim aldığını söyledi.”
+“Adres kapalıydı, telefonla ulaşılamadı.”
+“Ürünlerden biri hasarlı görünüyor.”
+
+6. Teslimatı belgeyle birlikte gönderme
+
+Şoför belge yükleyip gerekiyorsa not ekledikten sonra teslimatı gönderir.
+
+Bu işlemden sonra sistem otomatik olarak:
+
+teslimatı awaiting accounting approval durumuna alır
+muhasebe onay kuyruğuna gönderir
+activity log oluşturur
+belgeyi teslimata bağlar
+
+Yani şoförün işi burada biter. Final onay şoförde değildir.
+
+7. Kendi teslimat geçmişini görme
+
+Şoför kendi geçmiş teslimatlarını görebilir.
+
+Örneğin:
+
+bugün tamamlananlar
+bekleyenler
+belge yüklenenler
+sorun bildirilenler
+
+Ama bu geçmiş sadece kendi teslimatlarıyla sınırlı olmalı.

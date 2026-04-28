@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, ordersTable, customersTable, customerAddressesTable, usersTable } from "@workspace/db";
+import { db, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, ordersTable, orderItemsTable, productsTable, customersTable, customerAddressesTable, usersTable } from "@workspace/db";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
@@ -30,6 +30,8 @@ async function enrichDeliveries(deliveries: (typeof deliveriesTable.$inferSelect
 
   const customerIds = [...new Set(deliveries.map(d => d.customerId))];
   const driverIds = [...new Set(deliveries.filter(d => d.driverId).map(d => d.driverId!))];
+  const addressIds = [...new Set(deliveries.filter(d => d.deliveryAddressId).map(d => d.deliveryAddressId!))];
+  const orderIds = [...new Set(deliveries.map(d => d.orderId))];
 
   const customers = customerIds.length > 0
     ? await db.select().from(customersTable).where(inArray(customersTable.id, customerIds))
@@ -37,26 +39,75 @@ async function enrichDeliveries(deliveries: (typeof deliveriesTable.$inferSelect
   const drivers = driverIds.length > 0
     ? await db.select().from(usersTable).where(inArray(usersTable.id, driverIds))
     : [];
+  const addresses = addressIds.length > 0
+    ? await db.select().from(customerAddressesTable).where(inArray(customerAddressesTable.id, addressIds))
+    : [];
+  const orders = orderIds.length > 0
+    ? await db.select().from(ordersTable).where(inArray(ordersTable.id, orderIds))
+    : [];
 
-  const customerMap = Object.fromEntries(customers.map(c => [c.id, { name: c.companyName, priority: c.priorityClass }]));
+  const customerMap = Object.fromEntries(customers.map(c => [c.id, c]));
   const driverMap = Object.fromEntries(drivers.map(u => [u.id, u.fullName]));
+  const addressMap = Object.fromEntries(addresses.map(a => [a.id, a]));
+  const orderMap = Object.fromEntries(orders.map(o => [o.id, o]));
 
-  return deliveries.map(d => ({
-    ...d,
-    customerName: customerMap[d.customerId]?.name ?? "Unknown",
-    customerPriority: customerMap[d.customerId]?.priority ?? "C",
-    driverName: d.driverId ? (driverMap[d.driverId] ?? null) : null,
-    arrivalMarkedAt: d.arrivalMarkedAt?.toISOString() ?? null,
-    documentationUploadedAt: d.documentationUploadedAt?.toISOString() ?? null,
-    invoiceTriggeredAt: d.invoiceTriggeredAt?.toISOString() ?? null,
-    createdAt: d.createdAt.toISOString(),
-    updatedAt: d.updatedAt.toISOString(),
-  }));
+  return deliveries.map(d => {
+    const c = customerMap[d.customerId];
+    const a = d.deliveryAddressId ? addressMap[d.deliveryAddressId] : null;
+    const o = orderMap[d.orderId];
+    return {
+      ...d,
+      customerName: c?.companyName ?? "Unknown",
+      customerPriority: c?.priorityClass ?? "C",
+      contactPerson: c?.contactPerson ?? null,
+      contactPhone: c?.phone ?? null,
+      driverName: d.driverId ? (driverMap[d.driverId] ?? null) : null,
+      orderNumber: o?.orderNumber ?? null,
+      orderNotes: o?.notes ?? null,
+      deliveryAddress: a ? {
+        street: a.street,
+        postalCode: a.postalCode,
+        city: a.city,
+        country: a.country,
+        district: a.district ?? null,
+        label: a.label ?? null,
+        notes: a.notes ?? null,
+      } : null,
+      arrivalMarkedAt: d.arrivalMarkedAt?.toISOString() ?? null,
+      documentationUploadedAt: d.documentationUploadedAt?.toISOString() ?? null,
+      invoiceTriggeredAt: d.invoiceTriggeredAt?.toISOString() ?? null,
+      createdAt: d.createdAt.toISOString(),
+      updatedAt: d.updatedAt.toISOString(),
+    };
+  });
+}
+
+async function enrichDeliveriesWithItems(deliveries: (typeof deliveriesTable.$inferSelect)[]) {
+  const enriched = await enrichDeliveries(deliveries);
+  if (enriched.length === 0) return enriched;
+  const orderIds = [...new Set(deliveries.map(d => d.orderId))];
+  const items = await db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds));
+  const productIds = [...new Set(items.map(i => i.productId))];
+  const products = productIds.length > 0
+    ? await db.select().from(productsTable).where(inArray(productsTable.id, productIds))
+    : [];
+  const productMap = Object.fromEntries(products.map(p => [p.id, p.productName]));
+  const itemsByOrder: Record<number, any[]> = {};
+  for (const it of items) {
+    (itemsByOrder[it.orderId] ??= []).push({
+      id: it.id,
+      productId: it.productId,
+      productName: productMap[it.productId] ?? "Unknown",
+      quantity: it.quantity,
+    });
+  }
+  return enriched.map(d => ({ ...d, items: itemsByOrder[d.orderId] ?? [] }));
 }
 
 router.get("/deliveries", requireAuth as any, async (req, res): Promise<void> => {
   const qp = ListDeliveriesQueryParams.safeParse(req.query);
   const { status, driverId, channel } = qp.success ? qp.data : {} as any;
+  const user = (req as any).user;
 
   let query = db.select().from(deliveriesTable).$dynamic();
   const conditions = [];
@@ -64,6 +115,11 @@ router.get("/deliveries", requireAuth as any, async (req, res): Promise<void> =>
   if (status) conditions.push(eq(deliveriesTable.status, status as string));
   if (driverId) conditions.push(eq(deliveriesTable.driverId, Number(driverId)));
   if (channel) conditions.push(eq(deliveriesTable.businessChannel, channel as string));
+
+  // Drivers may only ever list their own deliveries
+  if (user?.role === "driver") {
+    conditions.push(eq(deliveriesTable.driverId, user.id));
+  }
 
   if (conditions.length > 0) query = query.where(and(...conditions));
 
@@ -151,7 +207,12 @@ router.get("/deliveries/:id", requireAuth as any, async (req, res): Promise<void
     return;
   }
 
+  const user = (req as any).user;
   const [delivery] = await db.select().from(deliveriesTable).where(eq(deliveriesTable.id, params.data.id));
+  if (delivery && user?.role === "driver" && delivery.driverId !== user.id) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   if (!delivery) {
     res.status(404).json({ error: "Delivery not found" });
     return;
@@ -161,7 +222,7 @@ router.get("/deliveries/:id", requireAuth as any, async (req, res): Promise<void
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, delivery.orderId));
   const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, delivery.customerId));
 
-  const enriched = await enrichDeliveries([delivery]);
+  const enriched = await enrichDeliveriesWithItems([delivery]);
   const base = enriched[0];
 
   const uploader_ids = [...new Set(documents.filter(d => d.uploadedBy).map(d => d.uploadedBy!))];
@@ -213,6 +274,27 @@ router.patch("/deliveries/:id", requireAuth as any, async (req, res): Promise<vo
   }
 
   const user = (req as any).user;
+
+  // Drivers can only update their own deliveries, and only the status field
+  if (user?.role === "driver") {
+    const [existing] = await db.select().from(deliveriesTable).where(eq(deliveriesTable.id, params.data.id));
+    if (!existing) {
+      res.status(404).json({ error: "Delivery not found" });
+      return;
+    }
+    if (existing.driverId !== user.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const allowed: any = {};
+    if (parsed.data.status === "arrived") allowed.status = "arrived";
+    if (Object.keys(allowed).length === 0) {
+      res.status(403).json({ error: "Drivers may only mark delivery as arrived" });
+      return;
+    }
+    parsed.data = allowed;
+  }
+
   const updateValues: any = { ...parsed.data };
 
   if (parsed.data.status === "arrived") {
@@ -287,6 +369,10 @@ router.post("/deliveries/:id/documents", requireAuth as any, async (req, res): P
   const [current] = await db.select().from(deliveriesTable).where(eq(deliveriesTable.id, params.data.id));
   if (!current) {
     res.status(404).json({ error: "Delivery not found" });
+    return;
+  }
+  if (user?.role === "driver" && current.driverId !== user.id) {
+    res.status(403).json({ error: "Forbidden" });
     return;
   }
   if (current.status !== "arrived") {
