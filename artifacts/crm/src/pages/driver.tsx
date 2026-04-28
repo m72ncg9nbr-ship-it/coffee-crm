@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDate } from "@/lib/utils";
-import { MapPin, Truck, CheckCircle, Navigation } from "lucide-react";
+import { MapPin, Truck, CheckCircle, Navigation, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_TRANSITIONS: Record<string, { next: string; label: string; className: string }> = {
@@ -26,7 +26,7 @@ const DEVIATION_OPTIONS = [
 ];
 
 export default function DriverPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const { data: deliveries, isLoading, refetch } = useListDeliveries();
   const [uploadFor, setUploadFor] = useState<any | null>(null);
@@ -83,10 +83,20 @@ export default function DriverPage() {
       <div className="sticky top-0 z-10 bg-primary text-primary-foreground px-4 py-4 shadow-md">
         <div className="flex items-center gap-3">
           <Truck className="h-6 w-6" />
-          <div>
+          <div className="flex-1">
             <h1 className="font-bold text-lg">Driver View</h1>
             <p className="text-primary-foreground/80 text-sm">Hi, {user?.fullName}</p>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => logout()}
+            className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+            data-testid="button-driver-logout"
+          >
+            <LogOut className="h-4 w-4 mr-1" />
+            Sign out
+          </Button>
         </div>
       </div>
 
