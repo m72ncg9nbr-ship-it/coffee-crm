@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useListDeliveries } from "@workspace/api-client-react";
+import { useListDeliveries, useUpdateDelivery, useListUsers } from "@workspace/api-client-react";
 import { StatusBadge, UrgencyBadge, PriorityBadge } from "@/components/priority-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { Truck, AlertCircle } from "lucide-react";
+import { Truck, AlertCircle, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const BOARD_COLUMNS = [
   { status: "unassigned", label: "Unassigned", color: "border-gray-300 bg-gray-50" },
@@ -106,7 +108,13 @@ export default function DeliveriesPage() {
                         {overdue && <OverdueBadge />}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm">{d.driverName ?? <span className="text-muted-foreground">Unassigned</span>}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {d.driverName ?? (
+                        d.status === "unassigned"
+                          ? <div className="w-44"><AssignDriverControl deliveryId={d.id} compact /></div>
+                          : <span className="text-muted-foreground">Unassigned</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3"><UrgencyBadge urgency={d.urgency} /></td>
                     <td className="px-4 py-3">
                       {d.deviationType ? (
@@ -169,6 +177,43 @@ function DeliveryCard({ delivery: d }: { delivery: any }) {
           <span className="truncate capitalize">{d.deviationType.replace(/_/g, " ")}</span>
         </div>
       )}
+      {d.status === "unassigned" && <AssignDriverControl deliveryId={d.id} />}
+    </div>
+  );
+}
+
+function AssignDriverControl({ deliveryId, compact }: { deliveryId: number; compact?: boolean }) {
+  const { toast } = useToast();
+  const { data: users } = useListUsers();
+  const drivers = (users ?? []).filter((u: any) => u.role === "driver" && u.active);
+  const update = useUpdateDelivery({
+    mutation: {
+      onSuccess: () => toast({ title: "Driver assigned" }),
+      onError: () => toast({ title: "Failed to assign driver", variant: "destructive" }),
+    },
+  });
+
+  return (
+    <div className={compact ? "" : "pt-1 border-t"}>
+      <Select
+        disabled={update.isPending}
+        onValueChange={(value) => update.mutate({ id: deliveryId, data: { driverId: Number(value) } })}
+      >
+        <SelectTrigger className={compact ? "h-8 text-xs" : "h-7 text-xs"} data-testid={`select-assign-driver-${deliveryId}`}>
+          <div className="flex items-center gap-1">
+            <UserPlus className="h-3 w-3" />
+            <SelectValue placeholder="Assign driver..." />
+          </div>
+        </SelectTrigger>
+        <SelectContent>
+          {drivers.length === 0 && (
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">No active drivers</div>
+          )}
+          {drivers.map((u: any) => (
+            <SelectItem key={u.id} value={String(u.id)}>{u.fullName}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
