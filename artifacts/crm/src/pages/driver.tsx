@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useListDeliveries, useUpdateDelivery, useUploadDeliveryDocument } from "@workspace/api-client-react";
+import { useListDeliveries, useUpdateDelivery, useUploadDeliveryDocument, useLogout, getGetCurrentUserQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { StatusBadge, UrgencyBadge } from "@/components/priority-badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,8 +27,17 @@ const DEVIATION_OPTIONS = [
 ];
 
 export default function DriverPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const logout = useLogout({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+        window.location.href = "/login";
+      },
+    },
+  });
   const { data: deliveries, isLoading, refetch } = useListDeliveries();
   const [uploadFor, setUploadFor] = useState<any | null>(null);
   const [deviationType, setDeviationType] = useState<string>("none");
