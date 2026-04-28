@@ -58,7 +58,14 @@ async function autoCreateDeliveryForOrder(order: typeof ordersTable.$inferSelect
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${order.id}::bigint)`);
 
     const existing = await tx.select().from(deliveriesTable).where(eq(deliveriesTable.orderId, order.id));
-    if (existing.length > 0) return null;
+    if (existing.length > 0) {
+      // Delivery already exists - just make sure the order is marked planned if it
+      // is still sitting in "new" / "incomplete".
+      if (order.status === "new" || order.status === "incomplete") {
+        await tx.update(ordersTable).set({ status: "planned" }).where(eq(ordersTable.id, order.id));
+      }
+      return null;
+    }
 
     const addrs = await tx.select().from(customerAddressesTable)
       .where(and(eq(customerAddressesTable.customerId, order.customerId), eq(customerAddressesTable.isDeliveryAddress, true)));
