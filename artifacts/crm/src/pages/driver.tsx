@@ -100,7 +100,8 @@ export default function DriverPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => logout()}
+            onClick={() => logout.mutate(undefined as any)}
+            disabled={logout.isPending}
             className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
             data-testid="button-driver-logout"
           >
