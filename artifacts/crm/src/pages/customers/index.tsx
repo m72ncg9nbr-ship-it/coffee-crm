@@ -1,6 +1,12 @@
 import { useState } from "react";
-import { Link } from "wouter";
-import { useListCustomers, useCheckCustomerDuplicates } from "@workspace/api-client-react";
+import { Link, useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useListCustomers,
+  useCheckCustomerDuplicates,
+  useCreateCustomer,
+  getListCustomersQueryKey,
+} from "@workspace/api-client-react";
 import { PriorityBadge } from "@/components/priority-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +15,57 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Plus, Search, AlertTriangle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+const SEGMENT_OPTIONS = [
+  "cafe",
+  "cafe_chain",
+  "bar",
+  "restaurant",
+  "hotel",
+  "bakery",
+  "catering",
+  "kiosk",
+  "coworking",
+  "corporate",
+  "education",
+];
+
+const PAYMENT_TERMS_OPTIONS = [
+  "net_14",
+  "net_21",
+  "net_30",
+  "net_45",
+  "net_60",
+  "cash_on_delivery",
+];
+
+const CHANNEL_OPTIONS = ["horeca", "office", "retail"];
+
+type CreateForm = {
+  contactPerson: string;
+  channel: string;
+  segment: string;
+  priorityClass: "A" | "B" | "C";
+  paymentTerms: string;
+  discountLevel: string;
+  notes: string;
+};
+
+const EMPTY_CREATE_FORM: CreateForm = {
+  contactPerson: "",
+  channel: "horeca",
+  segment: "cafe",
+  priorityClass: "C",
+  paymentTerms: "net_30",
+  discountLevel: "",
+  notes: "",
+};
 
 export default function CustomersPage() {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState("all");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -18,6 +73,7 @@ export default function CustomersPage() {
   const [dupeForm, setDupeForm] = useState({ companyName: "", phone: "", email: "" });
   const [dupeMatches, setDupeMatches] = useState<any[]>([]);
   const [dupeChecked, setDupeChecked] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE_FORM);
 
   const params: Record<string, string> = {};
   if (search) params.search = search;
@@ -35,9 +91,63 @@ export default function CustomersPage() {
     },
   });
 
+  const createCustomer = useCreateCustomer({
+    mutation: {
+      onSuccess: (created: any) => {
+        toast({ title: "Customer created", description: created?.companyName });
+        queryClient.invalidateQueries({ queryKey: getListCustomersQueryKey() });
+        setDupeOpen(false);
+        if (created?.id) navigate(`/customers/${created.id}`);
+      },
+      onError: (e: any) =>
+        toast({ title: "Failed to create customer", description: e?.error ?? "", variant: "destructive" }),
+    },
+  });
+
+  const openCreateDialog = () => {
+    setDupeOpen(true);
+    setDupeChecked(false);
+    setDupeMatches([]);
+    setDupeForm({ companyName: "", phone: "", email: "" });
+    setCreateForm(EMPTY_CREATE_FORM);
+  };
+
   const runDupeCheck = () => {
     setDupeChecked(false);
     checkDupes.mutate({ data: dupeForm });
+  };
+
+  const canCreate =
+    dupeForm.companyName.trim().length >= 2 &&
+    dupeForm.phone.trim().length >= 4 &&
+    dupeForm.email.trim().length >= 3 &&
+    createForm.contactPerson.trim().length >= 2;
+
+  const submitCreate = () => {
+    if (!canCreate) return;
+    const discount =
+      createForm.discountLevel.trim() === ""
+        ? null
+        : Number(createForm.discountLevel);
+    if (discount !== null && Number.isNaN(discount)) {
+      toast({ title: "Discount must be a number", variant: "destructive" });
+      return;
+    }
+    createCustomer.mutate({
+      data: {
+        companyName: dupeForm.companyName.trim(),
+        contactPerson: createForm.contactPerson.trim(),
+        phone: dupeForm.phone.trim(),
+        email: dupeForm.email.trim(),
+        customerChannel: createForm.channel,
+        businessChannel: createForm.channel,
+        segment: createForm.segment,
+        priorityClass: createForm.priorityClass,
+        paymentTerms: createForm.paymentTerms,
+        discountLevel: discount,
+        notes: createForm.notes.trim() || null,
+      } as any,
+    });
   };
 
   return (
@@ -47,33 +157,47 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-bold">Customers</h1>
           <p className="text-muted-foreground text-sm">{customers?.length ?? 0} records</p>
         </div>
-        <Button size="sm" onClick={() => { setDupeOpen(true); setDupeChecked(false); setDupeMatches([]); setDupeForm({ companyName: "", phone: "", email: "" }); }}>
+        <Button size="sm" onClick={openCreateDialog}>
           <Plus className="h-4 w-4 mr-1.5" />
           New Customer
         </Button>
       </div>
 
       <Dialog open={dupeOpen} onOpenChange={setDupeOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New Customer — Duplicate Check</DialogTitle>
+            <DialogTitle>New Customer</DialogTitle>
             <DialogDescription>
-              Enter at least one identifier and we'll check whether a similar customer already exists.
+              {dupeChecked
+                ? "Fill in the remaining details and create the customer."
+                : "Enter the basics and we'll check for possible duplicates first."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Company name</Label>
-              <Input value={dupeForm.companyName} onChange={e => setDupeForm({ ...dupeForm, companyName: e.target.value })} placeholder="e.g. Bean & Brew" />
+              <Label>Company name *</Label>
+              <Input
+                value={dupeForm.companyName}
+                onChange={e => setDupeForm({ ...dupeForm, companyName: e.target.value })}
+                placeholder="e.g. Bean & Brew"
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Phone</Label>
-                <Input value={dupeForm.phone} onChange={e => setDupeForm({ ...dupeForm, phone: e.target.value })} placeholder="+1 555 ..." />
+                <Label>Phone *</Label>
+                <Input
+                  value={dupeForm.phone}
+                  onChange={e => setDupeForm({ ...dupeForm, phone: e.target.value })}
+                  placeholder="+47 22 ..."
+                />
               </div>
               <div className="space-y-1.5">
-                <Label>Email</Label>
-                <Input value={dupeForm.email} onChange={e => setDupeForm({ ...dupeForm, email: e.target.value })} placeholder="contact@..." />
+                <Label>Email *</Label>
+                <Input
+                  value={dupeForm.email}
+                  onChange={e => setDupeForm({ ...dupeForm, email: e.target.value })}
+                  placeholder="contact@..."
+                />
               </div>
             </div>
 
@@ -106,12 +230,113 @@ export default function CustomersPage() {
                 No similar customers found. Safe to create.
               </div>
             )}
+
+            {dupeChecked && (
+              <div className="border-t pt-4 space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Contact person *</Label>
+                  <Input
+                    value={createForm.contactPerson}
+                    onChange={e => setCreateForm(p => ({ ...p, contactPerson: e.target.value }))}
+                    placeholder="Full name"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Channel</Label>
+                    <Select value={createForm.channel} onValueChange={v => setCreateForm(p => ({ ...p, channel: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CHANNEL_OPTIONS.map(o => (
+                          <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Segment</Label>
+                    <Select value={createForm.segment} onValueChange={v => setCreateForm(p => ({ ...p, segment: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {SEGMENT_OPTIONS.map(o => (
+                          <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Priority class *</Label>
+                    <Select
+                      value={createForm.priorityClass}
+                      onValueChange={v => setCreateForm(p => ({ ...p, priorityClass: v as "A" | "B" | "C" }))}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A">A — top priority</SelectItem>
+                        <SelectItem value="B">B — standard</SelectItem>
+                        <SelectItem value="C">C — low priority</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Payment terms</Label>
+                    <Select value={createForm.paymentTerms} onValueChange={v => setCreateForm(p => ({ ...p, paymentTerms: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_TERMS_OPTIONS.map(o => (
+                          <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Discount % (optional)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={createForm.discountLevel}
+                    onChange={e => setCreateForm(p => ({ ...p, discountLevel: e.target.value }))}
+                    placeholder="e.g. 10"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Notes (optional)</Label>
+                  <textarea
+                    className="w-full border rounded-md px-3 py-2 text-sm resize-none h-20 bg-background"
+                    value={createForm.notes}
+                    onChange={e => setCreateForm(p => ({ ...p, notes: e.target.value }))}
+                    placeholder="Anything sales should know..."
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDupeOpen(false)}>Cancel</Button>
-            <Button onClick={runDupeCheck} disabled={checkDupes.isPending || (!dupeForm.companyName && !dupeForm.phone && !dupeForm.email)}>
-              {checkDupes.isPending ? "Checking..." : "Check for duplicates"}
-            </Button>
+            {!dupeChecked && (
+              <Button
+                onClick={runDupeCheck}
+                disabled={
+                  checkDupes.isPending ||
+                  (!dupeForm.companyName.trim() && !dupeForm.phone.trim() && !dupeForm.email.trim())
+                }
+              >
+                {checkDupes.isPending ? "Checking..." : "Check for duplicates"}
+              </Button>
+            )}
+            {dupeChecked && (
+              <Button
+                onClick={submitCreate}
+                disabled={!canCreate || createCustomer.isPending}
+              >
+                {createCustomer.isPending ? "Creating..." : "Create customer"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
