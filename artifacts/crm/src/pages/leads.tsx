@@ -24,43 +24,15 @@ import {
 import { formatDateTime } from "@/lib/utils";
 import { Plus, X, UserPlus, ArrowRightCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const SEGMENT_OPTIONS = [
-  "cafe",
-  "cafe_chain",
-  "bar",
-  "restaurant",
-  "hotel",
-  "bakery",
-  "catering",
-  "kiosk",
-  "coworking",
-  "corporate",
-  "education",
-];
-
-const PAYMENT_TERMS_OPTIONS = [
-  "net_14",
-  "net_21",
-  "net_30",
-  "net_45",
-  "net_60",
-  "cash_on_delivery",
-];
-
-const CHANNEL_OPTIONS = ["horeca", "office", "retail"];
-
-function inferSegment(businessType: string | null | undefined): string {
-  const lower = (businessType ?? "").trim().toLowerCase();
-  if (SEGMENT_OPTIONS.includes(lower)) return lower;
-  return "cafe";
-}
-
-function normalisePaymentTerms(requested: string | null | undefined): string {
-  const lower = (requested ?? "").trim().toLowerCase();
-  if (PAYMENT_TERMS_OPTIONS.includes(lower)) return lower;
-  return "net_30";
-}
+import {
+  SEGMENT_OPTIONS,
+  PAYMENT_TERMS_OPTIONS,
+  CHANNEL_OPTIONS,
+  type PriorityClass,
+  inferSegment,
+  normalisePaymentTerms,
+  normaliseChannel,
+} from "@/lib/customer-options";
 
 type ConvertForm = {
   companyName: string;
@@ -69,7 +41,7 @@ type ConvertForm = {
   email: string;
   channel: string;
   segment: string;
-  priorityClass: "A" | "B" | "C";
+  priorityClass: PriorityClass;
   paymentTerms: string;
   discountLevel: string;
   notes: string;
@@ -124,7 +96,7 @@ export default function LeadsPage() {
       contactPerson: lead.contactPerson ?? "",
       phone: lead.phone ?? "",
       email: lead.email ?? "",
-      channel: CHANNEL_OPTIONS.includes(lead.businessChannel) ? lead.businessChannel : "horeca",
+      channel: normaliseChannel(lead.businessChannel),
       segment: inferSegment(lead.businessType),
       priorityClass: lead.qualificationResult === "auto_qualified" ? "B" : "C",
       paymentTerms: normalisePaymentTerms(lead.requestedPaymentTerms),
@@ -399,7 +371,7 @@ export default function LeadsPage() {
                   <Label>Priority class *</Label>
                   <Select
                     value={convertForm.priorityClass}
-                    onValueChange={v => setConvertForm(p => p && { ...p, priorityClass: v as "A" | "B" | "C" })}
+                    onValueChange={v => setConvertForm(p => p && { ...p, priorityClass: v as PriorityClass })}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>

@@ -16,37 +16,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Plus, Search, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const SEGMENT_OPTIONS = [
-  "cafe",
-  "cafe_chain",
-  "bar",
-  "restaurant",
-  "hotel",
-  "bakery",
-  "catering",
-  "kiosk",
-  "coworking",
-  "corporate",
-  "education",
-];
-
-const PAYMENT_TERMS_OPTIONS = [
-  "net_14",
-  "net_21",
-  "net_30",
-  "net_45",
-  "net_60",
-  "cash_on_delivery",
-];
-
-const CHANNEL_OPTIONS = ["horeca", "office", "retail"];
+import {
+  SEGMENT_OPTIONS,
+  PAYMENT_TERMS_OPTIONS,
+  CHANNEL_OPTIONS,
+  type PriorityClass,
+} from "@/lib/customer-options";
 
 type CreateForm = {
   contactPerson: string;
   channel: string;
   segment: string;
-  priorityClass: "A" | "B" | "C";
+  priorityClass: PriorityClass;
   paymentTerms: string;
   discountLevel: string;
   notes: string;
@@ -270,7 +251,7 @@ export default function CustomersPage() {
                     <Label>Priority class *</Label>
                     <Select
                       value={createForm.priorityClass}
-                      onValueChange={v => setCreateForm(p => ({ ...p, priorityClass: v as "A" | "B" | "C" }))}
+                      onValueChange={v => setCreateForm(p => ({ ...p, priorityClass: v as PriorityClass }))}
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
