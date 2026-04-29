@@ -1,11 +1,66 @@
+import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
 import { useGetCustomer, useUpdateCustomer } from "@workspace/api-client-react";
 import { PriorityBadge } from "@/components/priority-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Mail, Phone, MapPin, Building2, Power } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Mail, Phone, MapPin, Building2, Power, Pencil } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  SEGMENT_OPTIONS,
+  PAYMENT_TERMS_OPTIONS,
+  CHANNEL_OPTIONS,
+  type PriorityClass,
+  inferSegment,
+  normalisePaymentTerms,
+  normaliseChannel,
+} from "@/lib/customer-options";
+
+type EditForm = {
+  companyName: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  channel: string;
+  segment: string;
+  priorityClass: PriorityClass;
+  paymentTerms: string;
+  discountLevel: string;
+  notes: string;
+};
+
+function fromCustomer(c: any): EditForm {
+  return {
+    companyName: c.companyName ?? "",
+    contactPerson: c.contactPerson ?? "",
+    phone: c.phone ?? "",
+    email: c.email ?? "",
+    channel: normaliseChannel(c.businessChannel ?? c.customerChannel),
+    segment: inferSegment(c.segment),
+    priorityClass: (c.priorityClass as PriorityClass) ?? "C",
+    paymentTerms: normalisePaymentTerms(c.paymentTerms),
+    discountLevel: c.discountLevel != null ? String(c.discountLevel) : "",
+    notes: c.notes ?? "",
+  };
+}
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
@@ -13,15 +68,59 @@ export default function CustomerDetailPage() {
   const { data: customer, isLoading, refetch } = useGetCustomer(Number(id), {
     query: { enabled: !!id } as any,
   });
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+
+  useEffect(() => {
+    if (!editOpen && customer) setEditForm(fromCustomer(customer));
+  }, [customer, editOpen]);
+
   const updateCustomer = useUpdateCustomer({
     mutation: {
       onSuccess: () => {
         refetch();
+        setEditOpen(false);
         toast({ title: "Customer updated" });
       },
-      onError: () => toast({ title: "Failed to update customer", variant: "destructive" }),
+      onError: (e: any) =>
+        toast({ title: "Failed to update customer", description: e?.error ?? "", variant: "destructive" }),
     },
   });
+
+  const submitEdit = () => {
+    if (!editForm || !id) return;
+    if (
+      editForm.companyName.trim().length < 2 ||
+      editForm.contactPerson.trim().length < 2 ||
+      editForm.phone.trim().length < 4 ||
+      editForm.email.trim().length < 3
+    ) {
+      toast({ title: "Company, contact, phone and email are required", variant: "destructive" });
+      return;
+    }
+    const discount =
+      editForm.discountLevel.trim() === "" ? null : Number(editForm.discountLevel);
+    if (discount !== null && Number.isNaN(discount)) {
+      toast({ title: "Discount must be a number", variant: "destructive" });
+      return;
+    }
+    updateCustomer.mutate({
+      id: Number(id),
+      data: {
+        companyName: editForm.companyName.trim(),
+        contactPerson: editForm.contactPerson.trim(),
+        phone: editForm.phone.trim(),
+        email: editForm.email.trim(),
+        customerChannel: editForm.channel,
+        businessChannel: editForm.channel,
+        segment: editForm.segment,
+        priorityClass: editForm.priorityClass,
+        paymentTerms: editForm.paymentTerms,
+        discountLevel: discount,
+        notes: editForm.notes.trim() || null,
+      } as any,
+    });
+  };
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading...</div>;
   if (!customer) return <div className="p-6 text-muted-foreground">Customer not found</div>;
@@ -37,16 +136,27 @@ export default function CustomerDetailPage() {
             Customers
           </Button>
         </Link>
-        <Button
-          variant={c.active ? "outline" : "default"}
-          size="sm"
-          onClick={() => updateCustomer.mutate({ id: Number(id), data: { active: !c.active } })}
-          disabled={updateCustomer.isPending}
-          data-testid="button-toggle-customer-active"
-        >
-          <Power className="h-4 w-4 mr-1.5" />
-          {c.active ? "Deactivate" : "Activate"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setEditForm(fromCustomer(c)); setEditOpen(true); }}
+            data-testid="button-edit-customer"
+          >
+            <Pencil className="h-4 w-4 mr-1.5" />
+            Edit details
+          </Button>
+          <Button
+            variant={c.active ? "outline" : "default"}
+            size="sm"
+            onClick={() => updateCustomer.mutate({ id: Number(id), data: { active: !c.active } })}
+            disabled={updateCustomer.isPending}
+            data-testid="button-toggle-customer-active"
+          >
+            <Power className="h-4 w-4 mr-1.5" />
+            {c.active ? "Deactivate" : "Activate"}
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-start gap-4">
@@ -134,6 +244,131 @@ export default function CustomerDetailPage() {
           </Card>
         )}
       </div>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Customer</DialogTitle>
+            <DialogDescription>
+              Update contact, channel, priority, terms or notes. Changes save immediately.
+            </DialogDescription>
+          </DialogHeader>
+          {editForm && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Company name *</Label>
+                <Input
+                  value={editForm.companyName}
+                  onChange={e => setEditForm(p => p && { ...p, companyName: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Contact person *</Label>
+                  <Input
+                    value={editForm.contactPerson}
+                    onChange={e => setEditForm(p => p && { ...p, contactPerson: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Phone *</Label>
+                  <Input
+                    value={editForm.phone}
+                    onChange={e => setEditForm(p => p && { ...p, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email *</Label>
+                <Input
+                  value={editForm.email}
+                  onChange={e => setEditForm(p => p && { ...p, email: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Channel</Label>
+                  <Select value={editForm.channel} onValueChange={v => setEditForm(p => p && { ...p, channel: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CHANNEL_OPTIONS.map(o => (
+                        <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Segment</Label>
+                  <Select value={editForm.segment} onValueChange={v => setEditForm(p => p && { ...p, segment: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SEGMENT_OPTIONS.map(o => (
+                        <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Priority class *</Label>
+                  <Select
+                    value={editForm.priorityClass}
+                    onValueChange={v => setEditForm(p => p && { ...p, priorityClass: v as PriorityClass })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A">A — top priority</SelectItem>
+                      <SelectItem value="B">B — standard</SelectItem>
+                      <SelectItem value="C">C — low priority</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Payment terms</Label>
+                  <Select value={editForm.paymentTerms} onValueChange={v => setEditForm(p => p && { ...p, paymentTerms: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_TERMS_OPTIONS.map(o => (
+                        <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Discount % (optional)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={editForm.discountLevel}
+                  onChange={e => setEditForm(p => p && { ...p, discountLevel: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Notes (optional)</Label>
+                <textarea
+                  className="w-full border rounded-md px-3 py-2 text-sm resize-none h-20 bg-background"
+                  value={editForm.notes}
+                  onChange={e => setEditForm(p => p && { ...p, notes: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button
+              onClick={submitEdit}
+              disabled={updateCustomer.isPending}
+              data-testid="button-save-customer"
+            >
+              {updateCustomer.isPending ? "Saving..." : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
