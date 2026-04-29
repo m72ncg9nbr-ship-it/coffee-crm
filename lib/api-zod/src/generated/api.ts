@@ -397,6 +397,27 @@ export const UpdateLeadResponse = zod.object({
 });
 
 /**
+ * @summary Convert a qualified lead into a customer
+ */
+export const ConvertLeadParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ConvertLeadBody = zod.object({
+  priorityClass: zod.enum(["A", "B", "C"]),
+  companyName: zod.string().optional(),
+  contactPerson: zod.string().optional(),
+  phone: zod.string().optional(),
+  email: zod.string().optional(),
+  customerChannel: zod.string().optional(),
+  businessChannel: zod.string().optional(),
+  segment: zod.string(),
+  paymentTerms: zod.string(),
+  discountLevel: zod.number().nullish(),
+  notes: zod.string().nullish(),
+});
+
+/**
  * @summary List products
  */
 export const ListProductsQueryParams = zod.object({

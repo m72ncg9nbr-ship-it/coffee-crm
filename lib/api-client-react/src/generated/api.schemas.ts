@@ -253,6 +253,31 @@ export interface UpdateLeadBody {
   extraNotes?: string | null;
 }
 
+export type ConvertLeadBodyPriorityClass =
+  (typeof ConvertLeadBodyPriorityClass)[keyof typeof ConvertLeadBodyPriorityClass];
+
+export const ConvertLeadBodyPriorityClass = {
+  A: "A",
+  B: "B",
+  C: "C",
+} as const;
+
+export interface ConvertLeadBody {
+  priorityClass: ConvertLeadBodyPriorityClass;
+  companyName?: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  customerChannel?: string;
+  businessChannel?: string;
+  segment: string;
+  paymentTerms: string;
+  /** @nullable */
+  discountLevel?: number | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export type ProductStockStatus =
   (typeof ProductStockStatus)[keyof typeof ProductStockStatus];
 

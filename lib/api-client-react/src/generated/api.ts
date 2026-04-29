@@ -23,6 +23,7 @@ import type {
   ApproveBody,
   CheckCustomerDuplicates200,
   CheckCustomerDuplicatesBody,
+  ConvertLeadBody,
   CreateCustomerAddressBody,
   CreateCustomerBody,
   CreateDeliveryBody,
@@ -1382,6 +1383,93 @@ export const useUpdateLead = <
   TContext
 > => {
   return useMutation(getUpdateLeadMutationOptions(options));
+};
+
+/**
+ * @summary Convert a qualified lead into a customer
+ */
+export const getConvertLeadUrl = (id: number) => {
+  return `/api/leads/${id}/convert`;
+};
+
+export const convertLead = async (
+  id: number,
+  convertLeadBody: ConvertLeadBody,
+  options?: RequestInit,
+): Promise<Customer> => {
+  return customFetch<Customer>(getConvertLeadUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(convertLeadBody),
+  });
+};
+
+export const getConvertLeadMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof convertLead>>,
+    TError,
+    { id: number; data: BodyType<ConvertLeadBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof convertLead>>,
+  TError,
+  { id: number; data: BodyType<ConvertLeadBody> },
+  TContext
+> => {
+  const mutationKey = ["convertLead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof convertLead>>,
+    { id: number; data: BodyType<ConvertLeadBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return convertLead(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConvertLeadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof convertLead>>
+>;
+export type ConvertLeadMutationBody = BodyType<ConvertLeadBody>;
+export type ConvertLeadMutationError = ErrorType<void>;
+
+/**
+ * @summary Convert a qualified lead into a customer
+ */
+export const useConvertLead = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof convertLead>>,
+    TError,
+    { id: number; data: BodyType<ConvertLeadBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof convertLead>>,
+  TError,
+  { id: number; data: BodyType<ConvertLeadBody> },
+  TContext
+> => {
+  return useMutation(getConvertLeadMutationOptions(options));
 };
 
 /**

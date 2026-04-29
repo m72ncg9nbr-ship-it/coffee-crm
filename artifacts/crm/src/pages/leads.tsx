@@ -1,16 +1,83 @@
 import { useState } from "react";
-import { useListLeads, useCreateLead } from "@workspace/api-client-react";
+import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useListLeads,
+  useCreateLead,
+  useConvertLead,
+  getListCustomersQueryKey,
+} from "@workspace/api-client-react";
 import { StatusBadge } from "@/components/priority-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/utils";
-import { Plus, X, UserPlus } from "lucide-react";
+import { Plus, X, UserPlus, ArrowRightCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+const SEGMENT_OPTIONS = [
+  "cafe",
+  "cafe_chain",
+  "bar",
+  "restaurant",
+  "hotel",
+  "bakery",
+  "catering",
+  "kiosk",
+  "coworking",
+  "corporate",
+  "education",
+];
+
+const PAYMENT_TERMS_OPTIONS = [
+  "net_14",
+  "net_21",
+  "net_30",
+  "net_45",
+  "net_60",
+  "cash_on_delivery",
+];
+
+const CHANNEL_OPTIONS = ["horeca", "office", "retail"];
+
+function inferSegment(businessType: string | null | undefined): string {
+  const lower = (businessType ?? "").trim().toLowerCase();
+  if (SEGMENT_OPTIONS.includes(lower)) return lower;
+  return "cafe";
+}
+
+function normalisePaymentTerms(requested: string | null | undefined): string {
+  const lower = (requested ?? "").trim().toLowerCase();
+  if (PAYMENT_TERMS_OPTIONS.includes(lower)) return lower;
+  return "net_30";
+}
+
+type ConvertForm = {
+  companyName: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  channel: string;
+  segment: string;
+  priorityClass: "A" | "B" | "C";
+  paymentTerms: string;
+  discountLevel: string;
+  notes: string;
+};
+
 export default function LeadsPage() {
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
   const { data: leads, isLoading, refetch } = useListLeads();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
@@ -19,6 +86,9 @@ export default function LeadsPage() {
     businessChannel: "horeca", businessType: "", estimatedMonthlyConsumption: "",
     preferredCoffeeType: "", requestedPaymentTerms: "net_30", extraNotes: ""
   });
+
+  const [convertLeadId, setConvertLeadId] = useState<number | null>(null);
+  const [convertForm, setConvertForm] = useState<ConvertForm | null>(null);
 
   const createLead = useCreateLead({
     mutation: {
@@ -31,6 +101,74 @@ export default function LeadsPage() {
       onError: () => toast({ title: "Failed to submit lead", variant: "destructive" })
     }
   });
+
+  const convertLead = useConvertLead({
+    mutation: {
+      onSuccess: (created: any) => {
+        toast({ title: "Lead converted to customer", description: created?.companyName });
+        refetch();
+        queryClient.invalidateQueries({ queryKey: getListCustomersQueryKey() });
+        setConvertLeadId(null);
+        setConvertForm(null);
+        if (created?.id) navigate(`/customers/${created.id}`);
+      },
+      onError: (e: any) =>
+        toast({ title: "Conversion failed", description: e?.error ?? "", variant: "destructive" }),
+    },
+  });
+
+  const openConvert = (lead: any) => {
+    setConvertLeadId(lead.id);
+    setConvertForm({
+      companyName: lead.companyName ?? "",
+      contactPerson: lead.contactPerson ?? "",
+      phone: lead.phone ?? "",
+      email: lead.email ?? "",
+      channel: CHANNEL_OPTIONS.includes(lead.businessChannel) ? lead.businessChannel : "horeca",
+      segment: inferSegment(lead.businessType),
+      priorityClass: lead.qualificationResult === "auto_qualified" ? "B" : "C",
+      paymentTerms: normalisePaymentTerms(lead.requestedPaymentTerms),
+      discountLevel: "",
+      notes: lead.extraNotes ?? "",
+    });
+  };
+
+  const submitConvert = () => {
+    if (!convertLeadId || !convertForm) return;
+    if (
+      convertForm.companyName.trim().length < 2 ||
+      convertForm.contactPerson.trim().length < 2 ||
+      convertForm.phone.trim().length < 4 ||
+      convertForm.email.trim().length < 3
+    ) {
+      toast({ title: "Fill in company, contact person, phone and email", variant: "destructive" });
+      return;
+    }
+    const discount =
+      convertForm.discountLevel.trim() === ""
+        ? null
+        : Number(convertForm.discountLevel);
+    if (discount !== null && Number.isNaN(discount)) {
+      toast({ title: "Discount must be a number", variant: "destructive" });
+      return;
+    }
+    convertLead.mutate({
+      id: convertLeadId,
+      data: {
+        companyName: convertForm.companyName.trim(),
+        contactPerson: convertForm.contactPerson.trim(),
+        phone: convertForm.phone.trim(),
+        email: convertForm.email.trim(),
+        customerChannel: convertForm.channel,
+        businessChannel: convertForm.channel,
+        segment: convertForm.segment,
+        priorityClass: convertForm.priorityClass,
+        paymentTerms: convertForm.paymentTerms,
+        discountLevel: discount,
+        notes: convertForm.notes.trim() || null,
+      } as any,
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,6 +269,7 @@ export default function LeadsPage() {
         {!isLoading && (leads ?? []).map((lead: any) => {
           const isQualified = lead.qualificationResult === "auto_qualified";
           const followUpOverdue = lead.followUpDueAt && !lead.followUpCompletedAt && new Date(lead.followUpDueAt).getTime() <= Date.now();
+          const isConverted = lead.status === "converted_to_customer";
           return (
           <Card key={lead.id} className={followUpOverdue ? "border-amber-300" : ""}>
             <CardContent className="p-4">
@@ -161,7 +300,23 @@ export default function LeadsPage() {
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground shrink-0">{formatDateTime(lead.createdAt)}</p>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <p className="text-xs text-muted-foreground">{formatDateTime(lead.createdAt)}</p>
+                  {!isConverted && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openConvert(lead)}
+                      data-testid={`button-convert-lead-${lead.id}`}
+                    >
+                      <ArrowRightCircle className="h-4 w-4 mr-1.5" />
+                      Convert to Customer
+                    </Button>
+                  )}
+                  {isConverted && (
+                    <span className="text-xs text-emerald-700 font-medium">Converted</span>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -174,6 +329,129 @@ export default function LeadsPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={!!convertLeadId} onOpenChange={(open) => { if (!open) { setConvertLeadId(null); setConvertForm(null); } }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Convert Lead to Customer</DialogTitle>
+            <DialogDescription>
+              Review and adjust the values pulled from the lead, then assign a priority.
+            </DialogDescription>
+          </DialogHeader>
+          {convertForm && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Company name *</Label>
+                <Input
+                  value={convertForm.companyName}
+                  onChange={e => setConvertForm(p => p && { ...p, companyName: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Contact person *</Label>
+                  <Input
+                    value={convertForm.contactPerson}
+                    onChange={e => setConvertForm(p => p && { ...p, contactPerson: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Phone *</Label>
+                  <Input
+                    value={convertForm.phone}
+                    onChange={e => setConvertForm(p => p && { ...p, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email *</Label>
+                <Input
+                  value={convertForm.email}
+                  onChange={e => setConvertForm(p => p && { ...p, email: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Channel</Label>
+                  <Select value={convertForm.channel} onValueChange={v => setConvertForm(p => p && { ...p, channel: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CHANNEL_OPTIONS.map(o => (
+                        <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Segment</Label>
+                  <Select value={convertForm.segment} onValueChange={v => setConvertForm(p => p && { ...p, segment: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SEGMENT_OPTIONS.map(o => (
+                        <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Priority class *</Label>
+                  <Select
+                    value={convertForm.priorityClass}
+                    onValueChange={v => setConvertForm(p => p && { ...p, priorityClass: v as "A" | "B" | "C" })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A">A — top priority</SelectItem>
+                      <SelectItem value="B">B — standard</SelectItem>
+                      <SelectItem value="C">C — low priority</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Payment terms</Label>
+                  <Select value={convertForm.paymentTerms} onValueChange={v => setConvertForm(p => p && { ...p, paymentTerms: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_TERMS_OPTIONS.map(o => (
+                        <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Discount % (optional)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={convertForm.discountLevel}
+                  onChange={e => setConvertForm(p => p && { ...p, discountLevel: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Notes (optional)</Label>
+                <textarea
+                  className="w-full border rounded-md px-3 py-2 text-sm resize-none h-20 bg-background"
+                  value={convertForm.notes}
+                  onChange={e => setConvertForm(p => p && { ...p, notes: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setConvertLeadId(null); setConvertForm(null); }}>
+              Cancel
+            </Button>
+            <Button onClick={submitConvert} disabled={convertLead.isPending}>
+              {convertLead.isPending ? "Converting..." : "Convert to Customer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

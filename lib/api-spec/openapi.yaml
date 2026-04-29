@@ -351,6 +351,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/Lead"
 
+  /leads/{id}/convert:
+    post:
+      operationId: convertLead
+      tags: [leads]
+      summary: Convert a qualified lead into a customer
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvertLeadBody"
+      responses:
+        "201":
+          description: Customer created from lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "404":
+          description: Lead not found
+        "409":
+          description: Lead already converted
+
   /products:
     get:
       operationId: listProducts
@@ -1262,6 +1291,37 @@ components:
           type: ["string", "null"]
         extraNotes:
           type: ["string", "null"]
+
+    ConvertLeadBody:
+      type: object
+      properties:
+        priorityClass:
+          type: string
+          enum: [A, B, C]
+        companyName:
+          type: string
+        contactPerson:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        customerChannel:
+          type: string
+        businessChannel:
+          type: string
+        segment:
+          type: string
+        paymentTerms:
+          type: string
+        discountLevel:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - priorityClass
+        - segment
+        - paymentTerms
 
     Product:
       type: object

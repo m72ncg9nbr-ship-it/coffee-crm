@@ -1,8 +1,14 @@
 import { Router, type IRouter } from "express";
-import { db, leadsTable } from "@workspace/db";
+import { db, leadsTable, customersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
-import { CreateLeadBody, GetLeadParams, UpdateLeadParams, UpdateLeadBody } from "@workspace/api-zod";
+import {
+  CreateLeadBody,
+  GetLeadParams,
+  UpdateLeadParams,
+  UpdateLeadBody,
+  ConvertLeadBody,
+} from "@workspace/api-zod";
 import { logActivity } from "../lib/activity";
 
 const router: IRouter = Router();
@@ -94,6 +100,82 @@ router.get("/leads/:id", requireAuth as any, async (req, res): Promise<void> => 
     ...lead,
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
+  });
+});
+
+router.post("/leads/:id/convert", requireAuth as any, async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = GetLeadParams.safeParse({ id: rawId });
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const parsed = ConvertLeadBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [lead] = await db.select().from(leadsTable).where(eq(leadsTable.id, params.data.id));
+  if (!lead) {
+    res.status(404).json({ error: "Lead not found" });
+    return;
+  }
+  if (lead.status === "converted_to_customer") {
+    res.status(409).json({ error: "Lead has already been converted" });
+    return;
+  }
+
+  const user = (req as any).user;
+  const channel = parsed.data.businessChannel ?? parsed.data.customerChannel ?? lead.businessChannel;
+
+  const insertValues = {
+    companyName: parsed.data.companyName ?? lead.companyName,
+    contactPerson: parsed.data.contactPerson ?? lead.contactPerson,
+    phone: parsed.data.phone ?? lead.phone,
+    email: parsed.data.email ?? lead.email,
+    customerChannel: parsed.data.customerChannel ?? channel,
+    businessChannel: parsed.data.businessChannel ?? channel,
+    segment: parsed.data.segment,
+    priorityClass: parsed.data.priorityClass,
+    paymentTerms: parsed.data.paymentTerms,
+    discountLevel:
+      parsed.data.discountLevel === undefined || parsed.data.discountLevel === null
+        ? null
+        : parsed.data.discountLevel.toString(),
+    notes: parsed.data.notes ?? lead.extraNotes ?? null,
+    createdByUserId: user.id,
+  };
+
+  const [customer] = await db.insert(customersTable).values(insertValues).returning();
+
+  await db
+    .update(leadsTable)
+    .set({ status: "converted_to_customer" })
+    .where(eq(leadsTable.id, lead.id));
+
+  await logActivity({
+    actionType: "lead_converted",
+    entityType: "lead",
+    entityId: lead.id,
+    description: `Lead "${lead.companyName}" converted to customer #${customer.id}`,
+    performedBy: user.id,
+  });
+
+  await logActivity({
+    actionType: "customer_created",
+    entityType: "customer",
+    entityId: customer.id,
+    description: `Customer "${customer.companyName}" created from lead #${lead.id}`,
+    performedBy: user.id,
+  });
+
+  res.status(201).json({
+    ...customer,
+    discountLevel: customer.discountLevel ? parseFloat(customer.discountLevel) : null,
+    createdAt: customer.createdAt.toISOString(),
+    updatedAt: customer.updatedAt.toISOString(),
   });
 });
 
