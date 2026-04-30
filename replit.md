@@ -86,7 +86,7 @@ Tables: users, customers, customer_addresses, leads, products, orders, order_ite
 
 - `lib/api-spec/openapi.yaml` — OpenAPI spec (source of truth)
 - `lib/api-spec/orval.config.ts` — codegen config (schemas path removed to avoid conflict)
-- `lib/api-zod/src/index.ts` — must only export `./generated/api` (codegen overwrites it)
+- `lib/api-zod/src/index.ts` — only exports `./generated/api`. Orval is configured with `indexFiles: false` for the zod target so codegen no longer rewrites this file.
 - CORS configured with `credentials: true`
 - Frontend overrides `window.fetch` to always include `credentials: "include"`
 

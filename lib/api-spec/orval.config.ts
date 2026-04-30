@@ -54,6 +54,12 @@ export default defineConfig({
       mode: "split",
       clean: true,
       prettier: true,
+      // Don't let orval write a workspace-level index.ts. With mode: "split"
+      // it would otherwise re-export ./generated/api.schemas, which the zod
+      // client never produces — the resulting import breaks every typecheck
+      // until the file is hand-edited back to a single-line barrel. Owning
+      // src/index.ts ourselves keeps codegen idempotent.
+      indexFiles: false,
       override: {
         zod: {
           coerce: {
