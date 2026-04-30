@@ -28,6 +28,24 @@ interface Item {
   productName: string;
   quantity: number;
   unitPriceSnapshot: number;
+  stockStatus?: string;
+}
+
+function stockLabel(status: string | undefined): string {
+  switch (status) {
+    case "in_stock": return "in stock";
+    case "low_stock": return "low stock";
+    case "out_of_stock": return "out of stock";
+    default: return status ?? "";
+  }
+}
+
+function stockClass(status: string | undefined): string {
+  switch (status) {
+    case "low_stock": return "text-amber-700";
+    case "out_of_stock": return "text-red-700";
+    default: return "text-muted-foreground";
+  }
 }
 
 export default function OrderNewPage() {
@@ -85,11 +103,13 @@ export default function OrderNewPage() {
     setItems(prev => {
       const existing = prev.find(i => i.productId === pid);
       if (existing) return prev.map(i => i.productId === pid ? { ...i, quantity: i.quantity + qn } : i);
-      return [...prev, { productId: pid, productName: p.productName, quantity: qn, unitPriceSnapshot: parseFloat(p.unitPrice) }];
+      return [...prev, { productId: pid, productName: p.productName, quantity: qn, unitPriceSnapshot: parseFloat(p.unitPrice), stockStatus: p.stockStatus }];
     });
     setProductPick("");
     setQty("1");
   }
+
+  const hasOutOfStockItem = items.some(i => i.stockStatus === "out_of_stock");
 
   function removeItem(pid: number) {
     setItems(prev => prev.filter(i => i.productId !== pid));
@@ -193,7 +213,10 @@ export default function OrderNewPage() {
                     <SelectContent>
                       {(products ?? []).map((p: any) => (
                         <SelectItem key={p.id} value={String(p.id)}>
-                          {p.productName} — {formatCurrency(parseFloat(p.unitPrice))}/{p.unit ?? "ea"}
+                          <span>
+                            {p.productName} — {formatCurrency(parseFloat(p.unitPrice))}/{p.unit ?? "ea"}
+                            <span className={`ml-2 text-xs ${stockClass(p.stockStatus)}`}>· {stockLabel(p.stockStatus)}</span>
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -213,7 +236,14 @@ export default function OrderNewPage() {
                   {items.map(i => (
                     <div key={i.productId} className="flex items-center justify-between p-2.5 text-sm">
                       <div>
-                        <div className="font-medium">{i.productName}</div>
+                        <div className="font-medium flex items-center gap-2 flex-wrap">
+                          {i.productName}
+                          {i.stockStatus && i.stockStatus !== "in_stock" && (
+                            <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ${i.stockStatus === "out_of_stock" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>
+                              {stockLabel(i.stockStatus)}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {i.quantity} × {formatCurrency(i.unitPriceSnapshot)} = {formatCurrency(i.quantity * i.unitPriceSnapshot)}
                         </div>
@@ -230,6 +260,16 @@ export default function OrderNewPage() {
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground italic">No items yet — add at least one</p>
+              )}
+
+              {hasOutOfStockItem && (
+                <div className="flex items-start gap-2 text-xs text-red-800 bg-red-50 border border-red-200 rounded-md p-2.5">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">One or more items are out of stock.</p>
+                    <p>The order will still be saved, but operations may need to delay the delivery.</p>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
