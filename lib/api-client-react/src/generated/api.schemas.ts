@@ -614,7 +614,6 @@ export interface UpdateDeliveryBody {
 
 export interface UploadDocumentBody {
   documentType: string;
-  fileUrl: string;
   /** @nullable */
   notes?: string | null;
   /** @nullable */

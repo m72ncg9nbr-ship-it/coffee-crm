@@ -1,4 +1,5 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type RequestHandler } from "express";
+import multer from "multer";
 import { db, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, ordersTable, orderItemsTable, productsTable, customersTable, customerAddressesTable, usersTable } from "@workspace/db";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
@@ -15,6 +16,33 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+const ALLOWED_DOCUMENT_MIME_PREFIXES = ["image/"];
+const ALLOWED_DOCUMENT_MIME_EXACT = new Set(["application/pdf"]);
+const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_DOCUMENT_BYTES },
+  fileFilter: (_req, file, cb) => {
+    const m = file.mimetype.toLowerCase();
+    const ok =
+      ALLOWED_DOCUMENT_MIME_EXACT.has(m) ||
+      ALLOWED_DOCUMENT_MIME_PREFIXES.some(p => m.startsWith(p));
+    if (ok) {
+      cb(null, true);
+    } else {
+      // @types/multer older signature only allows `null` for the error slot,
+      // so cast the Error through to signal an unsupported file type.
+      (cb as unknown as (err: Error, acceptFile: boolean) => void)(
+        new Error("UNSUPPORTED_FILE_TYPE"),
+        false,
+      );
+    }
+  },
+});
+
+const uploadSingle: RequestHandler = upload.single("file") as unknown as RequestHandler;
 
 async function nextDeliveryNumber(): Promise<string> {
   const rows = await db.execute<{ next: number }>(sql`
@@ -349,80 +377,155 @@ router.patch("/deliveries/:id", requireAuth as any, async (req, res): Promise<vo
   res.json(enriched[0]);
 });
 
-router.post("/deliveries/:id/documents", requireAuth as any, async (req, res): Promise<void> => {
+router.post(
+  "/deliveries/:id/documents",
+  requireAuth as any,
+  (req, res, next) => {
+    uploadSingle(req, res, (err: any) => {
+      if (!err) return next();
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ error: "File exceeds 10 MB limit" });
+      }
+      if (err.message === "UNSUPPORTED_FILE_TYPE") {
+        return res.status(415).json({ error: "Only image and PDF uploads are supported" });
+      }
+      return res.status(400).json({ error: err.message ?? "Upload failed" });
+    });
+  },
+  async (req, res): Promise<void> => {
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const params = UploadDeliveryDocumentParams.safeParse({ id: rawId });
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const parsed = UploadDeliveryDocumentBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file) {
+      res.status(400).json({ error: "Missing file upload (form field 'file')" });
+      return;
+    }
+
+    const user = (req as any).user;
+    const now = new Date();
+
+    const [current] = await db.select().from(deliveriesTable).where(eq(deliveriesTable.id, params.data.id));
+    if (!current) {
+      res.status(404).json({ error: "Delivery not found" });
+      return;
+    }
+    if (user?.role === "driver" && current.driverId !== user.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (current.status !== "arrived") {
+      res.status(409).json({ error: `Cannot upload documentation: delivery status is "${current.status}", expected "arrived"` });
+      return;
+    }
+
+    const [doc] = await db
+      .insert(deliveryDocumentsTable)
+      .values({
+        deliveryId: params.data.id,
+        documentType: parsed.data.documentType,
+        fileUrl: "",
+        fileMimeType: file.mimetype,
+        fileSizeBytes: file.size,
+        fileDataBase64: file.buffer.toString("base64"),
+        notes: parsed.data.notes ?? null,
+        uploadedBy: user.id,
+      })
+      .returning();
+
+    const fileUrl = `/api/delivery-documents/${doc.id}/file`;
+    await db
+      .update(deliveryDocumentsTable)
+      .set({ fileUrl })
+      .where(eq(deliveryDocumentsTable.id, doc.id));
+
+    const [delivery] = await db.update(deliveriesTable)
+      .set({
+        hasDocument: true,
+        status: "awaiting_accounting_approval",
+        documentationUploadedAt: now,
+        deviationType: parsed.data.deviationType ?? null,
+        deviationNote: parsed.data.deviationNote ?? null,
+      })
+      .where(eq(deliveriesTable.id, params.data.id))
+      .returning();
+
+    await db.update(ordersTable)
+      .set({ status: "awaiting_accounting_approval" })
+      .where(eq(ordersTable.id, delivery.orderId));
+
+    await db.insert(accountingApprovalsTable).values({
+      deliveryId: params.data.id,
+      orderId: delivery.orderId,
+      status: "pending",
+    }).onConflictDoNothing();
+
+    await logActivity({
+      actionType: "documentation_uploaded",
+      entityType: "delivery",
+      entityId: params.data.id,
+      description: `Delivery proof uploaded for delivery ${delivery.deliveryNumber ?? `#${params.data.id}`}`,
+      performedBy: user.id,
+    });
+
+    res.status(201).json({
+      ...doc,
+      fileUrl,
+      uploadedByName: user.fullName,
+      createdAt: doc.createdAt.toISOString(),
+    });
+  },
+);
+
+router.get("/delivery-documents/:id/file", requireAuth as any, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const params = UploadDeliveryDocumentParams.safeParse({ id: rawId });
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
+  const docId = Number(rawId);
+  if (!Number.isFinite(docId) || docId <= 0) {
+    res.status(400).json({ error: "Invalid document id" });
     return;
   }
 
-  const parsed = UploadDeliveryDocumentBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+  const [doc] = await db
+    .select()
+    .from(deliveryDocumentsTable)
+    .where(eq(deliveryDocumentsTable.id, docId));
+  if (!doc) {
+    res.status(404).json({ error: "Document not found" });
     return;
   }
 
   const user = (req as any).user;
-  const now = new Date();
-
-  const [current] = await db.select().from(deliveriesTable).where(eq(deliveriesTable.id, params.data.id));
-  if (!current) {
-    res.status(404).json({ error: "Delivery not found" });
-    return;
-  }
-  if (user?.role === "driver" && current.driverId !== user.id) {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
-  if (current.status !== "arrived") {
-    res.status(409).json({ error: `Cannot upload documentation: delivery status is "${current.status}", expected "arrived"` });
-    return;
+  if (user?.role === "driver") {
+    const [delivery] = await db
+      .select()
+      .from(deliveriesTable)
+      .where(eq(deliveriesTable.id, doc.deliveryId));
+    if (!delivery || delivery.driverId !== user.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
   }
 
-  const [doc] = await db.insert(deliveryDocumentsTable).values({
-    deliveryId: params.data.id,
-    documentType: parsed.data.documentType,
-    fileUrl: parsed.data.fileUrl,
-    notes: parsed.data.notes ?? null,
-    uploadedBy: user.id,
-  }).returning();
+  if (!doc.fileDataBase64) {
+    res.status(404).json({ error: "No file stored for this document" });
+    return;
+  }
 
-  const [delivery] = await db.update(deliveriesTable)
-    .set({
-      hasDocument: true,
-      status: "awaiting_accounting_approval",
-      documentationUploadedAt: now,
-      deviationType: parsed.data.deviationType ?? null,
-      deviationNote: parsed.data.deviationNote ?? null,
-    })
-    .where(eq(deliveriesTable.id, params.data.id))
-    .returning();
-
-  // Move order to awaiting_accounting_approval, link approval to order
-  await db.update(ordersTable)
-    .set({ status: "awaiting_accounting_approval" })
-    .where(eq(ordersTable.id, delivery.orderId));
-
-  await db.insert(accountingApprovalsTable).values({
-    deliveryId: params.data.id,
-    orderId: delivery.orderId,
-    status: "pending",
-  }).onConflictDoNothing();
-
-  await logActivity({
-    actionType: "documentation_uploaded",
-    entityType: "delivery",
-    entityId: params.data.id,
-    description: `Delivery proof uploaded for delivery ${delivery.deliveryNumber ?? `#${params.data.id}`}`,
-    performedBy: user.id,
-  });
-
-  res.status(201).json({
-    ...doc,
-    uploadedByName: user.fullName,
-    createdAt: doc.createdAt.toISOString(),
-  });
+  const buffer = Buffer.from(doc.fileDataBase64, "base64");
+  res.setHeader("Content-Type", doc.fileMimeType ?? "application/octet-stream");
+  res.setHeader("Content-Length", String(buffer.byteLength));
+  res.setHeader("Cache-Control", "private, max-age=300");
+  res.status(200).send(buffer);
 });
 
 export default router;

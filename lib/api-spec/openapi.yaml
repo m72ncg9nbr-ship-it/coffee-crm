@@ -1711,11 +1711,15 @@ components:
           type: ["string", "null"]
 
     UploadDocumentBody:
+      # Server-side this endpoint accepts multipart/form-data with a "file"
+      # field. The fields below are the non-file form fields. Kept as JSON in
+      # the spec so existing codegen consumers do not need to change; the
+      # frontend issues the upload via a hand-written FormData call rather
+      # than the generated hook. The server fills `fileUrl` after persisting
+      # the bytes, so the client no longer supplies it.
       type: object
       properties:
         documentType:
-          type: string
-        fileUrl:
           type: string
         notes:
           type: ["string", "null"]
@@ -1725,7 +1729,6 @@ components:
           type: ["string", "null"]
       required:
         - documentType
-        - fileUrl
 
     AccountingApproval:
       type: object

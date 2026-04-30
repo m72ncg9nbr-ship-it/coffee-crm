@@ -953,7 +953,6 @@ export const UploadDeliveryDocumentParams = zod.object({
 
 export const UploadDeliveryDocumentBody = zod.object({
   documentType: zod.string(),
-  fileUrl: zod.string(),
   notes: zod.string().nullish(),
   deviationType: zod.string().nullish(),
   deviationNote: zod.string().nullish(),

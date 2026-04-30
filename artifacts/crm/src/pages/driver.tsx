@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useListDeliveries, useUpdateDelivery, useUploadDeliveryDocument, useGetDelivery, useLogout, getGetCurrentUserQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useListDeliveries, useUpdateDelivery, useGetDelivery, useLogout, getGetCurrentUserQueryKey } from "@workspace/api-client-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { StatusBadge, UrgencyBadge } from "@/components/priority-badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +39,41 @@ const DOCUMENT_TYPE_OPTIONS = [
 const HISTORY_STATUSES = ["awaiting_accounting_approval", "approved", "issue_reported"];
 const ACTIVE_STATUSES = ["assigned", "arrived"];
 
+type UploadVariables = {
+  deliveryId: number;
+  file: File;
+  documentType: string;
+  notes?: string | null;
+  deviationType?: string | null;
+  deviationNote?: string | null;
+};
+
+async function uploadDeliveryDocumentMultipart(vars: UploadVariables): Promise<any> {
+  const form = new FormData();
+  form.append("file", vars.file);
+  form.append("documentType", vars.documentType);
+  if (vars.notes) form.append("notes", vars.notes);
+  if (vars.deviationType) form.append("deviationType", vars.deviationType);
+  if (vars.deviationNote) form.append("deviationNote", vars.deviationNote);
+
+  const res = await fetch(`/api/deliveries/${vars.deliveryId}/documents`, {
+    method: "POST",
+    body: form,
+    credentials: "include",
+  });
+  if (!res.ok) {
+    let message = `Upload failed (${res.status})`;
+    try {
+      const data = await res.json();
+      if (data?.error) message = data.error;
+    } catch {
+      /* fall through */
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
 export default function DriverPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -56,7 +91,7 @@ export default function DriverPage() {
   const [uploadFor, setUploadFor] = useState<any | null>(null);
   const [detailFor, setDetailFor] = useState<number | null>(null);
   const [documentType, setDocumentType] = useState<string>("delivery_proof");
-  const [fileName, setFileName] = useState<string>("");
+  const [file, setFile] = useState<File | null>(null);
   const [deviationType, setDeviationType] = useState<string>("none");
   const [deviationNote, setDeviationNote] = useState<string>("");
   const [submitNote, setSubmitNote] = useState<string>("");
@@ -71,21 +106,21 @@ export default function DriverPage() {
     }
   });
 
-  const uploadDoc = useUploadDeliveryDocument({
-    mutation: {
-      onSuccess: () => {
-        refetch();
-        toast({ title: "Documentation uploaded" });
-        resetUploadDialog();
-      },
-      onError: () => toast({ title: "Upload failed", variant: "destructive" })
-    }
+  const uploadDoc = useMutation({
+    mutationFn: uploadDeliveryDocumentMultipart,
+    onSuccess: () => {
+      refetch();
+      toast({ title: "Documentation uploaded" });
+      resetUploadDialog();
+    },
+    onError: (err: Error) =>
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" }),
   });
 
   const resetUploadDialog = () => {
     setUploadFor(null);
     setDocumentType("delivery_proof");
-    setFileName("");
+    setFile(null);
     setDeviationType("none");
     setDeviationNote("");
     setSubmitNote("");
@@ -104,21 +139,18 @@ export default function DriverPage() {
 
   const submitUpload = () => {
     if (!uploadFor) return;
-    if (!fileName.trim()) {
+    if (!file) {
       toast({ title: "Please choose a file", variant: "destructive" });
       return;
     }
-    const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const body: any = {
+    uploadDoc.mutate({
+      deliveryId: uploadFor.id,
+      file,
       documentType,
-      fileUrl: `/uploads/delivery-${uploadFor.id}-${Date.now()}-${safeName}`,
       notes: submitNote || null,
-    };
-    if (deviationType !== "none") {
-      body.deviationType = deviationType;
-      body.deviationNote = deviationNote || null;
-    }
-    uploadDoc.mutate({ id: uploadFor.id, data: body });
+      deviationType: deviationType !== "none" ? deviationType : null,
+      deviationNote: deviationType !== "none" && deviationNote ? deviationNote : null,
+    });
   };
 
   return (
@@ -296,10 +328,17 @@ export default function DriverPage() {
                 id="driver-file"
                 type="file"
                 accept="image/*,.pdf"
-                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 data-testid="input-driver-file"
               />
-              {fileName && <p className="text-xs text-muted-foreground flex items-center gap-1"><Camera className="h-3 w-3" />{fileName}</p>}
+              {file && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Camera className="h-3 w-3" />
+                  {file.name}
+                  <span className="text-[10px]">({Math.round(file.size / 1024)} KB)</span>
+                </p>
+              )}
+              <p className="text-[10px] text-muted-foreground">Image or PDF, up to 10 MB.</p>
             </div>
 
             <div className="space-y-1.5">
@@ -346,7 +385,7 @@ export default function DriverPage() {
             <Button variant="outline" onClick={resetUploadDialog}>Cancel</Button>
             <Button
               className="bg-green-600 hover:bg-green-700 text-white"
-              disabled={uploadDoc.isPending || !fileName.trim()}
+              disabled={uploadDoc.isPending || !file}
               onClick={submitUpload}
               data-testid="button-submit-upload"
             >
