@@ -24,6 +24,7 @@ A full-stack CRM for a coffee distribution business. Role-based access (admin, o
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
+- `pnpm --filter @workspace/scripts run seed` — seed demo users / products / customers / leads (idempotent: bails out if `admin` already exists)
 
 ## Artifacts
 
