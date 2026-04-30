@@ -104,6 +104,35 @@ router.get("/customers/:id", requireAuth as any, async (req, res): Promise<void>
   });
 });
 
+// Fields whose changes we summarise in the activity-log description.
+// `notes` is intentionally excluded from the headline so multi-line note edits
+// do not produce noisy descriptions.
+const TRACKED_CUSTOMER_FIELDS = [
+  "priorityClass",
+  "paymentTerms",
+  "discountLevel",
+  "businessChannel",
+  "customerChannel",
+  "segment",
+  "companyName",
+  "contactPerson",
+  "phone",
+  "email",
+  "active",
+] as const;
+
+function formatCustomerChange(field: string, before: unknown, after: unknown): string {
+  if (field === "active") return after ? "activated" : "deactivated";
+  if (field === "discountLevel") {
+    const b = before == null ? "none" : `${before}%`;
+    const a = after == null ? "none" : `${after}%`;
+    return `discount ${b}→${a}`;
+  }
+  if (field === "priorityClass") return `priority ${before ?? "?"}→${after ?? "?"}`;
+  if (field === "paymentTerms") return `payment terms ${before ?? "?"}→${after ?? "?"}`;
+  return `${field} ${before ?? "?"}→${after ?? "?"}`;
+}
+
 router.patch("/customers/:id", requireAuth as any, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = UpdateCustomerParams.safeParse({ id: rawId });
@@ -118,6 +147,12 @@ router.patch("/customers/:id", requireAuth as any, async (req, res): Promise<voi
     return;
   }
 
+  const [previous] = await db.select().from(customersTable).where(eq(customersTable.id, params.data.id));
+  if (!previous) {
+    res.status(404).json({ error: "Customer not found" });
+    return;
+  }
+
   const updateData: Record<string, unknown> = { ...parsed.data };
   if (parsed.data.discountLevel !== undefined) {
     updateData.discountLevel = parsed.data.discountLevel?.toString();
@@ -129,9 +164,49 @@ router.patch("/customers/:id", requireAuth as any, async (req, res): Promise<voi
     return;
   }
 
+  const previousDiscount = previous.discountLevel ? parseFloat(previous.discountLevel) : null;
+  const nextDiscount = customer.discountLevel ? parseFloat(customer.discountLevel) : null;
+
+  const changes: { field: string; before: unknown; after: unknown }[] = [];
+  for (const field of TRACKED_CUSTOMER_FIELDS) {
+    const before = field === "discountLevel" ? previousDiscount : (previous as any)[field];
+    const after = field === "discountLevel" ? nextDiscount : (customer as any)[field];
+    if (before !== after) changes.push({ field, before, after });
+  }
+
+  if (changes.length > 0) {
+    const user = (req as any).user;
+    const activeChange = changes.find(c => c.field === "active");
+    const otherChanges = changes.filter(c => c.field !== "active");
+    let description: string;
+    if (activeChange && otherChanges.length === 0) {
+      description = `Customer "${customer.companyName}" ${activeChange.after ? "activated" : "deactivated"}`;
+    } else {
+      const summary = otherChanges
+        .map(c => formatCustomerChange(c.field, c.before, c.after))
+        .join(", ");
+      description = `Customer "${customer.companyName}" updated (${summary})`;
+    }
+
+    const priorityChange = changes.find(c => c.field === "priorityClass");
+    await logActivity({
+      actionType: priorityChange ? "customer_priority_changed" : "customer_updated",
+      entityType: "customer",
+      entityId: customer.id,
+      description,
+      performedBy: user?.id,
+      metadata: {
+        changes: changes.reduce<Record<string, { before: unknown; after: unknown }>>((acc, c) => {
+          acc[c.field] = { before: c.before, after: c.after };
+          return acc;
+        }, {}),
+      },
+    });
+  }
+
   res.json({
     ...customer,
-    discountLevel: customer.discountLevel ? parseFloat(customer.discountLevel) : null,
+    discountLevel: nextDiscount,
     createdAt: customer.createdAt.toISOString(),
     updatedAt: customer.updatedAt.toISOString(),
   });

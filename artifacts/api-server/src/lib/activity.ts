@@ -22,7 +22,10 @@ const ACTION_LABELS: Record<string, string> = {
   accounting_rejected: "Accounting Rejected",
   invoice_triggered: "Invoice Triggered",
   customer_created: "Customer Created",
+  customer_updated: "Customer Updated",
+  customer_priority_changed: "Priority Changed",
   lead_created: "Lead Submitted",
+  lead_converted: "Lead Converted",
 };
 
 export async function logActivity(opts: LogActivityOptions): Promise<void> {
