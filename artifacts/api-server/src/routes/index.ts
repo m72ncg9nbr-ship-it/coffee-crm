@@ -11,6 +11,7 @@ import accountingRouter from "./accounting";
 import activityRouter from "./activity";
 import dashboardRouter from "./dashboard";
 import invoicingRouter from "./invoicing";
+import inventoryRouter from "./inventory";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(accountingRouter);
 router.use(activityRouter);
 router.use(dashboardRouter);
 router.use(invoicingRouter);
+router.use(inventoryRouter);
 
 export default router;

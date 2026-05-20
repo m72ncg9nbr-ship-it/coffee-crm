@@ -3,6 +3,7 @@ import { db, ordersTable, orderItemsTable, customersTable, customerAddressesTabl
 import { eq, inArray, and, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
+import { allocateStockForOrder, releaseStockForOrder } from "../lib/inventory";
 import {
   CreateOrderBody,
   UpdateOrderBody,
@@ -192,6 +193,19 @@ router.post("/orders", requireAuth as any, async (req, res): Promise<void> => {
     );
   }
 
+  // Allocate inventory for each item against the mapped pool
+  let stockWarnings: ReturnType<typeof Array<{ productId: number; productName: string; requested: number; available: number; poolName: string }>> = [];
+  if (parsed.data.items.length > 0) {
+    const allocationItems = parsed.data.items.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+    }));
+    const result = await db.transaction(async (tx) => {
+      return allocateStockForOrder(tx, order.id, parsed.data.orderSource, allocationItems, user.id);
+    });
+    stockWarnings = result.warnings;
+  }
+
   // Evaluate completeness; auto-create unassigned delivery if valid
   const evaluatedStatus = await evaluateOrderCompleteness(order.id, order.customerId, order.requestedDeliveryDate);
   let finalOrder = order;
@@ -219,7 +233,7 @@ router.post("/orders", requireAuth as any, async (req, res): Promise<void> => {
     performedBy: user.id,
   });
 
-  res.status(201).json(serializeOrder(finalOrder, customer?.companyName, user.fullName));
+  res.status(201).json({ ...serializeOrder(finalOrder, customer?.companyName, user.fullName), stockWarnings });
 });
 
 router.post("/orders/:id/send-to-planning", requireAuth as any, async (req, res): Promise<void> => {
@@ -311,10 +325,29 @@ router.patch("/orders/:id", requireAuth as any, async (req, res): Promise<void> 
     return;
   }
 
+  // Fetch current order before updating so we can check prior status and approval fields
+  const [currentOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
+  if (!currentOrder) { res.status(404).json({ error: "Order not found" }); return; }
+
   const [order] = await db.update(ordersTable).set(parsed.data).where(eq(ordersTable.id, params.data.id)).returning();
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
+  }
+
+  // Handle cancellation: release (or flag) reserved stock
+  if (parsed.data.status === "cancelled" && currentOrder.status !== "cancelled") {
+    const user = (req as any).user;
+    await db.transaction(async (tx) => {
+      await releaseStockForOrder(tx, order.id, currentOrder.approvedAt, currentOrder.invoiceTriggeredAt, user.id);
+    });
+    await logActivity({
+      actionType: "order_cancelled",
+      entityType: "order",
+      entityId: order.id,
+      description: `Order ${order.orderNumber ?? `#${order.id}`} cancelled${currentOrder.approvedAt || currentOrder.invoiceTriggeredAt ? " — stock allocations flagged for manual review" : " — stock released"}`,
+      performedBy: (req as any).user.id,
+    });
   }
 
   // If currently incomplete, re-evaluate and possibly promote to "new"
