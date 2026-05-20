@@ -515,7 +515,7 @@ export const ListOrdersResponseItem = zod.object({
   customerId: zod.number(),
   customerName: zod.string(),
   businessChannel: zod.string(),
-  orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep"]),
+  orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep", "b2b", "direct", "online", "sample", "free_issue"]),
   requestedDeliveryDate: zod.string().nullish(),
   urgency: zod.enum(["low", "normal", "high", "critical"]),
   notes: zod.string().nullish(),
@@ -543,7 +543,7 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
 export const CreateOrderBody = zod.object({
   customerId: zod.number(),
   businessChannel: zod.string(),
-  orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep"]),
+  orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep", "b2b", "direct", "online", "sample", "free_issue"]),
   requestedDeliveryDate: zod.string().nullish(),
   urgency: zod.enum(["low", "normal", "high", "critical"]),
   notes: zod.string().nullish(),
@@ -569,7 +569,7 @@ export const SendOrderToPlanningResponse = zod.object({
   customerId: zod.number(),
   customerName: zod.string(),
   businessChannel: zod.string(),
-  orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep"]),
+  orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep", "b2b", "direct", "online", "sample", "free_issue"]),
   requestedDeliveryDate: zod.string().nullish(),
   urgency: zod.enum(["low", "normal", "high", "critical"]),
   notes: zod.string().nullish(),
@@ -604,7 +604,7 @@ export const GetOrderResponse = zod
     customerId: zod.number(),
     customerName: zod.string(),
     businessChannel: zod.string(),
-    orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep"]),
+    orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep", "b2b", "direct", "online", "sample", "free_issue"]),
     requestedDeliveryDate: zod.string().nullish(),
     urgency: zod.enum(["low", "normal", "high", "critical"]),
     notes: zod.string().nullish(),
@@ -686,7 +686,7 @@ export const UpdateOrderResponse = zod.object({
   customerId: zod.number(),
   customerName: zod.string(),
   businessChannel: zod.string(),
-  orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep"]),
+  orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep", "b2b", "direct", "online", "sample", "free_issue"]),
   requestedDeliveryDate: zod.string().nullish(),
   urgency: zod.enum(["low", "normal", "high", "critical"]),
   notes: zod.string().nullish(),
@@ -845,7 +845,7 @@ export const GetDeliveryResponse = zod
         customerId: zod.number(),
         customerName: zod.string(),
         businessChannel: zod.string(),
-        orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep"]),
+        orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep", "b2b", "direct", "online", "sample", "free_issue"]),
         requestedDeliveryDate: zod.string().nullish(),
         urgency: zod.enum(["low", "normal", "high", "critical"]),
         notes: zod.string().nullish(),
@@ -1220,3 +1220,95 @@ export const GetReadyForInvoicingResponseItem = zod.record(
 export const GetReadyForInvoicingResponse = zod.array(
   GetReadyForInvoicingResponseItem,
 );
+
+// ─── Inventory (V1.5) ────────────────────────────────────────────────────────
+
+export const ListInventoryPoolsResponse = zod.array(
+  zod.object({ id: zod.number(), name: zod.string(), label: zod.string() }),
+);
+
+export const ListInventoryStockParams = zod.object({
+  productId: zod.coerce.number().optional(),
+});
+
+export const InventoryStockPoolItem = zod.object({
+  poolId: zod.number(),
+  poolName: zod.string(),
+  poolLabel: zod.string(),
+  quantityAvailable: zod.number(),
+  quantityReserved: zod.number(),
+});
+
+export const InventoryStockItem = zod.object({
+  productId: zod.number(),
+  productName: zod.string(),
+  sku: zod.string(),
+  category: zod.string(),
+  businessChannel: zod.string(),
+  pools: zod.array(InventoryStockPoolItem),
+});
+
+export const ListInventoryStockResponse = zod.array(InventoryStockItem);
+
+export const UpsertInventoryStockParams = zod.object({});
+export const UpsertInventoryStockBody = zod.object({
+  productId: zod.number().int().positive(),
+  poolId: zod.number().int().positive(),
+  quantityAvailable: zod.number().int().min(0),
+});
+
+export const AdjustInventoryBody = zod.object({
+  productId: zod.number().int().positive(),
+  poolId: zod.number().int().positive(),
+  delta: zod.number().int(),
+  reason: zod.string().min(1),
+});
+
+export const ListInventoryAllocationsParams = zod.object({
+  orderId: zod.coerce.number().optional(),
+  status: zod.coerce.string().optional(),
+});
+
+export const InventoryAllocationItem = zod.object({
+  id: zod.number(),
+  orderId: zod.number(),
+  orderNumber: zod.string().nullish(),
+  productId: zod.number(),
+  productName: zod.string(),
+  poolId: zod.number(),
+  poolName: zod.string(),
+  quantity: zod.number(),
+  status: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListInventoryAllocationsResponse = zod.array(InventoryAllocationItem);
+
+export const ListInventoryMovementsParams = zod.object({
+  productId: zod.coerce.number().optional(),
+  poolId: zod.coerce.number().optional(),
+  limit: zod.coerce.number().optional(),
+});
+
+export const InventoryMovementItem = zod.object({
+  id: zod.number(),
+  productId: zod.number(),
+  productName: zod.string(),
+  poolId: zod.number(),
+  poolName: zod.string(),
+  quantityDelta: zod.number(),
+  reason: zod.string(),
+  referenceType: zod.string().nullish(),
+  referenceId: zod.number().nullish(),
+  createdBy: zod.number().nullish(),
+  createdAt: zod.string(),
+});
+export const ListInventoryMovementsResponse = zod.array(InventoryMovementItem);
+
+export const StockWarning = zod.object({
+  productId: zod.number(),
+  productName: zod.string(),
+  requested: zod.number(),
+  available: zod.number(),
+  poolName: zod.string(),
+});

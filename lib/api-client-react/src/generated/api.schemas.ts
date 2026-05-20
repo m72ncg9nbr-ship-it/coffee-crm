@@ -345,6 +345,11 @@ export const OrderOrderSource = {
   whatsapp: "whatsapp",
   web: "web",
   sales_rep: "sales_rep",
+  b2b: "b2b",
+  direct: "direct",
+  online: "online",
+  sample: "sample",
+  free_issue: "free_issue",
 } as const;
 
 export type OrderUrgency = (typeof OrderUrgency)[keyof typeof OrderUrgency];
@@ -417,6 +422,11 @@ export const CreateOrderBodyOrderSource = {
   whatsapp: "whatsapp",
   web: "web",
   sales_rep: "sales_rep",
+  b2b: "b2b",
+  direct: "direct",
+  online: "online",
+  sample: "sample",
+  free_issue: "free_issue",
 } as const;
 
 export type CreateOrderBodyUrgency =
@@ -753,3 +763,92 @@ export type ListActivityLogsParams = {
 export type GetTodayPriorities200 = { [key: string]: unknown };
 
 export type GetReadyForInvoicing200Item = { [key: string]: unknown };
+
+// ─── Inventory (V1.5) ────────────────────────────────────────────────────────
+
+export interface InventoryPool {
+  id: number;
+  name: string;
+  label: string;
+}
+
+export interface InventoryStockPoolItem {
+  poolId: number;
+  poolName: string;
+  poolLabel: string;
+  quantityAvailable: number;
+  quantityReserved: number;
+}
+
+export interface InventoryStockItem {
+  productId: number;
+  productName: string;
+  sku: string;
+  category: string;
+  businessChannel: string;
+  pools: InventoryStockPoolItem[];
+}
+
+export interface UpsertInventoryStockBody {
+  productId: number;
+  poolId: number;
+  quantityAvailable: number;
+}
+
+export interface AdjustInventoryBody {
+  productId: number;
+  poolId: number;
+  delta: number;
+  reason: string;
+}
+
+export interface InventoryAllocationItem {
+  id: number;
+  orderId: number;
+  orderNumber?: string | null;
+  productId: number;
+  productName: string;
+  poolId: number;
+  poolName: string;
+  quantity: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InventoryMovementItem {
+  id: number;
+  productId: number;
+  productName: string;
+  poolId: number;
+  poolName: string;
+  quantityDelta: number;
+  reason: string;
+  referenceType?: string | null;
+  referenceId?: number | null;
+  createdBy?: number | null;
+  createdAt: string;
+}
+
+export interface StockWarning {
+  productId: number;
+  productName: string;
+  requested: number;
+  available: number;
+  poolName: string;
+}
+
+export type ListInventoryStockParams = {
+  productId?: number;
+};
+
+export type ListInventoryAllocationsParams = {
+  orderId?: number;
+  status?: string;
+};
+
+export type ListInventoryMovementsParams = {
+  productId?: number;
+  poolId?: number;
+  limit?: number;
+};
