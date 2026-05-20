@@ -85,14 +85,53 @@ async function tableHasRows(table: any): Promise<boolean> {
   return Number(count) > 0;
 }
 
+async function seedInventoryPools() {
+  const existingPools = await db.select().from(inventoryPoolsTable);
+  if (existingPools.length === 0) {
+    console.log("Seeding inventory pools…");
+    await db.insert(inventoryPoolsTable).values([
+      { name: "physical_sales", label: "Physical Sales" },
+      { name: "online_sales",   label: "Online Sales" },
+      { name: "free_samples",   label: "Free Samples" },
+    ]);
+  } else {
+    console.log("Inventory pools already present — leaving them alone.");
+  }
+}
+
+async function seedProductInventory() {
+  const poolRows   = await db.select().from(inventoryPoolsTable);
+  const productRows = await db.select().from(productsTable);
+  const existingInv = await db.select().from(productInventoryTable);
+
+  if (existingInv.length === 0 && poolRows.length > 0 && productRows.length > 0) {
+    console.log("Seeding initial product inventory (100 units per pool)…");
+    const invValues: { productId: number; poolId: number; quantityAvailable: number; quantityReserved: number }[] = [];
+    for (const prod of productRows) {
+      for (const poolRow of poolRows) {
+        invValues.push({ productId: prod.id, poolId: poolRow.id, quantityAvailable: 100, quantityReserved: 0 });
+      }
+    }
+    await db.insert(productInventoryTable).values(invValues);
+  } else {
+    console.log("Product inventory already present — leaving it alone.");
+  }
+}
+
 async function main() {
+  // ── V1.5 inventory tables are always seeded first, independently of demo data ──
+  // This ensures they populate even when the demo admin already exists from a prior run.
+  await seedInventoryPools();
+
   const existingAdmin = await db
     .select({ id: usersTable.id })
     .from(usersTable)
     .where(eq(usersTable.username, "admin"));
 
   if (existingAdmin.length > 0) {
-    console.log("Demo admin user already exists — DB looks seeded. Exiting without changes.");
+    console.log("Demo admin user already exists — skipping demo data. Checking product inventory…");
+    await seedProductInventory();
+    console.log("Seed complete.");
     await pool.end();
     return;
   }
@@ -173,36 +212,7 @@ async function main() {
     });
   }
 
-  // Seed inventory pools (idempotent — skip if already present)
-  const existingPools = await db.select().from(inventoryPoolsTable);
-  if (existingPools.length === 0) {
-    console.log("Seeding inventory pools…");
-    await db.insert(inventoryPoolsTable).values([
-      { name: "physical_sales", label: "Physical Sales" },
-      { name: "online_sales",   label: "Online Sales" },
-      { name: "free_samples",   label: "Free Samples" },
-    ]);
-  } else {
-    console.log("Inventory pools already present — leaving them alone.");
-  }
-
-  // Seed initial product inventory (100 units per pool for each product)
-  const poolRows = await db.select().from(inventoryPoolsTable);
-  const productRows = await db.select().from(productsTable);
-  const existingInv = await db.select().from(productInventoryTable);
-
-  if (existingInv.length === 0 && poolRows.length > 0 && productRows.length > 0) {
-    console.log("Seeding initial product inventory (100 units each)…");
-    const invValues: { productId: number; poolId: number; quantityAvailable: number; quantityReserved: number }[] = [];
-    for (const prod of productRows) {
-      for (const poolRow of poolRows) {
-        invValues.push({ productId: prod.id, poolId: poolRow.id, quantityAvailable: 100, quantityReserved: 0 });
-      }
-    }
-    await db.insert(productInventoryTable).values(invValues);
-  } else {
-    console.log("Product inventory already present — leaving it alone.");
-  }
+  await seedProductInventory();
 
   console.log("Seed complete.");
   await pool.end();
