@@ -194,7 +194,7 @@ router.post("/orders", requireAuth as any, async (req, res): Promise<void> => {
   }
 
   // Allocate inventory for each item against the mapped pool
-  let stockWarnings: ReturnType<typeof Array<{ productId: number; productName: string; requested: number; available: number; poolName: string }>> = [];
+  let stockWarnings: Array<{ productId: number; productName: string; requested: number; available: number; poolName: string }> = [];
   if (parsed.data.items.length > 0) {
     const allocationItems = parsed.data.items.map(item => ({
       productId: item.productId,
