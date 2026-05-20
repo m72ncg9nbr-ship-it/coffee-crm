@@ -82,11 +82,23 @@ export default function OrderNewPage() {
     }
   }, [c?.id]);
 
+  const [stockWarnings, setStockWarnings] = useState<Array<{ productName: string; requested: number; available: number; poolName: string }>>([]);
+
   const create = useCreateOrder({
     mutation: {
       onSuccess: (data: any) => {
-        toast({ title: "Order created", description: `${data.orderNumber}` });
-        navigate(`/orders/${data.id}`);
+        const warnings = data.stockWarnings ?? [];
+        if (warnings.length > 0) {
+          setStockWarnings(warnings);
+          toast({
+            title: "Order created with stock warnings",
+            description: `${data.orderNumber} — ${warnings.length} item(s) have insufficient stock`,
+            variant: "destructive",
+          });
+        } else {
+          toast({ title: "Order created", description: `${data.orderNumber}` });
+          navigate(`/orders/${data.id}`);
+        }
       },
       onError: (e: any) => toast({ title: "Failed to create order", description: e?.error ?? "", variant: "destructive" }),
     },
@@ -300,8 +312,13 @@ export default function OrderNewPage() {
                   <SelectContent>
                     <SelectItem value="phone">Phone</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="web">Web</SelectItem>
                     <SelectItem value="sales_rep">Sales Rep</SelectItem>
+                    <SelectItem value="b2b">B2B</SelectItem>
+                    <SelectItem value="direct">Direct</SelectItem>
+                    <SelectItem value="web">Web</SelectItem>
+                    <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="sample">Sample</SelectItem>
+                    <SelectItem value="free_issue">Free Issue</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -344,6 +361,14 @@ export default function OrderNewPage() {
                   <p className="text-amber-700">Will be saved as <strong>incomplete</strong> until items, a delivery address, and a delivery date are all set.</p>
                 )}
               </div>
+              {stockWarnings.length > 0 && (
+                <div className="text-xs bg-red-50 border border-red-200 rounded p-2 mt-2 space-y-1">
+                  <p className="font-semibold text-red-800">Stock warnings — order was saved:</p>
+                  {stockWarnings.map((w, i) => (
+                    <p key={i} className="text-red-700">{w.productName}: requested {w.requested}, only {w.available} available in {w.poolName}</p>
+                  ))}
+                </div>
+              )}
               <Button type="submit" disabled={!cid || create.isPending} className="w-full mt-3">
                 {create.isPending ? "Creating..." : "Create Order"}
               </Button>

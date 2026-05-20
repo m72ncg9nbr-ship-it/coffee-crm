@@ -16,6 +16,7 @@ import {
   LogOut,
   Coffee,
   UserPlus,
+  Warehouse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/customers", label: "Customers", icon: Users, roles: ["admin", "operations", "sales"] },
   { href: "/leads", label: "Leads", icon: UserPlus, roles: ["admin", "sales"] },
   { href: "/products", label: "Products", icon: Package, roles: ["admin", "operations", "sales"] },
+  { href: "/inventory", label: "Inventory", icon: Warehouse, roles: ["admin", "operations"] },
   { href: "/orders", label: "Orders", icon: ShoppingCart, roles: ["admin", "operations", "sales"] },
   { href: "/deliveries", label: "Deliveries", icon: Truck, roles: ["admin", "operations"] },
   { href: "/accounting", label: "Approvals", icon: ClipboardCheck, roles: ["admin", "accounting"] },

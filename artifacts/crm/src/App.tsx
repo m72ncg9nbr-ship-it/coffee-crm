@@ -14,6 +14,7 @@ import OrderDetailPage from "@/pages/orders/detail";
 import DeliveriesPage from "@/pages/deliveries/index";
 import LeadsPage from "@/pages/leads";
 import ProductsPage from "@/pages/products";
+import InventoryPage from "@/pages/inventory";
 import AccountingPage from "@/pages/accounting";
 import InvoicingPage from "@/pages/invoicing";
 import ActivityPage from "@/pages/activity";
@@ -115,6 +116,12 @@ function AppRoutes() {
       <Route path="/products">
         <ProtectedRoute roles={["admin", "operations", "sales"]}>
           <Layout><ProductsPage /></Layout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/inventory">
+        <ProtectedRoute roles={["admin", "operations"]}>
+          <Layout><InventoryPage /></Layout>
         </ProtectedRoute>
       </Route>
 

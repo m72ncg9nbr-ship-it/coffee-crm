@@ -14,6 +14,8 @@ import {
   customerAddressesTable,
   productsTable,
   leadsTable,
+  inventoryPoolsTable,
+  productInventoryTable,
 } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 
@@ -169,6 +171,37 @@ async function main() {
         : `Monthly consumption ${consumption}kg below auto-qualify threshold; requires sales review.`,
       followUpDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
+  }
+
+  // Seed inventory pools (idempotent — skip if already present)
+  const existingPools = await db.select().from(inventoryPoolsTable);
+  if (existingPools.length === 0) {
+    console.log("Seeding inventory pools…");
+    await db.insert(inventoryPoolsTable).values([
+      { name: "physical_sales", label: "Physical Sales" },
+      { name: "online_sales",   label: "Online Sales" },
+      { name: "free_samples",   label: "Free Samples" },
+    ]);
+  } else {
+    console.log("Inventory pools already present — leaving them alone.");
+  }
+
+  // Seed initial product inventory (100 units per pool for each product)
+  const poolRows = await db.select().from(inventoryPoolsTable);
+  const productRows = await db.select().from(productsTable);
+  const existingInv = await db.select().from(productInventoryTable);
+
+  if (existingInv.length === 0 && poolRows.length > 0 && productRows.length > 0) {
+    console.log("Seeding initial product inventory (100 units each)…");
+    const invValues: { productId: number; poolId: number; quantityAvailable: number; quantityReserved: number }[] = [];
+    for (const prod of productRows) {
+      for (const poolRow of poolRows) {
+        invValues.push({ productId: prod.id, poolId: poolRow.id, quantityAvailable: 100, quantityReserved: 0 });
+      }
+    }
+    await db.insert(productInventoryTable).values(invValues);
+  } else {
+    console.log("Product inventory already present — leaving it alone.");
   }
 
   console.log("Seed complete.");
