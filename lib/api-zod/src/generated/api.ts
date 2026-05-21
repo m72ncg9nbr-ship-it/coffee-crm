@@ -1312,3 +1312,28 @@ export const StockWarning = zod.object({
   available: zod.number(),
   poolName: zod.string(),
 });
+
+// === merged: delete params (main agent) ===
+
+/**
+ * @summary Delete an order (admin/operations/sales)
+ */
+export const DeleteOrderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Add an item to an order
+ */
+
+/**
+ * @summary Delete a delivery (admin/operations/sales)
+ */
+export const DeleteDeliveryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Upload delivery document/proof
+ */
+

@@ -2,7 +2,7 @@ import { Router, type IRouter, type RequestHandler } from "express";
 import multer from "multer";
 import { db, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, ordersTable, orderItemsTable, productsTable, customersTable, customerAddressesTable, usersTable } from "@workspace/db";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireRole } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import {
   CreateDeliveryBody,
@@ -375,6 +375,56 @@ router.patch("/deliveries/:id", requireAuth as any, async (req, res): Promise<vo
 
   const enriched = await enrichDeliveries([delivery]);
   res.json(enriched[0]);
+});
+
+router.delete("/deliveries/:id", requireAuth as any, requireRole("admin", "operations", "sales") as any, async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = GetDeliveryParams.safeParse({ id: rawId });
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const user = (req as any).user;
+  let delivery: typeof deliveriesTable.$inferSelect | undefined;
+
+  try {
+    await db.transaction(async (tx) => {
+      [delivery] = await tx.select().from(deliveriesTable).where(eq(deliveriesTable.id, params.data.id));
+      if (!delivery) throw new Error("NOT_FOUND");
+      if (delivery.status === "approved") throw new Error("APPROVED");
+
+      await tx.delete(accountingApprovalsTable).where(eq(accountingApprovalsTable.deliveryId, delivery.id));
+      await tx.delete(deliveryDocumentsTable).where(eq(deliveryDocumentsTable.deliveryId, delivery.id));
+      await tx.delete(deliveriesTable).where(eq(deliveriesTable.id, delivery.id));
+
+      const [order] = await tx.select().from(ordersTable).where(eq(ordersTable.id, delivery.orderId));
+      if (order && ["out_for_delivery", "awaiting_accounting_approval"].includes(order.status)) {
+        // Only reset the order if no other deliveries for it are still active
+        const remaining = await tx.select().from(deliveriesTable).where(eq(deliveriesTable.orderId, order.id));
+        const stillActive = remaining.some(d =>
+          ["arrived", "awaiting_accounting_approval", "approved"].includes(d.status)
+        );
+        if (!stillActive) {
+          await tx.update(ordersTable)
+            .set({ status: "planned", approvedByAccountingUserId: null, approvedAt: null, invoiceTriggeredAt: null })
+            .where(eq(ordersTable.id, order.id));
+        }
+      }
+    });
+  } catch (err: any) {
+    if (err?.message === "NOT_FOUND") { res.status(404).json({ error: "Delivery not found" }); return; }
+    if (err?.message === "APPROVED") { res.status(409).json({ error: "Cannot delete an approved delivery" }); return; }
+    throw err;
+  }
+
+  await logActivity({
+    actionType: "delivery_deleted",
+    actionLabel: "Levering slettet",
+    entityType: "delivery",
+    entityId: delivery!.id,
+    description: `Delivery ${delivery!.deliveryNumber ?? `#${delivery!.id}`} deleted`,
+    performedBy: user.id,
+  });
+
+  res.status(204).end();
 });
 
 router.post(

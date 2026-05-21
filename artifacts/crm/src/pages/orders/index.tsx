@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useListOrders, useSendOrderToPlanning, getListOrdersQueryKey } from "@workspace/api-client-react";
+import { useListOrders, useSendOrderToPlanning, useDeleteOrder, getListOrdersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { StatusBadge, UrgencyBadge } from "@/components/priority-badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Plus, Search, Send } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import { DeleteConfirm } from "@/components/delete-confirm";
 
 export default function OrdersPage() {
   const [search, setSearch] = useState("");
@@ -23,6 +25,9 @@ export default function OrdersPage() {
 
   const { data: orders, isLoading } = useListOrders(params as any);
 
+  const { user } = useAuth();
+  const canDelete = !!user && ["admin", "operations", "sales"].includes(user.role);
+
   const sendToPlanning = useSendOrderToPlanning({
     mutation: {
       onSuccess: () => {
@@ -30,6 +35,16 @@ export default function OrdersPage() {
         toast({ title: "Order sent to planning" });
       },
       onError: (e: any) => toast({ title: "Cannot plan order", description: e?.error ?? "Order is still incomplete", variant: "destructive" }),
+    },
+  });
+
+  const deleteOrder = useDeleteOrder({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+        toast({ title: "Order deleted" });
+      },
+      onError: (e: any) => toast({ title: "Could not delete order", description: e?.error ?? "Try again", variant: "destructive" }),
     },
   });
 
@@ -109,17 +124,29 @@ export default function OrdersPage() {
                   <td className="px-4 py-3 text-sm font-medium">{formatCurrency(o.totalAmount)}</td>
                   <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
                   <td className="px-4 py-3 text-right">
-                    {(o.status === "incomplete" || o.status === "blocked" || o.status === "new") && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={sendToPlanning.isPending}
-                        onClick={() => sendToPlanning.mutate({ id: o.id })}
-                      >
-                        <Send className="h-3.5 w-3.5 mr-1" />
-                        Send to planning
-                      </Button>
-                    )}
+                    <div className="flex items-center justify-end gap-1">
+                      {(o.status === "incomplete" || o.status === "blocked" || o.status === "new") && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={sendToPlanning.isPending}
+                          onClick={() => sendToPlanning.mutate({ id: o.id })}
+                        >
+                          <Send className="h-3.5 w-3.5 mr-1" />
+                          Send to planning
+                        </Button>
+                      )}
+                      {canDelete && o.status !== "approved" && (
+                        <DeleteConfirm
+                          title={`Delete order ${o.orderNumber ?? `#${o.id}`}?`}
+                          description="This will remove the order, its items, and any unapproved deliveries and documentation. This cannot be undone."
+                          confirmLabel="Delete order"
+                          disabled={deleteOrder.isPending}
+                          testId={`button-delete-order-${o.id}`}
+                          onConfirm={() => deleteOrder.mutate({ id: o.id })}
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

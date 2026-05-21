@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
-import { db, ordersTable, orderItemsTable, customersTable, customerAddressesTable, deliveriesTable, usersTable, productsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, customersTable, customerAddressesTable, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, inventoryAllocationsTable, usersTable, productsTable } from "@workspace/db";
 import { eq, inArray, and, sql } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireRole } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import { allocateStockForOrder, releaseStockForOrder } from "../lib/inventory";
 import {
@@ -423,6 +423,54 @@ router.post("/orders/:id/items", requireAuth as any, async (req, res): Promise<v
     lineTotal: parseFloat(item!.lineTotal),
     createdAt: item!.createdAt.toISOString(),
   });
+});
+
+router.delete("/orders/:id", requireAuth as any, requireRole("admin", "operations", "sales") as any, async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const parsed = GetOrderParams.safeParse({ id: rawId });
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const user = (req as any).user;
+  let order: typeof ordersTable.$inferSelect | undefined;
+
+  try {
+    await db.transaction(async (tx) => {
+      [order] = await tx.select().from(ordersTable).where(eq(ordersTable.id, parsed.data.id));
+      if (!order) throw new Error("NOT_FOUND");
+      if (order.status === "approved") throw new Error("APPROVED");
+
+      const deliveries = await tx.select().from(deliveriesTable).where(eq(deliveriesTable.orderId, order.id));
+      const deliveryIds = deliveries.map(d => d.id);
+      if (deliveryIds.length > 0) {
+        await tx.delete(accountingApprovalsTable).where(inArray(accountingApprovalsTable.deliveryId, deliveryIds));
+        await tx.delete(deliveryDocumentsTable).where(inArray(deliveryDocumentsTable.deliveryId, deliveryIds));
+        await tx.delete(deliveriesTable).where(inArray(deliveriesTable.id, deliveryIds));
+      }
+      await tx.delete(accountingApprovalsTable).where(eq(accountingApprovalsTable.orderId, order.id));
+
+      // Release any reserved stock and drop allocation rows (FK to orders.id)
+      await releaseStockForOrder(tx, order.id, order.approvedAt, order.invoiceTriggeredAt, user.id);
+      await tx.delete(inventoryAllocationsTable).where(eq(inventoryAllocationsTable.orderId, order.id));
+
+      await tx.delete(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+      await tx.delete(ordersTable).where(eq(ordersTable.id, order.id));
+    });
+  } catch (err: any) {
+    if (err?.message === "NOT_FOUND") { res.status(404).json({ error: "Order not found" }); return; }
+    if (err?.message === "APPROVED") { res.status(409).json({ error: "Cannot delete an approved order" }); return; }
+    throw err;
+  }
+
+  await logActivity({
+    actionType: "order_deleted",
+    actionLabel: "Ordre slettet",
+    entityType: "order",
+    entityId: order!.id,
+    description: `Order ${order!.orderNumber ?? `#${order!.id}`} deleted`,
+    performedBy: user.id,
+  });
+
+  res.status(204).end();
 });
 
 router.delete("/orders/:id/items/:itemId", requireAuth as any, async (req, res): Promise<void> => {

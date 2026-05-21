@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useListDeliveries, useUpdateDelivery, useListUsers } from "@workspace/api-client-react";
+import { useState, type ReactNode } from "react";
+import { useListDeliveries, useUpdateDelivery, useDeleteDelivery, useListUsers, getListDeliveriesQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { StatusBadge, UrgencyBadge, PriorityBadge } from "@/components/priority-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,6 +9,8 @@ import { formatDate } from "@/lib/utils";
 import { Truck, AlertCircle, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import { DeleteConfirm } from "@/components/delete-confirm";
 
 const BOARD_COLUMNS = [
   { status: "unassigned", label: "Unassigned", color: "border-gray-300 bg-gray-50" },
@@ -21,8 +24,36 @@ const BOARD_COLUMNS = [
 export default function DeliveriesPage() {
   const [view, setView] = useState<"board" | "list">("board");
   const [dateFilter, setDateFilter] = useState("all");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const canDelete = !!user && ["admin", "operations", "sales"].includes(user.role);
 
   const { data: deliveries, isLoading } = useListDeliveries();
+
+  const deleteDelivery = useDeleteDelivery({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListDeliveriesQueryKey() });
+        toast({ title: "Delivery deleted" });
+      },
+      onError: (e: any) => toast({ title: "Could not delete delivery", description: e?.error ?? "Try again", variant: "destructive" }),
+    },
+  });
+
+  function renderDelete(d: any) {
+    if (!canDelete || d.status === "approved") return null;
+    return (
+      <DeleteConfirm
+        title={`Delete delivery ${d.deliveryNumber ?? `#${d.id}`}?`}
+        description="This will remove the delivery and any uploaded documentation. The order will move back to planned. This cannot be undone."
+        confirmLabel="Delete delivery"
+        disabled={deleteDelivery.isPending}
+        testId={`button-delete-delivery-${d.id}`}
+        onConfirm={() => deleteDelivery.mutate({ id: d.id })}
+      />
+    );
+  }
 
   const grouped = BOARD_COLUMNS.reduce((acc, col) => {
     acc[col.status] = (deliveries ?? []).filter((d: any) => d.status === col.status);
@@ -65,7 +96,7 @@ export default function DeliveriesPage() {
                 <span className="text-xs bg-white rounded-full px-2 py-0.5 font-semibold shadow-sm">{grouped[col.status]?.length ?? 0}</span>
               </div>
               {(grouped[col.status] ?? []).map((d: any) => (
-                <DeliveryCard key={d.id} delivery={d} />
+                <DeliveryCard key={d.id} delivery={d} deleteSlot={renderDelete(d)} />
               ))}
               {(grouped[col.status] ?? []).length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-4 italic">No deliveries</p>
@@ -88,6 +119,7 @@ export default function DeliveriesPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Urgency</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Deviation</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -125,6 +157,7 @@ export default function DeliveriesPage() {
                       ) : <span className="text-muted-foreground text-xs">—</span>}
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={d.status} /></td>
+                    <td className="px-4 py-3 text-right">{renderDelete(d)}</td>
                   </tr>
                   );
                 })}
@@ -152,7 +185,7 @@ function OverdueBadge() {
   );
 }
 
-function DeliveryCard({ delivery: d }: { delivery: any }) {
+function DeliveryCard({ delivery: d, deleteSlot }: { delivery: any; deleteSlot?: ReactNode }) {
   const overdue = isOverdue(d);
   return (
     <div className={`bg-white rounded-md shadow-sm border p-3 space-y-2 ${overdue ? "border-red-400 border-2" : ""}`}>
@@ -161,7 +194,10 @@ function DeliveryCard({ delivery: d }: { delivery: any }) {
           <PriorityBadge priority={d.customerPriority} />
           <span className="text-sm font-medium leading-tight truncate">{d.customerName}</span>
         </div>
-        <UrgencyBadge urgency={d.urgency} />
+        <div className="flex items-center gap-1">
+          <UrgencyBadge urgency={d.urgency} />
+          {deleteSlot}
+        </div>
       </div>
       <div className="text-xs text-muted-foreground flex items-center gap-1">
         <Truck className="h-3 w-3" />

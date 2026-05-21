@@ -576,6 +576,24 @@ paths:
               schema:
                 $ref: "#/components/schemas/Order"
 
+    delete:
+      operationId: deleteOrder
+      tags: [orders]
+      summary: Delete an order (admin/operations/sales)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+        "409":
+          description: Cannot delete (approved)
+
   /orders/{id}/items:
     post:
       operationId: addOrderItem
@@ -716,6 +734,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Delivery"
+    delete:
+      operationId: deleteDelivery
+      tags: [deliveries]
+      summary: Delete a delivery (admin/operations/sales)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+        "409":
+          description: Cannot delete (approved)
 
   /deliveries/{id}/documents:
     post:
