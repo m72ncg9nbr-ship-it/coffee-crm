@@ -6,7 +6,15 @@ import {
   useListCustomerAddresses,
   useListProducts,
   useCreateOrder,
+  useListInventoryStock,
 } from "@workspace/api-client-react";
+import {
+  calculateInventoryStatus,
+  getPoolNameForSource,
+  invStatusTextClass,
+  invStatusBadgeClass,
+  POOL_LABELS,
+} from "@/lib/inventoryStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,30 +36,13 @@ interface Item {
   productName: string;
   quantity: number;
   unitPriceSnapshot: number;
-  stockStatus?: string;
-}
-
-function stockLabel(status: string | undefined): string {
-  switch (status) {
-    case "in_stock": return "in stock";
-    case "low_stock": return "low stock";
-    case "out_of_stock": return "out of stock";
-    default: return status ?? "";
-  }
-}
-
-function stockClass(status: string | undefined): string {
-  switch (status) {
-    case "low_stock": return "text-amber-700";
-    case "out_of_stock": return "text-red-700";
-    default: return "text-muted-foreground";
-  }
 }
 
 export default function OrderNewPage() {
   const [, navigate] = useLocation();
   const { data: customers } = useListCustomers();
   const { data: products } = useListProducts();
+  const { data: stockData } = useListInventoryStock();
 
   const [customerId, setCustomerId] = useState<string>("");
   const [requestedDeliveryDate, setRequestedDeliveryDate] = useState("");
@@ -81,6 +72,35 @@ export default function OrderNewPage() {
       else setUrgency("normal");
     }
   }, [c?.id]);
+
+  // ── Pool-based stock lookup ──────────────────────────────────────────────
+  const poolName = getPoolNameForSource(orderSource);
+  const poolLabel = POOL_LABELS[poolName] ?? poolName;
+
+  // Map productId → { available, reserved } for the currently selected pool
+  const poolStockMap = useMemo(() => {
+    const map = new Map<number, { available: number; reserved: number }>();
+    for (const item of (stockData ?? []) as any[]) {
+      const pool = (item.pools ?? []).find((p: any) => p.poolName === poolName);
+      if (pool) {
+        map.set(item.productId, {
+          available: pool.quantityAvailable,
+          reserved: pool.quantityReserved,
+        });
+      }
+    }
+    return map;
+  }, [stockData, poolName]);
+
+  // Items in the cart that have pool-level stock issues
+  const cartPoolWarnings = useMemo(() =>
+    items.filter(i => {
+      const ps = poolStockMap.get(i.productId);
+      if (!ps) return false;
+      const { status } = calculateInventoryStatus(ps.available, ps.reserved);
+      return status === "out_of_stock" || status === "low_stock";
+    }),
+  [items, poolStockMap]);
 
   const [stockWarnings, setStockWarnings] = useState<Array<{ productName: string; requested: number; available: number; poolName: string }>>([]);
 
@@ -115,13 +135,11 @@ export default function OrderNewPage() {
     setItems(prev => {
       const existing = prev.find(i => i.productId === pid);
       if (existing) return prev.map(i => i.productId === pid ? { ...i, quantity: i.quantity + qn } : i);
-      return [...prev, { productId: pid, productName: p.productName, quantity: qn, unitPriceSnapshot: parseFloat(p.unitPrice), stockStatus: p.stockStatus }];
+      return [...prev, { productId: pid, productName: p.productName, quantity: qn, unitPriceSnapshot: parseFloat(p.unitPrice) }];
     });
     setProductPick("");
     setQty("1");
   }
-
-  const hasOutOfStockItem = items.some(i => i.stockStatus === "out_of_stock");
 
   function removeItem(pid: number) {
     setItems(prev => prev.filter(i => i.productId !== pid));
@@ -223,14 +241,31 @@ export default function OrderNewPage() {
                   <Select value={productPick} onValueChange={setProductPick}>
                     <SelectTrigger><SelectValue placeholder="Choose product" /></SelectTrigger>
                     <SelectContent>
-                      {(products ?? []).map((p: any) => (
-                        <SelectItem key={p.id} value={String(p.id)}>
-                          <span>
-                            {p.productName} — {formatCurrency(parseFloat(p.unitPrice))}/{p.unit ?? "ea"}
-                            <span className={`ml-2 text-xs ${stockClass(p.stockStatus)}`}>· {stockLabel(p.stockStatus)}</span>
-                          </span>
-                        </SelectItem>
-                      ))}
+                      {(products ?? []).map((p: any) => {
+                        const ps = poolStockMap.get(p.id);
+                        const invStatus = ps
+                          ? calculateInventoryStatus(ps.available, ps.reserved)
+                          : null;
+                        const statusText = invStatus
+                          ? `${poolLabel}: ${ps!.available} avail · ${invStatus.label}`
+                          : "";
+                        return (
+                          <SelectItem
+                            key={p.id}
+                            value={String(p.id)}
+                            textValue={`${p.productName} — ${formatCurrency(parseFloat(p.unitPrice))}/${p.unit ?? "ea"}`}
+                          >
+                            <span>
+                              {p.productName} — {formatCurrency(parseFloat(p.unitPrice))}/{p.unit ?? "ea"}
+                              {invStatus ? (
+                                <span className={`ml-2 text-xs ${invStatusTextClass(invStatus.status)}`}>
+                                  · {statusText}
+                                </span>
+                              ) : null}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -250,11 +285,17 @@ export default function OrderNewPage() {
                       <div>
                         <div className="font-medium flex items-center gap-2 flex-wrap">
                           {i.productName}
-                          {i.stockStatus && i.stockStatus !== "in_stock" && (
-                            <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ${i.stockStatus === "out_of_stock" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>
-                              {stockLabel(i.stockStatus)}
-                            </span>
-                          )}
+                          {(() => {
+                            const ps = poolStockMap.get(i.productId);
+                            if (!ps) return null;
+                            const { status, label } = calculateInventoryStatus(ps.available, ps.reserved);
+                            const cls = invStatusBadgeClass(status);
+                            return (
+                              <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}`}>
+                                {label}
+                              </span>
+                            );
+                          })()}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {i.quantity} × {formatCurrency(i.unitPriceSnapshot)} = {formatCurrency(i.quantity * i.unitPriceSnapshot)}
@@ -274,12 +315,21 @@ export default function OrderNewPage() {
                 <p className="text-xs text-muted-foreground italic">No items yet — add at least one</p>
               )}
 
-              {hasOutOfStockItem && (
-                <div className="flex items-start gap-2 text-xs text-red-800 bg-red-50 border border-red-200 rounded-md p-2.5">
+              {cartPoolWarnings.length > 0 && (
+                <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-2.5">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium">One or more items are out of stock.</p>
-                    <p>The order will still be saved, but operations may need to delay the delivery.</p>
+                    <p className="font-medium">Stock warning — {poolLabel} pool:</p>
+                    {cartPoolWarnings.map((item, idx) => {
+                      const ps = poolStockMap.get(item.productId)!;
+                      const { label, allocated } = calculateInventoryStatus(ps.available, ps.reserved);
+                      return (
+                        <p key={idx}>
+                          {item.productName}: {ps.available} of {allocated} available ({label})
+                        </p>
+                      );
+                    })}
+                    <p className="mt-0.5 opacity-70">The order will still be saved.</p>
                   </div>
                 </div>
               )}

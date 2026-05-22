@@ -5,21 +5,79 @@ import {
   useGetDeliveryDeviations,
   useGetTodayPriorities,
   useListActivityLogs,
+  useListInventoryStock,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { StatusBadge, PriorityBadge, UrgencyBadge } from "@/components/priority-badge";
 import { formatDateTime, formatDate } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import {
+  calculateInventoryStatus,
+  invStatusBadgeClass,
+  POOL_LABELS,
+  type InventoryStatus,
+} from "@/lib/inventoryStatus";
 import {
   Users, ShoppingCart, Truck, AlertTriangle, ClipboardCheck, CheckCircle,
-  Star, FileWarning, Receipt, AlertCircle,
+  Star, FileWarning, Receipt, AlertCircle, Warehouse,
 } from "lucide-react";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const { data: summary } = useGetDashboardSummary();
   const { data: recentDeliveries } = useGetRecentDeliveries();
   const { data: deviations } = useGetDeliveryDeviations();
   const { data: priorities } = useGetTodayPriorities();
   const { data: activityLogs } = useListActivityLogs({ limit: 15 });
+  const { data: stockData } = useListInventoryStock();
+
+  const showStockOverview = !!user && ["admin", "operations", "sales"].includes(user.role);
+
+  // Compute per-pool alerts from inventory data (client-side)
+  type StockAlert = {
+    productId: number;
+    productName: string;
+    sku: string;
+    poolName: string;
+    poolLabel: string;
+    allocated: number;
+    available: number;
+    reserved: number;
+    status: InventoryStatus;
+    statusLabel: string;
+  };
+
+  const stockAlerts: StockAlert[] = [];
+  if (showStockOverview && stockData) {
+    for (const item of stockData as any[]) {
+      for (const pool of item.pools ?? []) {
+        const { status, label, allocated } = calculateInventoryStatus(
+          pool.quantityAvailable,
+          pool.quantityReserved,
+        );
+        if (status === "out_of_stock" || status === "low_stock") {
+          stockAlerts.push({
+            productId: item.productId,
+            productName: item.productName,
+            sku: item.sku,
+            poolName: pool.poolName,
+            poolLabel: pool.poolLabel ?? POOL_LABELS[pool.poolName] ?? pool.poolName,
+            allocated,
+            available: pool.quantityAvailable,
+            reserved: pool.quantityReserved,
+            status,
+            statusLabel: label,
+          });
+        }
+      }
+    }
+    // out_of_stock first, then low_stock; alphabetically by product within each group
+    stockAlerts.sort((a, b) => {
+      if (a.status !== b.status) return a.status === "out_of_stock" ? -1 : 1;
+      return a.productName.localeCompare(b.productName);
+    });
+  }
 
   const s: any = summary ?? {};
   const p: any = priorities ?? {};
@@ -69,6 +127,64 @@ export default function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Stock Overview — admin / operations / sales only */}
+      {showStockOverview && stockData && (
+        <Card className={stockAlerts.length > 0 ? "border-amber-300" : ""}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Warehouse className="h-4 w-4 text-muted-foreground" />
+              Stock Overview
+              {stockAlerts.length > 0 && (
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({stockAlerts.filter(a => a.status === "out_of_stock").length} out of stock,{" "}
+                  {stockAlerts.filter(a => a.status === "low_stock").length} low)
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stockAlerts.length === 0 ? (
+              <p className="text-sm text-green-700 flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4" />
+                All pools healthy — no low-stock or out-of-stock items.
+              </p>
+            ) : (
+              <div className="divide-y">
+                {stockAlerts.map((a, i) => {
+                  const badgeCls = invStatusBadgeClass(a.status);
+                  const pct = a.allocated > 0
+                    ? Math.round((a.available / a.allocated) * 100)
+                    : 0;
+                  return (
+                    <div key={i} className="py-2.5 flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-tight">{a.productName}</p>
+                        <p className="text-xs text-muted-foreground font-mono mt-0.5">{a.sku}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Pool: <span className="font-medium">{a.poolLabel}</span>
+                          <span className="mx-1.5 opacity-40">·</span>
+                          Allocated: <span className="font-medium">{a.allocated}</span>
+                          <span className="mx-1.5 opacity-40">·</span>
+                          Reserved: <span className="font-medium">{a.reserved}</span>
+                          <span className="mx-1.5 opacity-40">·</span>
+                          Available: <span className="font-medium">{a.available}</span>
+                          {a.allocated > 0 && (
+                            <span className="text-muted-foreground/60"> ({pct}%)</span>
+                          )}
+                        </p>
+                      </div>
+                      <Badge className={`${badgeCls} text-[10px] shrink-0 mt-0.5`}>
+                        {a.statusLabel}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Today's Priorities */}
       <Card className="border-amber-200 bg-amber-50/30">
