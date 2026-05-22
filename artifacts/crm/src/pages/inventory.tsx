@@ -22,13 +22,20 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Package, History, Search, ChevronDown, Edit2, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { calculateInventoryStatus, invStatusBadgeClass } from "@/lib/inventoryStatus";
 
-function stockBadge(available: number) {
-  if (available === 0)
-    return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Out</Badge>;
-  if (available <= 10)
-    return <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] px-1.5 py-0">Low</Badge>;
-  return <Badge className="bg-green-100 text-green-800 border-green-200 text-[10px] px-1.5 py-0">OK</Badge>;
+function stockBadge(available: number, reserved: number) {
+  const { status, label } = calculateInventoryStatus(available, reserved);
+  const cls = invStatusBadgeClass(status);
+  const short = status === "out_of_stock" ? "Out"
+    : status === "low_stock" ? "Low"
+    : status === "not_allocated" ? "N/A"
+    : "OK";
+  return (
+    <Badge className={`${cls} text-[10px] px-1.5 py-0`} title={label}>
+      {short}
+    </Badge>
+  );
 }
 
 function reasonLabel(reason: string) {
@@ -264,7 +271,7 @@ export default function InventoryPage() {
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold">{pool.poolLabel}</span>
-                            {stockBadge(pool.quantityAvailable)}
+                            {stockBadge(pool.quantityAvailable, pool.quantityReserved)}
                           </div>
 
                           <div className="flex gap-4 text-sm">
