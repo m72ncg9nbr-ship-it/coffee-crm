@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed": "pnpm install && tsx ./src/seed.ts",
+    "backfill-inventory": "tsx ./src/backfill-inventory.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
