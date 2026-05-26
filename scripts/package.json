@@ -7,6 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "seed": "pnpm install && tsx ./src/seed.ts",
     "backfill-inventory": "tsx ./src/backfill-inventory.ts",
+    "reconcile-inventory-fulfillment": "tsx ./src/reconcile-inventory-fulfillment.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

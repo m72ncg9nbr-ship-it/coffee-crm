@@ -168,9 +168,11 @@ router.post("/accounting/approvals/:deliveryId/approve", requireRole("admin", "a
       .where(eq(ordersTable.id, delivery.orderId));
 
     // Convert reserved stock → fulfilled (drains quantityReserved)
-    await db.transaction(async (tx) => {
-      await fulfillStockForOrder(tx, delivery.orderId, user.id);
-    });
+    try {
+      await fulfillStockForOrder(db, delivery.orderId, user.id);
+    } catch (err) {
+      console.error(`[inventory] fulfillStockForOrder failed for order ${delivery.orderId}:`, err);
+    }
   }
 
   await logActivity({
