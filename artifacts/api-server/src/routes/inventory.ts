@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, inventoryPoolsTable, productInventoryTable, inventoryAllocationsTable, inventoryMovementsTable, productsTable, ordersTable } from "@workspace/db";
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import {
   ListInventoryStockParams,
@@ -42,6 +42,22 @@ router.get("/inventory/stock", requireAuth as any, async (req, res): Promise<voi
     invMap.set(`${row.productId}:${row.poolId}`, row);
   }
 
+  // Sum of fulfilled (used/sold) quantities per product × pool
+  const fulfilledRows = await db
+    .select({
+      productId: inventoryAllocationsTable.productId,
+      poolId:    inventoryAllocationsTable.poolId,
+      total:     sql<number>`cast(sum(${inventoryAllocationsTable.quantity}) as int)`,
+    })
+    .from(inventoryAllocationsTable)
+    .where(eq(inventoryAllocationsTable.status, "fulfilled"))
+    .groupBy(inventoryAllocationsTable.productId, inventoryAllocationsTable.poolId);
+
+  const fulfilledMap = new Map<string, number>();
+  for (const row of fulfilledRows) {
+    fulfilledMap.set(`${row.productId}:${row.poolId}`, row.total ?? 0);
+  }
+
   const result = products
     .filter(p => productIdFilter == null || p.id === productIdFilter)
     .map(p => ({
@@ -53,11 +69,12 @@ router.get("/inventory/stock", requireAuth as any, async (req, res): Promise<voi
       pools: pools.map(pool => {
         const inv = invMap.get(`${p.id}:${pool.id}`);
         return {
-          poolId: pool.id,
-          poolName: pool.name,
-          poolLabel: pool.label,
-          quantityAvailable: inv?.quantityAvailable ?? 0,
-          quantityReserved: inv?.quantityReserved ?? 0,
+          poolId:             pool.id,
+          poolName:           pool.name,
+          poolLabel:          pool.label,
+          quantityAvailable:  inv?.quantityAvailable ?? 0,
+          quantityReserved:   inv?.quantityReserved  ?? 0,
+          quantityFulfilled:  fulfilledMap.get(`${p.id}:${pool.id}`) ?? 0,
         };
       }),
     }));

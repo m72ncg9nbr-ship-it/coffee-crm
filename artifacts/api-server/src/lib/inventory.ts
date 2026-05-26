@@ -190,3 +190,59 @@ export async function releaseStockForOrder(
 
   return { needsManualReview: false };
 }
+
+/**
+ * Fulfils reserved stock when accounting approves a delivery/order.
+ *
+ * Converts every "reserved" allocation for this order into "fulfilled":
+ *   - quantityReserved  decreases (the reserved hold is released as sold)
+ *   - quantityAvailable unchanged  (was already deducted at reservation time)
+ *
+ * This is a one-way, permanent operation — fulfilled units are consumed.
+ * No stock is returned to available.
+ */
+export async function fulfillStockForOrder(
+  tx: any,
+  orderId: number,
+  userId: number,
+): Promise<void> {
+  const allocations = await tx.select()
+    .from(inventoryAllocationsTable)
+    .where(and(
+      eq(inventoryAllocationsTable.orderId, orderId),
+      eq(inventoryAllocationsTable.status, "reserved"),
+    ));
+
+  if (allocations.length === 0) return;
+
+  for (const alloc of allocations) {
+    const [invRow] = await tx.select()
+      .from(productInventoryTable)
+      .where(and(
+        eq(productInventoryTable.productId, alloc.productId),
+        eq(productInventoryTable.poolId, alloc.poolId),
+      ));
+
+    if (invRow) {
+      await tx.update(productInventoryTable)
+        .set({
+          quantityReserved: Math.max(0, invRow.quantityReserved - alloc.quantity),
+        })
+        .where(eq(productInventoryTable.id, invRow.id));
+    }
+
+    await tx.update(inventoryAllocationsTable)
+      .set({ status: "fulfilled" })
+      .where(eq(inventoryAllocationsTable.id, alloc.id));
+
+    await tx.insert(inventoryMovementsTable).values({
+      productId: alloc.productId,
+      poolId:    alloc.poolId,
+      quantityDelta: 0,            // available unchanged; reserved was already removed
+      reason:    "order_fulfilled",
+      referenceType: "order",
+      referenceId:   orderId,
+      createdBy: userId,
+    });
+  }
+}

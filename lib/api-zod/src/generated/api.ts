@@ -1237,6 +1237,7 @@ export const InventoryStockPoolItem = zod.object({
   poolLabel: zod.string(),
   quantityAvailable: zod.number(),
   quantityReserved: zod.number(),
+  quantityFulfilled: zod.number(),
 });
 
 export const InventoryStockItem = zod.object({

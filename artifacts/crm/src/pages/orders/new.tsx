@@ -287,8 +287,10 @@ export default function OrderNewPage() {
                           {i.productName}
                           {(() => {
                             const ps = poolStockMap.get(i.productId);
-                            if (!ps) return null;
-                            const { status, label } = calculateInventoryStatus(ps.available, ps.reserved);
+                            // Show badge even when no pool data: "Not Allocated" (gray)
+                            const { status, label } = ps
+                              ? calculateInventoryStatus(ps.available, ps.reserved)
+                              : { status: "not_allocated" as const, label: "Not Allocated" };
                             const cls = invStatusBadgeClass(status);
                             return (
                               <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}`}>

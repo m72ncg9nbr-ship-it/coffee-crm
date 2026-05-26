@@ -3,6 +3,7 @@ import { db, accountingApprovalsTable, deliveriesTable, ordersTable, customersTa
 import { eq, inArray } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
+import { fulfillStockForOrder } from "../lib/inventory";
 import {
   ListAccountingApprovalsQueryParams,
   ApproveDeliveryParams,
@@ -155,7 +156,7 @@ router.post("/accounting/approvals/:deliveryId/approve", requireRole("admin", "a
     .where(eq(deliveriesTable.id, params.data.deliveryId))
     .returning();
 
-  // Update the linked order
+  // Update the linked order and fulfil inventory reservations
   if (delivery) {
     await db.update(ordersTable)
       .set({
@@ -165,6 +166,11 @@ router.post("/accounting/approvals/:deliveryId/approve", requireRole("admin", "a
         invoiceTriggeredAt: now,
       })
       .where(eq(ordersTable.id, delivery.orderId));
+
+    // Convert reserved stock → fulfilled (drains quantityReserved)
+    await db.transaction(async (tx) => {
+      await fulfillStockForOrder(tx, delivery.orderId, user.id);
+    });
   }
 
   await logActivity({

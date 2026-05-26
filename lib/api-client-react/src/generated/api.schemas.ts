@@ -778,6 +778,7 @@ export interface InventoryStockPoolItem {
   poolLabel: string;
   quantityAvailable: number;
   quantityReserved: number;
+  quantityFulfilled: number;
 }
 
 export interface InventoryStockItem {
