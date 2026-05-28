@@ -26,12 +26,19 @@ const queryClient = new QueryClient({
 });
 
 const ROLE_DEFAULT: Record<string, string> = {
-  admin: "/dashboard",
-  operations: "/dashboard",
-  sales: "/dashboard",
-  driver: "/driver",
-  accounting: "/accounting",
+  owner_admin:     "/dashboard",
+  general_manager: "/dashboard",
+  channel_manager: "/dashboard",
+  sales:           "/dashboard",
+  driver:          "/driver",
+  accounting:      "/accounting",
 };
+
+// Role sets (mirrors server-side constants and layout.tsx)
+const FULL_ACCESS     = ["owner_admin", "general_manager"];
+const FULL_ACCOUNTING = [...FULL_ACCESS, "accounting"];
+const CHANNEL_OPS     = [...FULL_ACCESS, "channel_manager"];
+const SALES_CAPABLE   = [...FULL_ACCESS, "channel_manager", "sales"];
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -66,79 +73,79 @@ function AppRoutes() {
       </Route>
 
       <Route path="/dashboard">
-        <ProtectedRoute roles={["admin", "operations", "sales", "accounting"]}>
+        <ProtectedRoute roles={[...SALES_CAPABLE, "accounting"]}>
           <Layout><DashboardPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/customers/:id">
-        <ProtectedRoute roles={["admin", "operations", "sales"]}>
+        <ProtectedRoute roles={SALES_CAPABLE}>
           <Layout><CustomerDetailPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/customers">
-        <ProtectedRoute roles={["admin", "operations", "sales"]}>
+        <ProtectedRoute roles={SALES_CAPABLE}>
           <Layout><CustomersPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/orders/new">
-        <ProtectedRoute roles={["admin", "operations", "sales"]}>
+        <ProtectedRoute roles={SALES_CAPABLE}>
           <Layout><OrderNewPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/orders/:id">
-        <ProtectedRoute roles={["admin", "operations", "sales"]}>
+        <ProtectedRoute roles={SALES_CAPABLE}>
           <Layout><OrderDetailPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/orders">
-        <ProtectedRoute roles={["admin", "operations", "sales"]}>
+        <ProtectedRoute roles={SALES_CAPABLE}>
           <Layout><OrdersPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/deliveries">
-        <ProtectedRoute roles={["admin", "operations"]}>
+        <ProtectedRoute roles={CHANNEL_OPS}>
           <Layout><DeliveriesPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/leads">
-        <ProtectedRoute roles={["admin", "sales"]}>
+        <ProtectedRoute roles={SALES_CAPABLE}>
           <Layout><LeadsPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/products">
-        <ProtectedRoute roles={["admin", "operations", "sales"]}>
+        <ProtectedRoute roles={SALES_CAPABLE}>
           <Layout><ProductsPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/inventory">
-        <ProtectedRoute roles={["admin", "operations"]}>
+        <ProtectedRoute roles={CHANNEL_OPS}>
           <Layout><InventoryPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/accounting">
-        <ProtectedRoute roles={["admin", "accounting"]}>
+        <ProtectedRoute roles={FULL_ACCOUNTING}>
           <Layout><AccountingPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/invoicing">
-        <ProtectedRoute roles={["admin", "accounting"]}>
+        <ProtectedRoute roles={FULL_ACCOUNTING}>
           <Layout><InvoicingPage /></Layout>
         </ProtectedRoute>
       </Route>
 
       <Route path="/activity">
-        <ProtectedRoute roles={["admin", "operations"]}>
+        <ProtectedRoute roles={CHANNEL_OPS}>
           <Layout><ActivityPage /></Layout>
         </ProtectedRoute>
       </Route>

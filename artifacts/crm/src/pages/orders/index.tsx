@@ -26,7 +26,7 @@ export default function OrdersPage() {
   const { data: orders, isLoading } = useListOrders(params as any);
 
   const { user } = useAuth();
-  const canDelete = !!user && ["admin", "operations", "sales"].includes(user.role);
+  const canDelete = !!user && ["owner_admin", "general_manager", "channel_manager", "sales"].includes(user.role);
 
   const sendToPlanning = useSendOrderToPlanning({
     mutation: {

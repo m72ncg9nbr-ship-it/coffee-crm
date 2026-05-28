@@ -1,6 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { getUserById } from "../lib/auth";
 
+// ─── Role constants ────────────────────────────────────────────────────────────
+// owner_admin and general_manager are identical in system capability.
+export const FULL_ACCESS            = ["owner_admin", "general_manager"] as const;
+export const FULL_ACCESS_ACCOUNTING = [...FULL_ACCESS, "accounting"]     as const;
+export const CHANNEL_OPS            = [...FULL_ACCESS, "channel_manager"] as const;
+export const SALES_CAPABLE          = [...FULL_ACCESS, "channel_manager", "sales"] as const;
+
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const userId = req.session?.userId;
   if (!userId) {

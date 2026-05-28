@@ -1,11 +1,11 @@
 import { Router, type IRouter } from "express";
 import { db, ordersTable, customersTable, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, usersTable, orderItemsTable, productsTable } from "@workspace/db";
 import { eq, inArray, and, isNotNull, desc } from "drizzle-orm";
-import { requireRole } from "../middlewares/auth";
+import { requireRole, FULL_ACCESS_ACCOUNTING } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
-router.get("/invoicing/ready", requireRole("admin", "accounting") as any, async (_req, res): Promise<void> => {
+router.get("/invoicing/ready", requireRole(...FULL_ACCESS_ACCOUNTING) as any, async (_req, res): Promise<void> => {
   const orders = await db.select().from(ordersTable).where(
     and(eq(ordersTable.status, "approved"), isNotNull(ordersTable.invoiceTriggeredAt))
   ).orderBy(desc(ordersTable.invoiceTriggeredAt));

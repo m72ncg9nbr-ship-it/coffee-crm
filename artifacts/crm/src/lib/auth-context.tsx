@@ -6,7 +6,7 @@ interface User {
   username: string;
   fullName: string;
   email: string;
-  role: "admin" | "operations" | "sales" | "driver" | "accounting";
+  role: "owner_admin" | "general_manager" | "channel_manager" | "sales" | "driver" | "accounting";
   active: boolean;
   createdAt: string;
 }

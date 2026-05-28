@@ -98,11 +98,12 @@ export default function LoginPage() {
               <p className="text-xs text-muted-foreground font-medium mb-2">Demo accounts (click to fill):</p>
               <div className="grid grid-cols-2 gap-1.5 text-xs">
                 {[
-                  { u: "admin", p: "admin123", label: "Admin" },
-                  { u: "ops1", p: "ops123", label: "Operations" },
-                  { u: "sales1", p: "sales123", label: "Sales" },
+                  { u: "admin",   p: "admin123", label: "Owner Admin" },
+                  { u: "gm1",     p: "gm123",    label: "General Manager" },
+                  { u: "ops1",    p: "ops123",    label: "Channel Manager" },
+                  { u: "sales1",  p: "sales123",  label: "Sales" },
                   { u: "driver1", p: "driver123", label: "Driver" },
-                  { u: "acct1", p: "acct123", label: "Accounting" },
+                  { u: "acct1",   p: "acct123",   label: "Accounting" },
                 ].map(acc => (
                   <button
                     key={acc.u}

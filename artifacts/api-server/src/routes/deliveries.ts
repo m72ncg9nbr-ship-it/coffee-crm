@@ -2,7 +2,7 @@ import { Router, type IRouter, type RequestHandler } from "express";
 import multer from "multer";
 import { db, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, ordersTable, orderItemsTable, productsTable, customersTable, customerAddressesTable, usersTable } from "@workspace/db";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { requireAuth, requireRole, SALES_CAPABLE } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import {
   CreateDeliveryBody,
@@ -377,7 +377,7 @@ router.patch("/deliveries/:id", requireAuth as any, async (req, res): Promise<vo
   res.json(enriched[0]);
 });
 
-router.delete("/deliveries/:id", requireAuth as any, requireRole("admin", "operations", "sales") as any, async (req, res): Promise<void> => {
+router.delete("/deliveries/:id", requireAuth as any, requireRole(...SALES_CAPABLE) as any, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = GetDeliveryParams.safeParse({ id: rawId });
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }

@@ -27,7 +27,7 @@ export default function DeliveriesPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const canDelete = !!user && ["admin", "operations", "sales"].includes(user.role);
+  const canDelete = !!user && ["owner_admin", "general_manager", "channel_manager", "sales"].includes(user.role);
 
   const { data: deliveries, isLoading } = useListDeliveries();
 

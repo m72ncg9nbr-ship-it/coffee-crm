@@ -32,7 +32,7 @@ export default function DashboardPage() {
   const { data: activityLogs } = useListActivityLogs({ limit: 15 });
   const { data: stockData } = useListInventoryStock();
 
-  const showStockOverview = !!user && ["admin", "operations", "sales"].includes(user.role);
+  const showStockOverview = !!user && ["owner_admin", "general_manager", "channel_manager"].includes(user.role);
 
   // Compute per-pool alerts from inventory data (client-side)
   type StockAlert = {

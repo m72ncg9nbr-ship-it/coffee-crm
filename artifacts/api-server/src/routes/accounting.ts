@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, accountingApprovalsTable, deliveriesTable, ordersTable, customersTable, usersTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { requireAuth, requireRole, FULL_ACCESS_ACCOUNTING } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import { fulfillStockForOrder } from "../lib/inventory";
 import {
@@ -110,7 +110,7 @@ router.get("/accounting/approvals", requireAuth as any, async (req, res): Promis
   res.json(await enrichApprovals(approvals));
 });
 
-router.post("/accounting/approvals/:deliveryId/approve", requireRole("admin", "accounting") as any, async (req, res): Promise<void> => {
+router.post("/accounting/approvals/:deliveryId/approve", requireRole(...FULL_ACCESS_ACCOUNTING) as any, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.deliveryId) ? req.params.deliveryId[0] : req.params.deliveryId;
   const params = ApproveDeliveryParams.safeParse({ deliveryId: rawId });
   if (!params.success) {
@@ -195,7 +195,7 @@ router.post("/accounting/approvals/:deliveryId/approve", requireRole("admin", "a
   res.json(enriched[0]);
 });
 
-router.post("/accounting/approvals/:deliveryId/reject", requireRole("admin", "accounting") as any, async (req, res): Promise<void> => {
+router.post("/accounting/approvals/:deliveryId/reject", requireRole(...FULL_ACCESS_ACCOUNTING) as any, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.deliveryId) ? req.params.deliveryId[0] : req.params.deliveryId;
   const params = RejectDeliveryParams.safeParse({ deliveryId: rawId });
   if (!params.success) {

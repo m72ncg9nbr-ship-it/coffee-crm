@@ -26,11 +26,12 @@ function hashPassword(password: string): string {
 }
 
 const DEMO_USERS = [
-  { username: "admin", password: "admin123", fullName: "Alex Thompson", email: "admin@coffeedist.com", role: "admin", channelScope: "all", phone: null },
-  { username: "ops1", password: "ops123", fullName: "Sven Eriksen", email: "ops1@coffeedist.com", role: "operations", channelScope: "all", phone: null },
-  { username: "sales1", password: "sales123", fullName: "Sofia Andersen", email: "sales1@coffeedist.com", role: "sales", channelScope: "horeca", phone: "+47 90 11 22 33" },
-  { username: "driver1", password: "driver123", fullName: "Carlos Rivera", email: "driver1@coffeedist.com", role: "driver", channelScope: "all", phone: "+47 90 44 55 66" },
-  { username: "acct1", password: "acct123", fullName: "Lina Hauge", email: "acct1@coffeedist.com", role: "accounting", channelScope: "all", phone: null },
+  { username: "admin",   password: "admin123", fullName: "Alex Thompson",  email: "admin@coffeedist.com",  role: "owner_admin",     channelScope: "all",    phone: null },
+  { username: "gm1",     password: "gm123",    fullName: "Maria Jensen",   email: "gm1@coffeedist.com",    role: "general_manager", channelScope: "all",    phone: null },
+  { username: "ops1",    password: "ops123",   fullName: "Sven Eriksen",   email: "ops1@coffeedist.com",   role: "channel_manager", channelScope: "coffee", phone: null },
+  { username: "sales1",  password: "sales123", fullName: "Sofia Andersen", email: "sales1@coffeedist.com", role: "sales",           channelScope: "coffee", phone: "+47 90 11 22 33" },
+  { username: "driver1", password: "driver123",fullName: "Carlos Rivera",  email: "driver1@coffeedist.com",role: "driver",          channelScope: "all",    phone: "+47 90 44 55 66" },
+  { username: "acct1",   password: "acct123",  fullName: "Lina Hauge",     email: "acct1@coffeedist.com",  role: "accounting",      channelScope: "all",    phone: null },
 ];
 
 const DEMO_PRODUCTS = [

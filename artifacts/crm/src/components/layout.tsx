@@ -20,17 +20,23 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// Role sets (must mirror server-side constants)
+const FULL_ACCESS        = ["owner_admin", "general_manager"];
+const FULL_ACCOUNTING    = [...FULL_ACCESS, "accounting"];
+const CHANNEL_OPS        = [...FULL_ACCESS, "channel_manager"];
+const SALES_CAPABLE      = [...FULL_ACCESS, "channel_manager", "sales"];
+
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "operations", "sales", "accounting"] },
-  { href: "/customers", label: "Customers", icon: Users, roles: ["admin", "operations", "sales"] },
-  { href: "/leads", label: "Leads", icon: UserPlus, roles: ["admin", "sales"] },
-  { href: "/products", label: "Products", icon: Package, roles: ["admin", "operations", "sales"] },
-  { href: "/inventory", label: "Inventory", icon: Warehouse, roles: ["admin", "operations"] },
-  { href: "/orders", label: "Orders", icon: ShoppingCart, roles: ["admin", "operations", "sales"] },
-  { href: "/deliveries", label: "Deliveries", icon: Truck, roles: ["admin", "operations"] },
-  { href: "/accounting", label: "Approvals", icon: ClipboardCheck, roles: ["admin", "accounting"] },
-  { href: "/invoicing", label: "Ready for Invoicing", icon: Receipt, roles: ["admin", "accounting"] },
-  { href: "/activity", label: "Activity", icon: Activity, roles: ["admin", "operations"] },
+  { href: "/dashboard",  label: "Dashboard",          icon: LayoutDashboard, roles: [...SALES_CAPABLE, "accounting"] },
+  { href: "/customers",  label: "Customers",           icon: Users,           roles: SALES_CAPABLE },
+  { href: "/leads",      label: "Leads",               icon: UserPlus,        roles: SALES_CAPABLE },
+  { href: "/products",   label: "Products",            icon: Package,         roles: SALES_CAPABLE },
+  { href: "/inventory",  label: "Inventory",           icon: Warehouse,       roles: CHANNEL_OPS },
+  { href: "/orders",     label: "Orders",              icon: ShoppingCart,    roles: SALES_CAPABLE },
+  { href: "/deliveries", label: "Deliveries",          icon: Truck,           roles: CHANNEL_OPS },
+  { href: "/accounting", label: "Approvals",           icon: ClipboardCheck,  roles: FULL_ACCOUNTING },
+  { href: "/invoicing",  label: "Ready for Invoicing", icon: Receipt,         roles: FULL_ACCOUNTING },
+  { href: "/activity",   label: "Activity",            icon: Activity,        roles: CHANNEL_OPS },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

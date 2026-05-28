@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, ordersTable, orderItemsTable, customersTable, customerAddressesTable, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, inventoryAllocationsTable, usersTable, productsTable } from "@workspace/db";
 import { eq, inArray, and, sql } from "drizzle-orm";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { requireAuth, requireRole, SALES_CAPABLE } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import { allocateStockForOrder, releaseStockForOrder } from "../lib/inventory";
 import {
@@ -425,7 +425,7 @@ router.post("/orders/:id/items", requireAuth as any, async (req, res): Promise<v
   });
 });
 
-router.delete("/orders/:id", requireAuth as any, requireRole("admin", "operations", "sales") as any, async (req, res): Promise<void> => {
+router.delete("/orders/:id", requireAuth as any, requireRole(...SALES_CAPABLE) as any, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const parsed = GetOrderParams.safeParse({ id: rawId });
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
