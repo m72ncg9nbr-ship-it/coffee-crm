@@ -284,12 +284,10 @@ export default function InventoryPage() {
                               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Reserved</p>
                               <p className="font-medium text-base leading-tight text-amber-700">{pool.quantityReserved}</p>
                             </div>
-                            {(pool.quantityFulfilled ?? 0) > 0 && (
-                              <div>
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fulfilled</p>
-                                <p className="font-medium text-base leading-tight text-green-700">{pool.quantityFulfilled}</p>
-                              </div>
-                            )}
+                            <div>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fulfilled</p>
+                              <p className="font-medium text-base leading-tight text-green-700">{pool.quantityFulfilled ?? 0}</p>
+                            </div>
                           </div>
 
                           <div className="flex gap-1.5 pt-1 border-t">
