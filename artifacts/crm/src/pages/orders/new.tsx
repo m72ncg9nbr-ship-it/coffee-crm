@@ -50,6 +50,10 @@ export default function OrderNewPage() {
   const [orderSource, setOrderSource] = useState("phone");
   const [businessChannel, setBusinessChannel] = useState("horeca");
   const [notes, setNotes] = useState("");
+  const [sampleReason, setSampleReason] = useState("");
+  const [sampleEventName, setSampleEventName] = useState("");
+
+  const isSampleOrder = orderSource === "sample" || orderSource === "free_issue";
   const [items, setItems] = useState<Item[]>([]);
   const [productPick, setProductPick] = useState("");
   const [qty, setQty] = useState("1");
@@ -159,6 +163,8 @@ export default function OrderNewPage() {
         requestedDeliveryDate: requestedDeliveryDate || undefined,
         urgency,
         notes: notes || undefined,
+        sampleReason: isSampleOrder && sampleReason ? sampleReason : undefined,
+        sampleEventName: isSampleOrder && sampleEventName ? sampleEventName : undefined,
         items: items.map(i => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -394,6 +400,26 @@ export default function OrderNewPage() {
                   placeholder="Special instructions, etc."
                 />
               </div>
+              {isSampleOrder && (
+                <>
+                  <div className="col-span-2">
+                    <Label>Sample / Free Issue Reason</Label>
+                    <Input
+                      value={sampleReason}
+                      onChange={e => setSampleReason(e.target.value)}
+                      placeholder="e.g. New customer intro, product trial..."
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Event / Campaign Name <span className="text-muted-foreground">(optional)</span></Label>
+                    <Input
+                      value={sampleEventName}
+                      onChange={e => setSampleEventName(e.target.value)}
+                      placeholder="e.g. Summer 2026 Campaign"
+                    />
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -18,6 +18,7 @@ import InventoryPage from "@/pages/inventory";
 import AccountingPage from "@/pages/accounting";
 import InvoicingPage from "@/pages/invoicing";
 import ActivityPage from "@/pages/activity";
+import ReportsPage from "@/pages/reports";
 import DriverPage from "@/pages/driver";
 import NotFound from "@/pages/not-found";
 
@@ -147,6 +148,12 @@ function AppRoutes() {
       <Route path="/activity">
         <ProtectedRoute roles={CHANNEL_OPS}>
           <Layout><ActivityPage /></Layout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/reports">
+        <ProtectedRoute roles={["owner_admin", "general_manager", "accounting", "channel_manager", "sales"]}>
+          <Layout><ReportsPage /></Layout>
         </ProtectedRoute>
       </Route>
 

@@ -4,6 +4,7 @@ import { eq, inArray } from "drizzle-orm";
 import { requireAuth, requireRole, FULL_ACCESS_ACCOUNTING } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import { fulfillStockForOrder } from "../lib/inventory";
+import { parsePaymentTermsDays, addDaysToDateStr } from "../lib/paymentTerms";
 import {
   ListAccountingApprovalsQueryParams,
   ApproveDeliveryParams,
@@ -79,6 +80,10 @@ async function enrichApprovals(approvals: (typeof accountingApprovalsTable.$infe
       customerPriority: customer?.priority ?? "C",
       orderNumber: order?.orderNumber ?? null,
       orderTotalAmount: order ? parseFloat(order.totalAmount) : null,
+      invoiceDate: order?.invoiceDate ?? null,
+      dueDate: order?.dueDate ?? null,
+      paymentStatus: order?.paymentStatus ?? null,
+      paidAt: order?.paidAt ? (order.paidAt as Date).toISOString() : null,
       orderItems: orderItems.map(i => ({
         productName: productNameMap[i.productId] ?? "Unknown",
         quantity: i.quantity,
@@ -158,12 +163,30 @@ router.post("/accounting/approvals/:deliveryId/approve", requireRole(...FULL_ACC
 
   // Update the linked order and fulfil inventory reservations
   if (delivery) {
+    // V2.5: compute invoiceDate / dueDate from actual delivery date
+    const invoiceDateStr =
+      delivery.arrivalMarkedAt
+        ? delivery.arrivalMarkedAt.toISOString().split("T")[0]
+        : delivery.scheduledDate ?? now.toISOString().split("T")[0];
+
+    const [orderCustomer] = await db.select({ paymentTerms: customersTable.paymentTerms })
+      .from(customersTable)
+      .where(
+        eq(customersTable.id, delivery.customerId)
+      );
+    const ptDays = parsePaymentTermsDays(orderCustomer?.paymentTerms);
+    const dueDateStr = addDaysToDateStr(invoiceDateStr, ptDays);
+
     await db.update(ordersTable)
       .set({
         status: "approved",
         approvedByAccountingUserId: user.id,
         approvedAt: now,
         invoiceTriggeredAt: now,
+        invoiceDate: invoiceDateStr,
+        dueDate: dueDateStr,
+        paymentTermsDays: ptDays,
+        paymentStatus: "unpaid",
       })
       .where(eq(ordersTable.id, delivery.orderId));
 

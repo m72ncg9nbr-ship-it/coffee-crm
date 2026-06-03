@@ -8,6 +8,7 @@ export const productsTable = pgTable("products", {
   sku: text("sku").notNull().unique(),
   category: text("category").notNull(),
   unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
+  costPrice: numeric("cost_price", { precision: 10, scale: 2 }),
   stockStatus: text("stock_status").notNull().default("in_stock"),
   active: boolean("active").notNull().default(true),
   businessChannel: text("business_channel").notNull(),

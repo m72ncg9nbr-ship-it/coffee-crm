@@ -45,6 +45,11 @@ export default function ProductsPage() {
               <p className="text-xs text-muted-foreground capitalize mt-0.5">{p.category?.replace(/_/g, " ")} · {p.businessChannel}</p>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-sm font-bold text-primary">{formatCurrency(p.unitPrice)}</span>
+                {p.costPrice != null && (
+                  <span className="text-xs text-muted-foreground">
+                    Cost: {formatCurrency(p.costPrice)}
+                  </span>
+                )}
               </div>
             </div>
           </Card>

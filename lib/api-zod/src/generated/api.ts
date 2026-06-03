@@ -1338,3 +1338,156 @@ export const DeleteDeliveryParams = zod.object({
  * @summary Upload delivery document/proof
  */
 
+// ── V2.5: Product cost price ──────────────────────────────────────────────────
+
+export const UpdateProductCostBody = zod.object({
+  costPrice: zod.number().nonnegative().nullish(),
+});
+
+// ── V2.5: Order creation additions ───────────────────────────────────────────
+
+export const CreateOrderBodyV2 = zod.object({
+  customerId: zod.number(),
+  businessChannel: zod.string(),
+  orderSource: zod.enum(["phone", "whatsapp", "web", "sales_rep", "b2b", "direct", "online", "sample", "free_issue"]),
+  requestedDeliveryDate: zod.string().nullish(),
+  urgency: zod.enum(["low", "normal", "high", "critical"]),
+  notes: zod.string().nullish(),
+  sampleReason: zod.string().nullish(),
+  sampleEventName: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      quantity: zod.number(),
+      unitPriceSnapshot: zod.number(),
+    }),
+  ),
+});
+
+// ── V2.5: Mark order as paid ─────────────────────────────────────────────────
+
+export const MarkOrderPaidParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MarkOrderPaidBody = zod.object({
+  paidAt: zod.string().optional(),
+  collectedAmount: zod.number().optional(),
+});
+
+// ── V2.5: Reports ─────────────────────────────────────────────────────────────
+
+export const ReportFilters = zod.object({
+  dateFrom:      zod.string().optional(),
+  dateTo:        zod.string().optional(),
+  channel:       zod.string().optional(),
+  productId:     zod.coerce.number().optional(),
+  customerId:    zod.coerce.number().optional(),
+  createdBy:     zod.coerce.number().optional(),
+  orderSource:   zod.string().optional(),
+  paymentStatus: zod.string().optional(),
+  city:          zod.string().optional(),
+  region:        zod.string().optional(),
+});
+
+export const SalesByDimensionItem = zod.object({
+  key:     zod.string(),
+  label:   zod.string(),
+  revenue: zod.number(),
+  orders:  zod.number(),
+  units:   zod.number(),
+});
+
+export const SalesSummaryResponse = zod.object({
+  totalRevenue:  zod.number(),
+  totalOrders:   zod.number(),
+  totalUnits:    zod.number(),
+  avgOrderValue: zod.number(),
+  byChannel:     zod.array(SalesByDimensionItem),
+  byOrderSource: zod.array(SalesByDimensionItem),
+  byProduct:     zod.array(SalesByDimensionItem),
+  byCustomer:    zod.array(SalesByDimensionItem),
+  bySalesperson: zod.array(SalesByDimensionItem),
+  byMonth:       zod.array(SalesByDimensionItem),
+});
+
+export const ProfitabilityItem = zod.object({
+  key:                      zod.string(),
+  label:                    zod.string(),
+  grossRevenue:             zod.number(),
+  discountAmount:           zod.number(),
+  netRevenue:               zod.number(),
+  productCost:              zod.number().nullish(),
+  grossProfit:              zod.number().nullish(),
+  valorCost:                zod.number(),
+  collectionAdjustedProfit: zod.number().nullish(),
+});
+
+export const ProfitabilitySummaryResponse = zod.object({
+  totals:     ProfitabilityItem,
+  byProduct:  zod.array(ProfitabilityItem),
+  byCustomer: zod.array(ProfitabilityItem),
+  byChannel:  zod.array(ProfitabilityItem),
+});
+
+export const CollectionOrderItem = zod.object({
+  orderId:         zod.number(),
+  orderNumber:     zod.string().nullish(),
+  customerName:    zod.string(),
+  channel:         zod.string(),
+  invoiceDate:     zod.string().nullish(),
+  dueDate:         zod.string().nullish(),
+  paymentStatus:   zod.string(),
+  paidAt:          zod.string().nullish(),
+  totalAmount:     zod.number(),
+  collectedAmount: zod.number().nullish(),
+  delayDays:       zod.number(),
+});
+
+export const CollectionSummaryResponse = zod.object({
+  totalInvoiced:    zod.number(),
+  totalCollected:   zod.number(),
+  totalOutstanding: zod.number(),
+  totalOverdue:     zod.number(),
+  overdueCount:     zod.number(),
+  unpaidCount:      zod.number(),
+  orders:           zod.array(CollectionOrderItem),
+});
+
+export const SampleOrderItem = zod.object({
+  orderId:         zod.number(),
+  orderNumber:     zod.string().nullish(),
+  orderSource:     zod.string(),
+  customerName:    zod.string(),
+  channel:         zod.string(),
+  salesperson:     zod.string().nullish(),
+  city:            zod.string().nullish(),
+  region:          zod.string().nullish(),
+  sampleReason:    zod.string().nullish(),
+  sampleEventName: zod.string().nullish(),
+  totalUnits:      zod.number(),
+  createdAt:       zod.string(),
+  products:        zod.array(zod.object({ productName: zod.string(), sku: zod.string(), quantity: zod.number() })),
+});
+
+export const SamplesSummaryResponse = zod.object({
+  totalSampleOrders: zod.number(),
+  totalSampleUnits:  zod.number(),
+  uniqueCustomers:   zod.number(),
+  byProduct:         zod.array(SalesByDimensionItem),
+  orders:            zod.array(SampleOrderItem),
+});
+
+export const RegionalSummaryItem = zod.object({
+  city:    zod.string(),
+  region:  zod.string().nullish(),
+  revenue: zod.number(),
+  orders:  zod.number(),
+  units:   zod.number(),
+});
+
+export const RegionalSummaryResponse = zod.object({
+  byCity:   zod.array(RegionalSummaryItem),
+  byRegion: zod.array(zod.object({ region: zod.string(), revenue: zod.number(), orders: zod.number(), units: zod.number() })),
+});
+

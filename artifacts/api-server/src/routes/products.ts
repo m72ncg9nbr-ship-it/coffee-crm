@@ -37,6 +37,7 @@ router.get("/products", requireAuth as any, async (req, res): Promise<void> => {
   res.json(products.map(p => ({
     ...p,
     unitPrice: parseFloat(p.unitPrice),
+    costPrice: p.costPrice != null ? parseFloat(p.costPrice) : null,
     createdAt: p.createdAt.toISOString(),
   })));
 });
@@ -51,11 +52,13 @@ router.post("/products", requireAuth as any, async (req, res): Promise<void> => 
   const [product] = await db.insert(productsTable).values({
     ...parsed.data,
     unitPrice: parsed.data.unitPrice.toString(),
+    costPrice: parsed.data.costPrice != null ? parsed.data.costPrice.toString() : null,
   }).returning();
 
   res.status(201).json({
     ...product,
     unitPrice: parseFloat(product.unitPrice),
+    costPrice: product.costPrice != null ? parseFloat(product.costPrice) : null,
     createdAt: product.createdAt.toISOString(),
   });
 });
@@ -77,6 +80,7 @@ router.get("/products/:id", requireAuth as any, async (req, res): Promise<void> 
   res.json({
     ...product,
     unitPrice: parseFloat(product.unitPrice),
+    costPrice: product.costPrice != null ? parseFloat(product.costPrice) : null,
     createdAt: product.createdAt.toISOString(),
   });
 });
@@ -99,6 +103,9 @@ router.patch("/products/:id", requireAuth as any, async (req, res): Promise<void
   if (parsed.data.unitPrice !== undefined) {
     updateData.unitPrice = parsed.data.unitPrice.toString();
   }
+  if ("costPrice" in parsed.data) {
+    updateData.costPrice = parsed.data.costPrice != null ? parsed.data.costPrice.toString() : null;
+  }
 
   const [product] = await db.update(productsTable).set(updateData).where(eq(productsTable.id, params.data.id)).returning();
   if (!product) {
@@ -109,6 +116,7 @@ router.patch("/products/:id", requireAuth as any, async (req, res): Promise<void
   res.json({
     ...product,
     unitPrice: parseFloat(product.unitPrice),
+    costPrice: product.costPrice != null ? parseFloat(product.costPrice) : null,
     createdAt: product.createdAt.toISOString(),
   });
 });

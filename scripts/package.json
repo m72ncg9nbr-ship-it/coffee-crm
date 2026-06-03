@@ -9,6 +9,7 @@
     "backfill-inventory": "tsx ./src/backfill-inventory.ts",
     "reconcile-inventory-fulfillment": "tsx ./src/reconcile-inventory-fulfillment.ts",
     "migrate-roles-v2": "tsx ./src/migrate-roles-v2.ts",
+    "create-tables-v2-5": "tsx ./src/create-tables-v2-5.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

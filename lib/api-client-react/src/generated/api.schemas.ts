@@ -853,3 +853,137 @@ export type ListInventoryMovementsParams = {
   poolId?: number;
   limit?: number;
 };
+
+// ── V2.5: Analytics / Profitability / Collection ──────────────────────────────
+
+export type ReportFiltersParams = {
+  dateFrom?: string;
+  dateTo?: string;
+  channel?: string;
+  productId?: number;
+  customerId?: number;
+  createdBy?: number;
+  orderSource?: string;
+  paymentStatus?: string;
+  city?: string;
+  region?: string;
+};
+
+export interface SalesByDimensionItem {
+  key: string;
+  label: string;
+  revenue: number;
+  orders: number;
+  units: number;
+}
+
+export interface SalesSummaryResponse {
+  totalRevenue: number;
+  totalOrders: number;
+  totalUnits: number;
+  avgOrderValue: number;
+  byChannel: SalesByDimensionItem[];
+  byOrderSource: SalesByDimensionItem[];
+  byProduct: SalesByDimensionItem[];
+  byCustomer: SalesByDimensionItem[];
+  bySalesperson: SalesByDimensionItem[];
+  byMonth: SalesByDimensionItem[];
+}
+
+export interface ProfitabilityItem {
+  key: string;
+  label: string;
+  grossRevenue: number;
+  discountAmount: number;
+  netRevenue: number;
+  productCost?: number | null;
+  grossProfit?: number | null;
+  valorCost: number;
+  collectionAdjustedProfit?: number | null;
+}
+
+export interface ProfitabilitySummaryResponse {
+  totals: ProfitabilityItem;
+  byProduct: ProfitabilityItem[];
+  byCustomer: ProfitabilityItem[];
+  byChannel: ProfitabilityItem[];
+}
+
+export interface CollectionOrderItem {
+  orderId: number;
+  orderNumber?: string | null;
+  customerName: string;
+  channel: string;
+  invoiceDate?: string | null;
+  dueDate?: string | null;
+  paymentStatus: string;
+  paidAt?: string | null;
+  totalAmount: number;
+  collectedAmount?: number | null;
+  delayDays: number;
+}
+
+export interface CollectionSummaryResponse {
+  totalInvoiced: number;
+  totalCollected: number;
+  totalOutstanding: number;
+  totalOverdue: number;
+  overdueCount: number;
+  unpaidCount: number;
+  orders: CollectionOrderItem[];
+}
+
+export interface SampleProductItem {
+  productName: string;
+  sku: string;
+  quantity: number;
+}
+
+export interface SampleOrderItem {
+  orderId: number;
+  orderNumber?: string | null;
+  orderSource: string;
+  customerName: string;
+  channel: string;
+  salesperson?: string | null;
+  city?: string | null;
+  region?: string | null;
+  sampleReason?: string | null;
+  sampleEventName?: string | null;
+  totalUnits: number;
+  createdAt: string;
+  products: SampleProductItem[];
+}
+
+export interface SamplesSummaryResponse {
+  totalSampleOrders: number;
+  totalSampleUnits: number;
+  uniqueCustomers: number;
+  byProduct: SalesByDimensionItem[];
+  orders: SampleOrderItem[];
+}
+
+export interface RegionalSummaryItem {
+  city: string;
+  region?: string | null;
+  revenue: number;
+  orders: number;
+  units: number;
+}
+
+export interface RegionalByRegionItem {
+  region: string;
+  revenue: number;
+  orders: number;
+  units: number;
+}
+
+export interface RegionalSummaryResponse {
+  byCity: RegionalSummaryItem[];
+  byRegion: RegionalByRegionItem[];
+}
+
+export interface MarkOrderPaidBody {
+  paidAt?: string;
+  collectedAmount?: number;
+}

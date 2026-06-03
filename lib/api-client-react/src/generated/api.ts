@@ -70,6 +70,13 @@ import type {
   ListInventoryStockParams,
   ListInventoryAllocationsParams,
   ListInventoryMovementsParams,
+  ReportFiltersParams,
+  SalesSummaryResponse,
+  ProfitabilitySummaryResponse,
+  CollectionSummaryResponse,
+  SamplesSummaryResponse,
+  RegionalSummaryResponse,
+  MarkOrderPaidBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -4070,4 +4077,354 @@ export const useDeleteDelivery = <
 /**
  * @summary Upload delivery document/proof
  */
+
+// ── V2.5: Reports + Mark-Paid hooks ──────────────────────────────────────────
+// Hand-appended — do not remove this section on orval regeneration
+// (Types imported above in the main import block)
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+function buildReportUrl(base: string, params?: ReportFiltersParams): string {
+  const p = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) p.append(k, String(v));
+    });
+  }
+  const qs = p.toString();
+  return qs ? `${base}?${qs}` : base;
+}
+
+// ── GET /reports/sales ────────────────────────────────────────────────────────
+
+export const getReportsSalesUrl = (params?: ReportFiltersParams) =>
+  buildReportUrl("/api/reports/sales", params);
+
+export const getReportsSales = async (
+  params?: ReportFiltersParams,
+  options?: RequestInit,
+): Promise<SalesSummaryResponse> =>
+  customFetch<SalesSummaryResponse>(getReportsSalesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+export const getReportsSalesQueryKey = (params?: ReportFiltersParams) =>
+  ["/api/reports/sales", ...(params ? [params] : [])] as const;
+
+export const getReportsSalesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getReportsSales>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ReportFiltersParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getReportsSales>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getReportsSalesQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsSales>>> = ({ signal }) =>
+    getReportsSales(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getReportsSales>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetReportsSales<
+  TData = Awaited<ReturnType<typeof getReportsSales>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ReportFiltersParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getReportsSales>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getReportsSalesQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+// ── GET /reports/profitability ────────────────────────────────────────────────
+
+export const getReportsProfitabilityUrl = (params?: ReportFiltersParams) =>
+  buildReportUrl("/api/reports/profitability", params);
+
+export const getReportsProfitability = async (
+  params?: ReportFiltersParams,
+  options?: RequestInit,
+): Promise<ProfitabilitySummaryResponse> =>
+  customFetch<ProfitabilitySummaryResponse>(getReportsProfitabilityUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+export const getReportsProfitabilityQueryKey = (params?: ReportFiltersParams) =>
+  ["/api/reports/profitability", ...(params ? [params] : [])] as const;
+
+export const getReportsProfitabilityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getReportsProfitability>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ReportFiltersParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getReportsProfitability>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getReportsProfitabilityQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsProfitability>>> = ({ signal }) =>
+    getReportsProfitability(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getReportsProfitability>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetReportsProfitability<
+  TData = Awaited<ReturnType<typeof getReportsProfitability>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ReportFiltersParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getReportsProfitability>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getReportsProfitabilityQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+// ── GET /reports/collection ───────────────────────────────────────────────────
+
+export const getReportsCollectionUrl = (params?: ReportFiltersParams) =>
+  buildReportUrl("/api/reports/collection", params);
+
+export const getReportsCollection = async (
+  params?: ReportFiltersParams,
+  options?: RequestInit,
+): Promise<CollectionSummaryResponse> =>
+  customFetch<CollectionSummaryResponse>(getReportsCollectionUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+export const getReportsCollectionQueryKey = (params?: ReportFiltersParams) =>
+  ["/api/reports/collection", ...(params ? [params] : [])] as const;
+
+export const getReportsCollectionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getReportsCollection>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ReportFiltersParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getReportsCollection>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getReportsCollectionQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsCollection>>> = ({ signal }) =>
+    getReportsCollection(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getReportsCollection>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetReportsCollection<
+  TData = Awaited<ReturnType<typeof getReportsCollection>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ReportFiltersParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getReportsCollection>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getReportsCollectionQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+// ── GET /reports/samples ──────────────────────────────────────────────────────
+
+export const getReportsSamplesUrl = (params?: ReportFiltersParams) =>
+  buildReportUrl("/api/reports/samples", params);
+
+export const getReportsSamples = async (
+  params?: ReportFiltersParams,
+  options?: RequestInit,
+): Promise<SamplesSummaryResponse> =>
+  customFetch<SamplesSummaryResponse>(getReportsSamplesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+export const getReportsSamplesQueryKey = (params?: ReportFiltersParams) =>
+  ["/api/reports/samples", ...(params ? [params] : [])] as const;
+
+export const getReportsSamplesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getReportsSamples>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ReportFiltersParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getReportsSamples>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getReportsSamplesQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsSamples>>> = ({ signal }) =>
+    getReportsSamples(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getReportsSamples>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetReportsSamples<
+  TData = Awaited<ReturnType<typeof getReportsSamples>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ReportFiltersParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getReportsSamples>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getReportsSamplesQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+// ── GET /reports/regional ─────────────────────────────────────────────────────
+
+export const getReportsRegionalUrl = (params?: ReportFiltersParams) =>
+  buildReportUrl("/api/reports/regional", params);
+
+export const getReportsRegional = async (
+  params?: ReportFiltersParams,
+  options?: RequestInit,
+): Promise<RegionalSummaryResponse> =>
+  customFetch<RegionalSummaryResponse>(getReportsRegionalUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+export const getReportsRegionalQueryKey = (params?: ReportFiltersParams) =>
+  ["/api/reports/regional", ...(params ? [params] : [])] as const;
+
+export const getReportsRegionalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getReportsRegional>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ReportFiltersParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getReportsRegional>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getReportsRegionalQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsRegional>>> = ({ signal }) =>
+    getReportsRegional(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getReportsRegional>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetReportsRegional<
+  TData = Awaited<ReturnType<typeof getReportsRegional>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ReportFiltersParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getReportsRegional>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getReportsRegionalQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+// ── POST /orders/:id/mark-paid ────────────────────────────────────────────────
+
+export const getMarkOrderPaidUrl = (id: number) => `/api/orders/${id}/mark-paid`;
+
+export const markOrderPaid = async (
+  id: number,
+  markOrderPaidBody: MarkOrderPaidBody,
+  options?: RequestInit,
+): Promise<Order> =>
+  customFetch<Order>(getMarkOrderPaidUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(markOrderPaidBody),
+  });
+
+export const getMarkOrderPaidMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markOrderPaid>>,
+    TError,
+    { id: number; data: BodyType<MarkOrderPaidBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markOrderPaid>>,
+  TError,
+  { id: number; data: BodyType<MarkOrderPaidBody> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markOrderPaid>>,
+    { id: number; data: BodyType<MarkOrderPaidBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+    return markOrderPaid(id, data, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkOrderPaidMutationResult = NonNullable<Awaited<ReturnType<typeof markOrderPaid>>>;
+export type MarkOrderPaidMutationBody = BodyType<MarkOrderPaidBody>;
+export type MarkOrderPaidMutationError = ErrorType<unknown>;
+
+export const useMarkOrderPaid = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markOrderPaid>>,
+    TError,
+    { id: number; data: BodyType<MarkOrderPaidBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markOrderPaid>>,
+  TError,
+  { id: number; data: BodyType<MarkOrderPaidBody> },
+  TContext
+> => {
+  return useMutation(getMarkOrderPaidMutationOptions(options));
+};
 

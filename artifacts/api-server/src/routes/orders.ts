@@ -12,7 +12,10 @@ import {
   ListOrdersQueryParams,
   AddOrderItemBody,
   DeleteOrderItemParams,
+  MarkOrderPaidParams,
+  MarkOrderPaidBody,
 } from "@workspace/api-zod";
+import { requireRole, FULL_ACCESS_ACCOUNTING } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -22,9 +25,18 @@ function serializeOrder(order: typeof ordersTable.$inferSelect, customerName?: s
     customerName: customerName ?? "Unknown",
     createdByName: createdByName ?? null,
     totalAmount: parseFloat(order.totalAmount),
+    collectedAmount: order.collectedAmount != null ? parseFloat(order.collectedAmount) : null,
     requestedDeliveryDate: order.requestedDeliveryDate ?? null,
     approvedAt: order.approvedAt?.toISOString() ?? null,
     invoiceTriggeredAt: order.invoiceTriggeredAt?.toISOString() ?? null,
+    paidAt: order.paidAt?.toISOString() ?? null,
+    // V2.5 payment fields
+    invoiceDate: order.invoiceDate ?? null,
+    dueDate: order.dueDate ?? null,
+    paymentTermsDays: order.paymentTermsDays ?? null,
+    paymentStatus: order.paymentStatus ?? "unpaid",
+    sampleReason: order.sampleReason ?? null,
+    sampleEventName: order.sampleEventName ?? null,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
   };
@@ -168,6 +180,17 @@ router.post("/orders", requireAuth as any, async (req, res): Promise<void> => {
   const totalAmount = parsed.data.items.reduce((sum, item) => sum + item.quantity * item.unitPriceSnapshot, 0);
   const orderNumber = await nextOrderNumber();
 
+  // V2.5: load customer discount + products cost prices for snapshots
+  const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, parsed.data.customerId));
+  const discountPct = customer?.discountLevel != null ? parseFloat(customer.discountLevel) : 0;
+
+  const productIds = [...new Set(parsed.data.items.map(i => i.productId))];
+  const products = productIds.length > 0
+    ? await db.select({ id: productsTable.id, costPrice: productsTable.costPrice })
+        .from(productsTable).where(inArray(productsTable.id, productIds))
+    : [];
+  const costPriceMap = new Map(products.map(p => [p.id, p.costPrice]));
+
   const [order] = await db.insert(ordersTable).values({
     orderNumber,
     customerId: parsed.data.customerId,
@@ -179,17 +202,24 @@ router.post("/orders", requireAuth as any, async (req, res): Promise<void> => {
     status: "new",
     totalAmount: totalAmount.toString(),
     createdBy: user.id,
+    sampleReason: (parsed.data as any).sampleReason ?? null,
+    sampleEventName: (parsed.data as any).sampleEventName ?? null,
   }).returning();
 
   if (parsed.data.items.length > 0) {
     await db.insert(orderItemsTable).values(
-      parsed.data.items.map(item => ({
-        orderId: order.id,
-        productId: item.productId,
-        quantity: item.quantity,
-        unitPriceSnapshot: item.unitPriceSnapshot.toString(),
-        lineTotal: (item.quantity * item.unitPriceSnapshot).toString(),
-      }))
+      parsed.data.items.map(item => {
+        const rawCost = costPriceMap.get(item.productId);
+        return {
+          orderId: order.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPriceSnapshot: item.unitPriceSnapshot.toString(),
+          costPriceSnapshot: rawCost != null ? rawCost : null,
+          discountPercentSnapshot: discountPct > 0 ? discountPct.toString() : null,
+          lineTotal: (item.quantity * item.unitPriceSnapshot).toString(),
+        };
+      })
     );
   }
 
@@ -376,6 +406,10 @@ router.post("/orders/:id/items", requireAuth as any, async (req, res): Promise<v
   const lineTotal = parsed.data.quantity * parsed.data.unitPriceSnapshot;
   const user = (req as any).user;
 
+  // V2.5: load product cost + customer discount for snapshots
+  const [itemProduct] = await db.select({ id: productsTable.id, costPrice: productsTable.costPrice })
+    .from(productsTable).where(eq(productsTable.id, parsed.data.productId));
+
   let item: typeof orderItemsTable.$inferSelect | undefined;
   let order: typeof ordersTable.$inferSelect | undefined;
 
@@ -386,11 +420,18 @@ router.post("/orders/:id/items", requireAuth as any, async (req, res): Promise<v
       if (!order) throw new Error("NOT_FOUND");
       if (!ITEM_EDITABLE_STATUSES.has(order.status)) throw new Error(`NOT_EDITABLE:${order.status}`);
 
+      // Load customer discount for snapshot
+      const [itemCustomer] = await tx.select({ discountLevel: customersTable.discountLevel })
+        .from(customersTable).where(eq(customersTable.id, order.customerId));
+      const itemDiscountPct = itemCustomer?.discountLevel != null ? parseFloat(itemCustomer.discountLevel) : 0;
+
       [item] = await tx.insert(orderItemsTable).values({
         orderId: order.id,
         productId: parsed.data.productId,
         quantity: parsed.data.quantity,
         unitPriceSnapshot: parsed.data.unitPriceSnapshot.toString(),
+        costPriceSnapshot: itemProduct?.costPrice != null ? itemProduct.costPrice : null,
+        discountPercentSnapshot: itemDiscountPct > 0 ? itemDiscountPct.toString() : null,
         lineTotal: lineTotal.toString(),
       }).returning();
 
@@ -520,6 +561,49 @@ router.delete("/orders/:id/items/:itemId", requireAuth as any, async (req, res):
   });
 
   res.status(204).end();
+});
+
+// ── V2.5: Mark order as paid ──────────────────────────────────────────────────
+// POST /api/orders/:id/mark-paid
+router.post("/orders/:id/mark-paid", requireRole(...FULL_ACCESS_ACCOUNTING) as any, async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = MarkOrderPaidParams.safeParse({ id: rawId });
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const parsed = MarkOrderPaidBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+  if (order.status !== "approved") { res.status(409).json({ error: "Only approved orders can be marked as paid" }); return; }
+  if (order.paymentStatus === "paid") { res.status(409).json({ error: "Order is already marked as paid" }); return; }
+
+  const user = (req as any).user;
+  const paidAtDate = parsed.data.paidAt ? new Date(parsed.data.paidAt) : new Date();
+  const collectedAmount = parsed.data.collectedAmount != null
+    ? parsed.data.collectedAmount.toString()
+    : order.totalAmount;
+
+  const [updated] = await db.update(ordersTable)
+    .set({
+      paymentStatus: "paid",
+      paidAt: paidAtDate,
+      collectedAmount,
+    })
+    .where(eq(ordersTable.id, params.data.id))
+    .returning();
+
+  const [cust] = await db.select().from(customersTable).where(eq(customersTable.id, order.customerId));
+
+  await logActivity({
+    actionType: "order_paid",
+    entityType: "order",
+    entityId: order.id,
+    description: `Order ${order.orderNumber ?? `#${order.id}`} marked as paid (${collectedAmount})`,
+    performedBy: user.id,
+  });
+
+  res.json(serializeOrder(updated, cust?.companyName, null));
 });
 
 export default router;

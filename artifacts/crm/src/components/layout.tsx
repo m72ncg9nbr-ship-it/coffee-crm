@@ -17,6 +17,7 @@ import {
   Coffee,
   UserPlus,
   Warehouse,
+  BarChart2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,6 +38,7 @@ const navItems = [
   { href: "/accounting", label: "Approvals",           icon: ClipboardCheck,  roles: FULL_ACCOUNTING },
   { href: "/invoicing",  label: "Ready for Invoicing", icon: Receipt,         roles: FULL_ACCOUNTING },
   { href: "/activity",   label: "Activity",            icon: Activity,        roles: CHANNEL_OPS },
+  { href: "/reports",    label: "Reports",             icon: BarChart2,       roles: ["owner_admin", "general_manager", "accounting", "channel_manager", "sales"] },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
