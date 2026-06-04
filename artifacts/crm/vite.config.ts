@@ -66,6 +66,14 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    proxy: {
+      // Forward all /api/* calls to the api-server.
+      // Without this every fetch("/api/…") returns 404 from Vite.
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: false,
+      },
+    },
   },
   preview: {
     port,

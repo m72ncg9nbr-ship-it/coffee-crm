@@ -11,6 +11,48 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+# ── "Project" — main run button ─────────────────────────────────────────────
+# Starts the api-server (port 8080) and the CRM Vite dev server (port 8081)
+# in parallel.  Port 8081 is mapped to external port 80, so the user-facing
+# URL always shows the real CRM login, not the mockup sandbox.
+#
+# Port assignments:
+#   8080 → api-server  (Express, serves /api/*)
+#   8081 → CRM Vite dev server  (React, proxies /api → 8080)
+#
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start API Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start CRM"
+
+# ── api-server ────────────────────────────────────────────────────────────────
+[[workflows.workflow]]
+name = "Start API Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-server run build && PORT=8080 node --enable-source-maps artifacts/api-server/dist/index.mjs"
+waitForPort = 8080
+
+# ── CRM Vite dev server ───────────────────────────────────────────────────────
+[[workflows.workflow]]
+name = "Start CRM"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=8081 BASE_PATH=/ pnpm --filter @workspace/crm run dev"
+waitForPort = 8081
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
