@@ -10,11 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 const ROLE_DEFAULT: Record<string, string> = {
-  admin: "/dashboard",
-  operations: "/dashboard",
-  sales: "/dashboard",
-  driver: "/driver",
-  accounting: "/accounting",
+  owner_admin:     "/dashboard",
+  general_manager: "/dashboard",
+  channel_manager: "/dashboard",
+  sales:           "/dashboard",
+  driver:          "/driver",
+  accounting:      "/accounting",
 };
 
 export default function LoginPage() {
@@ -98,12 +99,12 @@ export default function LoginPage() {
               <p className="text-xs text-muted-foreground font-medium mb-2">Demo accounts (click to fill):</p>
               <div className="grid grid-cols-2 gap-1.5 text-xs">
                 {[
-                  { u: "admin",   p: "admin123", label: "Owner Admin" },
-                  { u: "gm1",     p: "gm123",    label: "General Manager" },
-                  { u: "ops1",    p: "ops123",    label: "Channel Manager" },
-                  { u: "sales1",  p: "sales123",  label: "Sales" },
-                  { u: "driver1", p: "driver123", label: "Driver" },
-                  { u: "acct1",   p: "acct123",   label: "Accounting" },
+                  { u: "admin",   p: "admin123",  label: "Owner Admin" },
+                  { u: "gm1",     p: "gm123",     label: "General Manager" },
+                  { u: "ops1",    p: "ops123",     label: "Channel Manager" },
+                  { u: "sales1",  p: "sales123",   label: "Sales" },
+                  { u: "driver1", p: "driver123",  label: "Driver" },
+                  { u: "acct1",   p: "acct123",    label: "Accounting" },
                 ].map(acc => (
                   <button
                     key={acc.u}
