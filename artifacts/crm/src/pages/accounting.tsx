@@ -46,8 +46,8 @@ export default function AccountingPage() {
     markPaid.mutate({ id: orderId, data: {} });
   };
 
-  // Only accounting roles can mark paid
-  const canMarkPaid = user?.role && ["admin", "accounting"].includes(user.role);
+  // Only full-access accounting roles can mark paid
+  const canMarkPaid = user?.role && ["owner_admin", "general_manager", "accounting"].includes(user.role);
 
   const pending = (approvals ?? []).filter((a: any) => a.status === "pending");
   const reviewed = (approvals ?? []).filter((a: any) => a.status !== "pending");

@@ -191,11 +191,11 @@ function ProfitRow({ row }: { row: ProfitabilityItem }) {
 export default function ReportsPage() {
   const [filters, setFilters] = useState<ReportFiltersParams>({});
 
-  const { data: sales, isLoading: salesLoading } = useGetReportsSales(filters);
-  const { data: profit, isLoading: profitLoading } = useGetReportsProfitability(filters);
-  const { data: coll, isLoading: collLoading } = useGetReportsCollection(filters);
-  const { data: samples, isLoading: samplesLoading } = useGetReportsSamples(filters);
-  const { data: regional, isLoading: regionalLoading } = useGetReportsRegional(filters);
+  const { data: sales, isLoading: salesLoading, isError: salesError } = useGetReportsSales(filters);
+  const { data: profit, isLoading: profitLoading, isError: profitError } = useGetReportsProfitability(filters);
+  const { data: coll, isLoading: collLoading, isError: collError } = useGetReportsCollection(filters);
+  const { data: samples, isLoading: samplesLoading, isError: samplesError } = useGetReportsSamples(filters);
+  const { data: regional, isLoading: regionalLoading, isError: regionalError } = useGetReportsRegional(filters);
 
   return (
     <div className="p-6 space-y-5">
@@ -229,6 +229,7 @@ export default function ReportsPage() {
         {/* ── Sales ─────────────────────────────────────────────────────── */}
         <TabsContent value="sales" className="space-y-5">
           {salesLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {salesError && <div className="text-sm text-red-600 py-4">Failed to load sales data. Please try refreshing.</div>}
           {sales && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -277,6 +278,7 @@ export default function ReportsPage() {
         {/* ── Profitability ──────────────────────────────────────────────── */}
         <TabsContent value="profitability" className="space-y-5">
           {profitLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {profitError && <div className="text-sm text-red-600 py-4">Failed to load profitability data. Please try refreshing.</div>}
           {profit && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -331,6 +333,7 @@ export default function ReportsPage() {
         {/* ── Collection ────────────────────────────────────────────────── */}
         <TabsContent value="collection" className="space-y-5">
           {collLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {collError && <div className="text-sm text-red-600 py-4">Failed to load collection data. Please try refreshing.</div>}
           {coll && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -400,6 +403,7 @@ export default function ReportsPage() {
         {/* ── Samples ───────────────────────────────────────────────────── */}
         <TabsContent value="samples" className="space-y-5">
           {samplesLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {samplesError && <div className="text-sm text-red-600 py-4">Failed to load samples data. Please try refreshing.</div>}
           {samples && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -464,6 +468,7 @@ export default function ReportsPage() {
         {/* ── Regional ──────────────────────────────────────────────────── */}
         <TabsContent value="regional" className="space-y-5">
           {regionalLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {regionalError && <div className="text-sm text-red-600 py-4">Failed to load regional data. Please try refreshing.</div>}
           {regional && (
             <>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

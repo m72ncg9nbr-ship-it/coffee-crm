@@ -293,6 +293,8 @@ export interface Product {
   sku: string;
   category: string;
   unitPrice: number;
+  /** @nullable — V2.5 */
+  costPrice?: number | null;
   stockStatus: ProductStockStatus;
   active: boolean;
   businessChannel: string;
@@ -395,6 +397,21 @@ export interface Order {
   approvedAt?: string | null;
   /** @nullable */
   invoiceTriggeredAt?: string | null;
+  /** V2.5 payment fields @nullable */
+  invoiceDate?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  /** @nullable */
+  paymentTermsDays?: number | null;
+  paymentStatus?: string | null;
+  /** @nullable */
+  paidAt?: string | null;
+  /** @nullable */
+  collectedAmount?: number | null;
+  /** @nullable */
+  sampleReason?: string | null;
+  /** @nullable */
+  sampleEventName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -406,6 +423,10 @@ export interface OrderItem {
   productName: string;
   quantity: number;
   unitPriceSnapshot: number;
+  /** @nullable — V2.5 */
+  costPriceSnapshot?: number | null;
+  /** @nullable — V2.5 */
+  discountPercentSnapshot?: number | null;
   lineTotal: number;
 }
 

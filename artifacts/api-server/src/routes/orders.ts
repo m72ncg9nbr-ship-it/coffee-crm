@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, ordersTable, orderItemsTable, customersTable, customerAddressesTable, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, inventoryAllocationsTable, usersTable, productsTable } from "@workspace/db";
 import { eq, inArray, and, sql } from "drizzle-orm";
-import { requireAuth, requireRole, SALES_CAPABLE } from "../middlewares/auth";
+import { requireAuth, requireRole, SALES_CAPABLE, FULL_ACCESS_ACCOUNTING } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import { allocateStockForOrder, releaseStockForOrder } from "../lib/inventory";
 import {
@@ -15,7 +15,6 @@ import {
   MarkOrderPaidParams,
   MarkOrderPaidBody,
 } from "@workspace/api-zod";
-import { requireRole, FULL_ACCESS_ACCOUNTING } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -254,12 +253,12 @@ router.post("/orders", requireAuth as any, async (req, res): Promise<void> => {
     [finalOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, order.id));
   }
 
-  const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, finalOrder.customerId));
+  const [orderCustomer] = await db.select().from(customersTable).where(eq(customersTable.id, finalOrder.customerId));
   await logActivity({
     actionType: "order_created",
     entityType: "order",
     entityId: finalOrder.id,
-    description: `Order ${finalOrder.orderNumber} created for "${customer?.companyName}"`,
+    description: `Order ${finalOrder.orderNumber} created for "${orderCustomer?.companyName}"`,
     performedBy: user.id,
   });
 
