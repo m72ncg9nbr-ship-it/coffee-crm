@@ -610,7 +610,7 @@ router.post("/orders/:id/mark-paid", requireRole(...FULL_ACCESS_ACCOUNTING) as a
       .where(eq(customersTable.id, order.customerId));
 
     backfillPaymentTermsDays = parsePaymentTermsDays(cust?.paymentTerms);
-    backfillDueDate = addDaysToDateStr(backfillInvoiceDate, backfillPaymentTermsDays);
+    backfillDueDate = addDaysToDateStr(backfillInvoiceDate!, backfillPaymentTermsDays);
   }
 
   const [updated] = await db.update(ordersTable)

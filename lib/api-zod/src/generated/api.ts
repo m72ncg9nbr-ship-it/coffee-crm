@@ -432,6 +432,7 @@ export const ListProductsResponseItem = zod.object({
   sku: zod.string(),
   category: zod.string(),
   unitPrice: zod.number(),
+  costPrice: zod.number().nullish(),  // V2.5
   stockStatus: zod.enum(["in_stock", "low_stock", "out_of_stock"]),
   active: zod.boolean(),
   businessChannel: zod.string(),
@@ -465,6 +466,7 @@ export const GetProductResponse = zod.object({
   sku: zod.string(),
   category: zod.string(),
   unitPrice: zod.number(),
+  costPrice: zod.number().nullish(),  // V2.5
   stockStatus: zod.enum(["in_stock", "low_stock", "out_of_stock"]),
   active: zod.boolean(),
   businessChannel: zod.string(),
@@ -483,6 +485,7 @@ export const UpdateProductBody = zod.object({
   sku: zod.string().optional(),
   category: zod.string().optional(),
   unitPrice: zod.number().optional(),
+  costPrice: zod.number().nonnegative().nullish(),  // V2.5
   stockStatus: zod.enum(["in_stock", "low_stock", "out_of_stock"]).optional(),
   active: zod.boolean().optional(),
   businessChannel: zod.string().optional(),
@@ -494,6 +497,7 @@ export const UpdateProductResponse = zod.object({
   sku: zod.string(),
   category: zod.string(),
   unitPrice: zod.number(),
+  costPrice: zod.number().nullish(),  // V2.5
   stockStatus: zod.enum(["in_stock", "low_stock", "out_of_stock"]),
   active: zod.boolean(),
   businessChannel: zod.string(),
