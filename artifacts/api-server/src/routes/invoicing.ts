@@ -48,6 +48,7 @@ router.get("/invoicing/ready", requireRole(...FULL_ACCESS_ACCOUNTING) as any, as
       customerId: o.customerId,
       customerName: customer?.companyName ?? "Unknown",
       customerPriority: customer?.priorityClass ?? "C",
+      customerPaymentTerms: customer?.paymentTerms ?? null,
       totalAmount: parseFloat(o.totalAmount),
       requestedDeliveryDate: o.requestedDeliveryDate,
       scheduledDeliveryDate: delivery?.scheduledDate ?? null,
@@ -57,6 +58,13 @@ router.get("/invoicing/ready", requireRole(...FULL_ACCESS_ACCOUNTING) as any, as
       invoiceTriggeredAt: o.invoiceTriggeredAt?.toISOString() ?? null,
       approvedByName: o.approvedByAccountingUserId ? (approverMap[o.approvedByAccountingUserId] ?? null) : null,
       itemCount: (itemsByOrder[o.id] ?? []).length,
+      // ── V2.5 payment fields ────────────────────────────────────────────────────
+      invoiceDate: o.invoiceDate ?? null,
+      dueDate: o.dueDate ?? null,
+      paymentTermsDays: o.paymentTermsDays ?? null,
+      paymentStatus: o.paymentStatus ?? "unpaid",
+      paidAt: o.paidAt ? (o.paidAt as Date).toISOString() : null,
+      collectedAmount: o.collectedAmount != null ? parseFloat(o.collectedAmount) : null,
       documents: docs.map(d => ({
         id: d.id,
         documentType: d.documentType,

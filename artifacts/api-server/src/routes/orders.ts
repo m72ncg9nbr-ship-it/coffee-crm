@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
 import { db, ordersTable, orderItemsTable, customersTable, customerAddressesTable, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, inventoryAllocationsTable, usersTable, productsTable } from "@workspace/db";
-import { eq, inArray, and, sql } from "drizzle-orm";
+import { eq, inArray, and, sql, desc } from "drizzle-orm";
 import { requireAuth, requireRole, SALES_CAPABLE, FULL_ACCESS_ACCOUNTING } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import { allocateStockForOrder, releaseStockForOrder } from "../lib/inventory";
+import { parsePaymentTermsDays, addDaysToDateStr } from "../lib/paymentTerms";
 import {
   CreateOrderBody,
   UpdateOrderBody,
@@ -583,11 +584,46 @@ router.post("/orders/:id/mark-paid", requireRole(...FULL_ACCESS_ACCOUNTING) as a
     ? parsed.data.collectedAmount.toString()
     : order.totalAmount;
 
+  // ── V2.5 backfill: set invoiceDate/dueDate if missing (orders approved before V2.5) ──
+  let backfillInvoiceDate: string | undefined;
+  let backfillDueDate: string | undefined;
+  let backfillPaymentTermsDays: number | undefined;
+
+  if (!order.invoiceDate) {
+    // Fetch the linked delivery to get the best available date
+    const [delivery] = await db
+      .select()
+      .from(deliveriesTable)
+      .where(eq(deliveriesTable.orderId, order.id))
+      .orderBy(desc(deliveriesTable.createdAt))
+      .limit(1);
+
+    backfillInvoiceDate =
+      (delivery?.arrivalMarkedAt ? (delivery.arrivalMarkedAt as Date).toISOString().split("T")[0] : null) ??
+      delivery?.scheduledDate ??
+      order.requestedDeliveryDate ??
+      paidAtDate.toISOString().split("T")[0];
+
+    const [cust] = await db
+      .select({ paymentTerms: customersTable.paymentTerms })
+      .from(customersTable)
+      .where(eq(customersTable.id, order.customerId));
+
+    backfillPaymentTermsDays = parsePaymentTermsDays(cust?.paymentTerms);
+    backfillDueDate = addDaysToDateStr(backfillInvoiceDate, backfillPaymentTermsDays);
+  }
+
   const [updated] = await db.update(ordersTable)
     .set({
       paymentStatus: "paid",
       paidAt: paidAtDate,
       collectedAmount,
+      // Only write backfill values when invoice date was not already set
+      ...(backfillInvoiceDate ? {
+        invoiceDate: backfillInvoiceDate,
+        dueDate: backfillDueDate,
+        paymentTermsDays: backfillPaymentTermsDays,
+      } : {}),
     })
     .where(eq(ordersTable.id, params.data.id))
     .returning();
