@@ -746,6 +746,7 @@ export const ListDeliveriesResponseItem = zod.object({
   id: zod.number(),
   deliveryNumber: zod.string().nullish(),
   orderId: zod.number(),
+  orderNumber: zod.string().nullish(),   // V2.5 — returned by list endpoint
   customerId: zod.number(),
   customerName: zod.string(),
   customerPriority: zod.enum(["A", "B", "C"]),
