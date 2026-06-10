@@ -384,16 +384,16 @@ export default function DeliveriesPage() {
             </SelectContent>
           </Select>
 
-          {/* Clear filters */}
+          {/* Clear filters — shown whenever any filter is active or sort is non-default */}
           {(hasFilters || sortBy !== DEFAULT_SORT) && (
             <Button
               size="sm"
-              variant="ghost"
-              className="h-8 text-xs gap-1 text-muted-foreground hover:text-foreground"
+              variant="outline"
+              className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 shrink-0"
               onClick={clearFilters}
             >
               <X className="h-3.5 w-3.5" />
-              Clear
+              Clear filters
             </Button>
           )}
         </div>
