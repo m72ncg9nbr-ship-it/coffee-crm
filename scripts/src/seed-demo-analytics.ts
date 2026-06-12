@@ -276,9 +276,11 @@ async function main() {
     paymentStatus: "paid" | "unpaid";
     paidDaysAfterDue?: number; // positive = late, negative = early, 0 = on due date
     sampleReason?: string;
+    sampleEventName?: string;
     noteTag: string;
   }) {
-    const { customer, products: prods, orderSource, invoiceDateOffset, ptDays, paymentStatus, paidDaysAfterDue, sampleReason, noteTag } = opts;
+    const { customer, products: prods, orderSource, invoiceDateOffset, ptDays, paymentStatus, paidDaysAfterDue, sampleReason, sampleEventName, noteTag } = opts;
+    const isSample = orderSource === "free_sample" || orderSource === "sample";
 
     const invoiceDate = daysAgo(invoiceDateOffset);
     const dueDate = addDays(invoiceDate, ptDays);
@@ -287,9 +289,11 @@ async function main() {
     // Build order items
     const items = prods.slice(0, 1 + Math.floor(Math.random() * 2)).map(p => {
       const qty = 1 + Math.floor(Math.random() * 10);
-      const unitPrice = parseFloat(p.unitPrice as unknown as string);
-      const costPrice = p.costPrice ? parseFloat(p.costPrice as unknown as string) : unitPrice * 0.65;
-      const lineTotal = qty * unitPrice;
+      const catalogPrice = parseFloat(p.unitPrice as unknown as string);
+      // Free samples: €0 revenue but keep cost for margin tracking
+      const unitPrice = isSample ? 0 : catalogPrice;
+      const costPrice = p.costPrice ? parseFloat(p.costPrice as unknown as string) : catalogPrice * 0.65;
+      const lineTotal = isSample ? 0 : qty * unitPrice;
       return { productId: p.id, quantity: qty, unitPrice, costPrice, lineTotal };
     });
     const totalAmount = items.reduce((s, i) => s + i.lineTotal, 0);
@@ -317,6 +321,7 @@ async function main() {
       paymentTermsDays: ptDays,
       paymentStatus,
       sampleReason: sampleReason ?? null,
+      sampleEventName: sampleEventName ?? null,
       paidAt: paymentStatus === "paid"
         ? new Date(addDays(dueDate, paidDaysAfterDue ?? -5) + "T14:00:00Z")
         : null,
@@ -446,22 +451,50 @@ async function main() {
     console.log("  → Done\n");
   }
 
+  // ── 10a. Backfill: ensure all existing demo free_sample orders have €0 revenue ─
+  console.log("[seed-demo-analytics] Step 10a: Ensuring demo free_sample orders have €0 revenue...");
+  const existingFreeSampleDemoOrders = await db.select({ id: ordersTable.id })
+    .from(ordersTable)
+    .where(sql`order_source IN ('free_sample', 'sample') AND notes LIKE '%[DEMO-ANALYTICS]%'`);
+  if (existingFreeSampleDemoOrders.length > 0) {
+    const fsIds = existingFreeSampleDemoOrders.map(r => r.id);
+    await db.update(ordersTable)
+      .set({ totalAmount: "0", collectedAmount: "0", paymentStatus: "paid" } as any)
+      .where(inArray(ordersTable.id, fsIds));
+    await db.update(orderItemsTable)
+      .set({ unitPriceSnapshot: "0", lineTotal: "0" } as any)
+      .where(inArray(orderItemsTable.orderId, fsIds));
+    console.log(`  → Zeroed revenue on ${fsIds.length} existing demo sample orders\n`);
+  } else {
+    console.log("  → No existing demo sample orders to update\n");
+  }
+
   // ── 10. Create free sample orders ─────────────────────────────────────
   if (needSamples > 0) {
     console.log(`[seed-demo-analytics] Creating ${needSamples} free sample orders...`);
-    const sampleReasons = ["tasting", "customer_visit", "promotional", "machine_setup", "fair", "fair", "other"];
+    const sampleScenarios: Array<{ reason: string; eventName?: string }> = [
+      { reason: "tasting" },
+      { reason: "customer_visit" },
+      { reason: "promotional" },
+      { reason: "machine_setup" },
+      { reason: "fair", eventName: "Oslo Coffee Expo 2025" },
+      { reason: "fair", eventName: "Bergen Café Festival 2025" },
+      { reason: "other" },
+    ];
     const customers = pickCustomers(needSamples);
     for (let i = 0; i < needSamples; i++) {
       const cust = customers[i % customers.length];
+      const scenario = sampleScenarios[i % sampleScenarios.length];
       await createDemoOrder({
         customer: cust,
         products: pickProducts(1),
         orderSource: "free_sample",
         invoiceDateOffset: 10 + i * 8,
         ptDays: 0,
-        paymentStatus: "paid",    // free samples are zero-cost or comped
+        paymentStatus: "paid",    // free samples are comped at €0
         paidDaysAfterDue: 0,
-        sampleReason: sampleReasons[i % sampleReasons.length],
+        sampleReason: scenario.reason,
+        sampleEventName: scenario.eventName,
         noteTag: "[DEMO-ANALYTICS]",
       });
     }

@@ -350,7 +350,7 @@ export default function ReportsPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">
-                    Orders — {coll.unpaidCount} unpaid ({coll.overdueCount} overdue)
+                    Orders — {coll.orders.length} records ({coll.unpaidCount} unpaid, {coll.overdueCount} overdue)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

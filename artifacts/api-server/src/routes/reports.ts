@@ -10,7 +10,7 @@ const router: IRouter = Router();
 
 const VALOR_RATE_MONTHLY = 0.04; // 4% monthly financing/valor rate
 
-const SAMPLE_SOURCES = ["sample", "free_issue"];
+const SAMPLE_SOURCES = ["sample", "free_issue", "free_sample"];
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -408,7 +408,7 @@ router.get("/reports/samples", requireAuth as any, async (req, res): Promise<voi
   const filters = parseFilters(req.query);
 
   let orders = await db.select().from(ordersTable)
-    .where(sql`${ordersTable.orderSource} IN ('sample', 'free_issue')`);
+    .where(inArray(ordersTable.orderSource, SAMPLE_SOURCES));
 
   if (filters.dateFrom) orders = orders.filter(o => o.createdAt.toISOString().split("T")[0] >= filters.dateFrom!);
   if (filters.dateTo)   orders = orders.filter(o => o.createdAt.toISOString().split("T")[0] <= filters.dateTo!);
