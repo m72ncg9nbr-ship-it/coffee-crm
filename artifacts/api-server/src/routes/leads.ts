@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, leadsTable, customersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, leadsTable, customersTable, usersTable } from "@workspace/db";
+import { eq, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import {
   CreateLeadBody,
@@ -10,6 +10,23 @@ import {
   ConvertLeadBody,
 } from "@workspace/api-zod";
 import { logActivity } from "../lib/activity";
+
+async function enrichLeads(leads: (typeof leadsTable.$inferSelect)[]) {
+  if (leads.length === 0) return [];
+  const creatorIds = [...new Set(leads.filter(l => l.createdBy).map(l => l.createdBy!))];
+  const creators = creatorIds.length > 0
+    ? await db.select({ id: usersTable.id, fullName: usersTable.fullName }).from(usersTable).where(inArray(usersTable.id, creatorIds))
+    : [];
+  const creatorMap = Object.fromEntries(creators.map(u => [u.id, u.fullName]));
+  return leads.map(l => ({
+    ...l,
+    createdByName: l.createdBy ? (creatorMap[l.createdBy] ?? null) : null,
+    createdAt: l.createdAt.toISOString(),
+    updatedAt: l.updatedAt.toISOString(),
+    followUpDueAt: l.followUpDueAt?.toISOString() ?? null,
+    followUpCompletedAt: l.followUpCompletedAt?.toISOString() ?? null,
+  }));
+}
 
 const router: IRouter = Router();
 
@@ -34,13 +51,7 @@ function qualifyLead(data: {
 
 router.get("/leads", requireAuth as any, async (req, res): Promise<void> => {
   const leads = await db.select().from(leadsTable).orderBy(leadsTable.createdAt);
-  res.json(leads.map(l => ({
-    ...l,
-    createdAt: l.createdAt.toISOString(),
-    updatedAt: l.updatedAt.toISOString(),
-    followUpDueAt: l.followUpDueAt?.toISOString() ?? null,
-    followUpCompletedAt: l.followUpCompletedAt?.toISOString() ?? null,
-  })));
+  res.json(await enrichLeads(leads));
 });
 
 router.post("/leads", requireAuth as any, async (req, res): Promise<void> => {
@@ -63,6 +74,8 @@ router.post("/leads", requireAuth as any, async (req, res): Promise<void> => {
     qualificationResult: q.result,
     qualificationReason: q.reason,
     followUpDueAt,
+    createdBy: user?.id ?? null,
+    importance: parsed.data.importance ?? "normal",
   }).returning();
 
   await logActivity({
@@ -73,13 +86,8 @@ router.post("/leads", requireAuth as any, async (req, res): Promise<void> => {
     performedBy: user?.id,
   });
 
-  res.status(201).json({
-    ...lead,
-    createdAt: lead.createdAt.toISOString(),
-    updatedAt: lead.updatedAt.toISOString(),
-    followUpDueAt: lead.followUpDueAt?.toISOString() ?? null,
-    followUpCompletedAt: lead.followUpCompletedAt?.toISOString() ?? null,
-  });
+  const enriched = await enrichLeads([lead]);
+  res.status(201).json(enriched[0]);
 });
 
 router.get("/leads/:id", requireAuth as any, async (req, res): Promise<void> => {
@@ -199,11 +207,8 @@ router.patch("/leads/:id", requireAuth as any, async (req, res): Promise<void> =
     return;
   }
 
-  res.json({
-    ...lead,
-    createdAt: lead.createdAt.toISOString(),
-    updatedAt: lead.updatedAt.toISOString(),
-  });
+  const enriched = await enrichLeads([lead]);
+  res.json(enriched[0]);
 });
 
 export default router;

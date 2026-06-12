@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
-import { Truck, AlertCircle, UserPlus, Search, X, SlidersHorizontal } from "lucide-react";
+import { Truck, AlertCircle, UserPlus, Search, X, SlidersHorizontal, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
@@ -441,14 +441,14 @@ export default function DeliveriesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">#</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Order</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Customer</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Driver</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Urgency</th>
+                  <SortableHeader col="delivery_asc" descVal="delivery_desc" sortBy={sortBy} setSortBy={setSortBy}>Delivery #</SortableHeader>
+                  <SortableHeader col="order_asc" descVal="order_desc" sortBy={sortBy} setSortBy={setSortBy}>Order #</SortableHeader>
+                  <SortableHeader col="customer_asc" descVal="customer_desc" sortBy={sortBy} setSortBy={setSortBy}>Customer</SortableHeader>
+                  <SortableHeader col="date_asc" descVal="date_desc" sortBy={sortBy} setSortBy={setSortBy}>Date</SortableHeader>
+                  <SortableHeader col="driver_asc" descVal="driver_desc" sortBy={sortBy} setSortBy={setSortBy}>Driver</SortableHeader>
+                  <SortableHeader col="priority_high" descVal="priority_low" sortBy={sortBy} setSortBy={setSortBy}>Urgency</SortableHeader>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Deviation</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Status</th>
+                  <SortableHeader col="status" descVal="status" sortBy={sortBy} setSortBy={setSortBy}>Status</SortableHeader>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Actions</th>
                 </tr>
               </thead>
@@ -541,9 +541,9 @@ function DeliveryCard({ delivery: d, deleteSlot }: { delivery: any; deleteSlot?:
     <div className={`bg-white rounded-md shadow-sm border p-3 space-y-2 ${overdue ? "border-red-400 border-2" : ""}`}>
       {/* Top row: priority badge + customer name + urgency + delete */}
       <div className="flex items-start justify-between gap-1">
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-start gap-1.5 min-w-0">
           <PriorityBadge priority={d.customerPriority} />
-          <span className="text-sm font-medium leading-tight truncate">{d.customerName}</span>
+          <span className="text-sm font-medium leading-tight line-clamp-2">{d.customerName}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <UrgencyBadge urgency={d.urgency} />
@@ -585,6 +585,40 @@ function DeliveryCard({ delivery: d, deleteSlot }: { delivery: any; deleteSlot?:
       {/* Assign driver control (unassigned only) */}
       {d.status === "unassigned" && <AssignDriverControl deliveryId={d.id} />}
     </div>
+  );
+}
+
+// ── Sortable column header ─────────────────────────────────────────────────────
+function SortableHeader({
+  col, descVal, sortBy, setSortBy, children
+}: {
+  col: string;
+  descVal: string;
+  sortBy: string;
+  setSortBy: (v: string) => void;
+  children: React.ReactNode;
+}) {
+  const isAsc = sortBy === col;
+  const isDesc = sortBy === descVal && descVal !== col;
+  const isActive = isAsc || isDesc;
+  function toggle() {
+    if (!isActive) { setSortBy(col); return; }
+    // if same column: toggle asc/desc (unless col === descVal i.e. single-value like "status")
+    if (col === descVal) return;
+    setSortBy(isAsc ? descVal : col);
+  }
+  return (
+    <th
+      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground whitespace-nowrap"
+      onClick={toggle}
+    >
+      <span className="flex items-center gap-1">
+        {children}
+        {!isActive && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+        {isAsc  && <ArrowUp   className="h-3 w-3 text-primary" />}
+        {isDesc && <ArrowDown className="h-3 w-3 text-primary" />}
+      </span>
+    </th>
   );
 }
 

@@ -1,10 +1,13 @@
+import { useState, useMemo } from "react";
 import { useGetReadyForInvoicing, useMarkOrderPaid } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PriorityBadge } from "@/components/priority-badge";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
-import { FileCheck, Receipt, CreditCard, AlertCircle } from "lucide-react";
+import { FileCheck, Receipt, CreditCard, AlertCircle, X, SlidersHorizontal, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // ── Payment status badge ───────────────────────────────────────────────────────
@@ -32,10 +35,79 @@ function effectiveStatus(r: any): string {
   return r.paymentStatus ?? "unpaid";
 }
 
+type SortKey = "orderNumber" | "customer" | "deliveryDate" | "invoiceDate" | "dueDate" | "total" | "payment" | "approvedBy";
+type SortDir = "asc" | "desc";
+
+function sortRows(list: any[], key: SortKey, dir: SortDir): any[] {
+  return [...list].sort((a, b) => {
+    let va: any, vb: any;
+    switch (key) {
+      case "orderNumber":   va = a.orderNumber ?? ""; vb = b.orderNumber ?? ""; break;
+      case "customer":      va = a.customerName ?? ""; vb = b.customerName ?? ""; break;
+      case "deliveryDate":  va = a.scheduledDeliveryDate ?? a.requestedDeliveryDate ?? ""; vb = b.scheduledDeliveryDate ?? b.requestedDeliveryDate ?? ""; break;
+      case "invoiceDate":   va = a.invoiceDate ?? ""; vb = b.invoiceDate ?? ""; break;
+      case "dueDate":       va = a.dueDate ?? ""; vb = b.dueDate ?? ""; break;
+      case "total":         va = a.totalAmount ?? 0; vb = b.totalAmount ?? 0; return dir === "asc" ? va - vb : vb - va;
+      case "payment":       va = effectiveStatus(a); vb = effectiveStatus(b); break;
+      case "approvedBy":    va = a.approvedByName ?? ""; vb = b.approvedByName ?? ""; break;
+      default: return 0;
+    }
+    const cmp = String(va).localeCompare(String(vb));
+    return dir === "asc" ? cmp : -cmp;
+  });
+}
+
+function ColHeader({ label, col, sortKey, sortDir, onSort }: {
+  label: string;
+  col: SortKey;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onSort: (k: SortKey) => void;
+}) {
+  const active = sortKey === col;
+  return (
+    <th
+      className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap cursor-pointer select-none hover:text-foreground"
+      onClick={() => onSort(col)}
+    >
+      <span className="flex items-center gap-1">
+        {label}
+        {!active && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+        {active && sortDir === "asc"  && <ArrowUp   className="h-3 w-3 text-primary" />}
+        {active && sortDir === "desc" && <ArrowDown className="h-3 w-3 text-primary" />}
+      </span>
+    </th>
+  );
+}
+
 export default function InvoicingPage() {
   const { data, isLoading, refetch } = useGetReadyForInvoicing();
   const { toast } = useToast();
   const list = (data ?? []) as any[];
+
+  // ── Filter state ───────────────────────────────────────────────────────────
+  const [orderSearch,    setOrderSearch]    = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [deliverySearch, setDeliverySearch] = useState("");
+  const [delivDateFrom,  setDelivDateFrom]  = useState("");
+  const [delivDateTo,    setDelivDateTo]    = useState("");
+  const [invDateFrom,    setInvDateFrom]    = useState("");
+  const [invDateTo,      setInvDateTo]      = useState("");
+  const [dueDateFrom,    setDueDateFrom]    = useState("");
+  const [dueDateTo,      setDueDateTo]      = useState("");
+  const [paymentFilter,  setPaymentFilter]  = useState("all");
+  const [docsFilter,     setDocsFilter]     = useState("all");
+  const [totalMin,       setTotalMin]       = useState("");
+  const [totalMax,       setTotalMax]       = useState("");
+
+  // ── Sort state ─────────────────────────────────────────────────────────────
+  const [sortKey, setSortKey] = useState<SortKey>("invoiceDate");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  function handleSort(k: SortKey) {
+    if (sortKey === k) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(k); setSortDir("asc"); }
+  }
 
   const markPaid = useMarkOrderPaid({
     mutation: {
@@ -46,6 +118,41 @@ export default function InvoicingPage() {
       onError: () => toast({ title: "Failed to mark as paid", variant: "destructive" }),
     },
   });
+
+  // ── Filter pipeline ─────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    return list.filter(r => {
+      if (orderSearch.trim()    && !r.orderNumber?.toLowerCase().includes(orderSearch.toLowerCase()))    return false;
+      if (customerSearch.trim() && !r.customerName?.toLowerCase().includes(customerSearch.toLowerCase())) return false;
+      if (deliverySearch.trim() && !r.deliveryNumber?.toLowerCase().includes(deliverySearch.toLowerCase())) return false;
+      const delivDate = r.scheduledDeliveryDate ?? r.requestedDeliveryDate ?? "";
+      if (delivDateFrom && delivDate && delivDate < delivDateFrom) return false;
+      if (delivDateTo   && delivDate && delivDate > delivDateTo)   return false;
+      if (invDateFrom && r.invoiceDate && r.invoiceDate < invDateFrom) return false;
+      if (invDateTo   && r.invoiceDate && r.invoiceDate > invDateTo)   return false;
+      if (dueDateFrom && r.dueDate && r.dueDate < dueDateFrom) return false;
+      if (dueDateTo   && r.dueDate && r.dueDate > dueDateTo)   return false;
+      const eff = effectiveStatus(r);
+      if (paymentFilter !== "all" && eff !== paymentFilter) return false;
+      if (docsFilter === "with_docs"    && !(r.documents?.length > 0)) return false;
+      if (docsFilter === "without_docs" && (r.documents?.length > 0))  return false;
+      if (totalMin.trim() && r.totalAmount < parseFloat(totalMin)) return false;
+      if (totalMax.trim() && r.totalAmount > parseFloat(totalMax)) return false;
+      return true;
+    });
+  }, [list, orderSearch, customerSearch, deliverySearch, delivDateFrom, delivDateTo, invDateFrom, invDateTo, dueDateFrom, dueDateTo, paymentFilter, docsFilter, totalMin, totalMax]);
+
+  const sorted = useMemo(() => sortRows(filtered, sortKey, sortDir), [filtered, sortKey, sortDir]);
+
+  const hasFilters = orderSearch || customerSearch || deliverySearch || delivDateFrom || delivDateTo || invDateFrom || invDateTo || dueDateFrom || dueDateTo || paymentFilter !== "all" || docsFilter !== "all" || totalMin || totalMax;
+
+  function clearFilters() {
+    setOrderSearch(""); setCustomerSearch(""); setDeliverySearch("");
+    setDelivDateFrom(""); setDelivDateTo(""); setInvDateFrom(""); setInvDateTo("");
+    setDueDateFrom(""); setDueDateTo(""); setPaymentFilter("all");
+    setDocsFilter("all"); setTotalMin(""); setTotalMax("");
+  }
 
   // ── Summary calculations ───────────────────────────────────────────────────────
   const today = new Date().toISOString().split("T")[0];
@@ -103,6 +210,65 @@ export default function InvoicingPage() {
         </Card>
       </div>
 
+      {/* ── Filter bar ─────────────────────────────────────────────────────────── */}
+      <div className="bg-muted/20 border rounded-lg p-3 space-y-2">
+        <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          <span>Filters</span>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Input placeholder="Order #..." value={orderSearch}    onChange={e => setOrderSearch(e.target.value)}    className="h-8 text-xs w-28" />
+          <Input placeholder="Customer..." value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} className="h-8 text-xs w-40" />
+          <Input placeholder="Delivery #..." value={deliverySearch} onChange={e => setDeliverySearch(e.target.value)} className="h-8 text-xs w-32" />
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="Payment status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All payments</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="unpaid">Unpaid</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={docsFilter} onValueChange={setDocsFilter}>
+            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="Docs" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All docs</SelectItem>
+              <SelectItem value="with_docs">With docs</SelectItem>
+              <SelectItem value="without_docs">No docs</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Delivery date</span>
+          <Input type="date" value={delivDateFrom} onChange={e => setDelivDateFrom(e.target.value)} className="h-8 text-xs w-36" />
+          <span className="text-xs text-muted-foreground">–</span>
+          <Input type="date" value={delivDateTo}   onChange={e => setDelivDateTo(e.target.value)}   className="h-8 text-xs w-36" />
+          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">Invoice date</span>
+          <Input type="date" value={invDateFrom}   onChange={e => setInvDateFrom(e.target.value)}   className="h-8 text-xs w-36" />
+          <span className="text-xs text-muted-foreground">–</span>
+          <Input type="date" value={invDateTo}     onChange={e => setInvDateTo(e.target.value)}     className="h-8 text-xs w-36" />
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Due date</span>
+          <Input type="date" value={dueDateFrom} onChange={e => setDueDateFrom(e.target.value)} className="h-8 text-xs w-36" />
+          <span className="text-xs text-muted-foreground">–</span>
+          <Input type="date" value={dueDateTo}   onChange={e => setDueDateTo(e.target.value)}   className="h-8 text-xs w-36" />
+          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">Total</span>
+          <Input placeholder="Min" value={totalMin} onChange={e => setTotalMin(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
+          <span className="text-xs text-muted-foreground">–</span>
+          <Input placeholder="Max" value={totalMax} onChange={e => setTotalMax(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
+          {hasFilters && (
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700" onClick={clearFilters}>
+              <X className="h-3.5 w-3.5" />
+              Clear filters
+            </Button>
+          )}
+        </div>
+        {hasFilters && (
+          <p className="text-xs text-muted-foreground">{sorted.length} of {list.length} records</p>
+        )}
+      </div>
+
       {/* ── Main table ─────────────────────────────────────────────────────────── */}
       <Card>
         <CardHeader className="pb-3">
@@ -116,17 +282,17 @@ export default function InvoicingPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Order #</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground">Customer</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Delivery</th>
+                  <ColHeader label="Order #"     col="orderNumber"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <ColHeader label="Customer"    col="customer"     sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <ColHeader label="Delivery"    col="deliveryDate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <th className="px-3 py-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Items</th>
-                  <th className="px-3 py-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Total</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Invoice Date</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Due Date</th>
+                  <ColHeader label="Total"       col="total"        sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <ColHeader label="Invoice Date" col="invoiceDate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <ColHeader label="Due Date"    col="dueDate"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Terms</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Payment</th>
+                  <ColHeader label="Payment"     col="payment"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Paid At</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Approved By</th>
+                  <ColHeader label="Approved By" col="approvedBy"   sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Docs</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Action</th>
                 </tr>
@@ -137,14 +303,14 @@ export default function InvoicingPage() {
                     <td colSpan={13} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
                   </tr>
                 )}
-                {!isLoading && list.length === 0 && (
+                {!isLoading && sorted.length === 0 && (
                   <tr>
                     <td colSpan={13} className="px-4 py-12 text-center text-muted-foreground">
-                      No records ready for invoicing yet
+                      {hasFilters ? "No records match the current filters." : "No records ready for invoicing yet"}
                     </td>
                   </tr>
                 )}
-                {!isLoading && list.map(r => {
+                {!isLoading && sorted.map(r => {
                   const effStatus = effectiveStatus(r);
                   const isOverdue = effStatus === "overdue";
                   const isPaid    = r.paymentStatus === "paid";

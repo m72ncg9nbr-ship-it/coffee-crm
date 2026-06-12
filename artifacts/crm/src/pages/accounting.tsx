@@ -3,9 +3,11 @@ import { StatusBadge } from "@/components/priority-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import { CheckCircle, XCircle, FileText, CreditCard } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle, XCircle, FileText, CreditCard, SlidersHorizontal, X } from "lucide-react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 
@@ -14,6 +16,12 @@ export default function AccountingPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [notes, setNotes] = useState<Record<number, string>>({});
+
+  // ── Filter state ────────────────────────────────────────────────────────────
+  const [statusFilter,  setStatusFilter]  = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [dateFrom,      setDateFrom]      = useState("");
+  const [dateTo,        setDateTo]        = useState("");
 
   const approveDelivery = useApproveDelivery({
     mutation: {
@@ -49,15 +57,83 @@ export default function AccountingPage() {
   // Only full-access accounting roles can mark paid
   const canMarkPaid = user?.role && ["owner_admin", "general_manager", "accounting"].includes(user.role);
 
-  const pending = (approvals ?? []).filter((a: any) => a.status === "pending");
-  const reviewed = (approvals ?? []).filter((a: any) => a.status !== "pending");
   const isBusy = approveDelivery.isPending || rejectDelivery.isPending || markPaid.isPending;
+
+  // ── Filter pipeline ─────────────────────────────────────────────────────────
+  const hasFilters = statusFilter !== "all" || paymentFilter !== "all" || dateFrom || dateTo;
+
+  function clearFilters() {
+    setStatusFilter("all"); setPaymentFilter("all"); setDateFrom(""); setDateTo("");
+  }
+
+  const filteredApprovals = useMemo(() => {
+    let list = (approvals ?? []) as any[];
+    if (statusFilter !== "all") list = list.filter(a => a.status === statusFilter);
+    if (paymentFilter !== "all") {
+      const today = new Date().toISOString().split("T")[0];
+      list = list.filter(a => {
+        if (paymentFilter === "paid")    return a.paymentStatus === "paid";
+        if (paymentFilter === "overdue") return a.paymentStatus !== "paid" && a.dueDate && a.dueDate < today;
+        if (paymentFilter === "unpaid")  return a.paymentStatus !== "paid" && !(a.dueDate && a.dueDate < today);
+        return true;
+      });
+    }
+    if (dateFrom) list = list.filter(a => a.scheduledDate && a.scheduledDate >= dateFrom);
+    if (dateTo)   list = list.filter(a => a.scheduledDate && a.scheduledDate <= dateTo);
+    return list;
+  }, [approvals, statusFilter, paymentFilter, dateFrom, dateTo]);
+
+  const pending  = filteredApprovals.filter((a: any) => a.status === "pending");
+  const reviewed = filteredApprovals.filter((a: any) => a.status !== "pending");
 
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Accounting Approvals</h1>
         <p className="text-muted-foreground text-sm">{pending.length} pending approval{pending.length !== 1 ? "s" : ""}</p>
+      </div>
+
+      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
+      <div className="bg-muted/20 border rounded-lg p-3 space-y-2">
+        <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          <span>Filters</span>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder="All statuses" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder="Payment status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All payments</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="unpaid">Unpaid</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">Date</span>
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-8 text-xs w-36" title="Scheduled date from" />
+            <span className="text-xs text-muted-foreground">–</span>
+            <Input type="date" value={dateTo}   onChange={e => setDateTo(e.target.value)}   className="h-8 text-xs w-36" title="Scheduled date to" />
+          </div>
+          {hasFilters && (
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700" onClick={clearFilters}>
+              <X className="h-3.5 w-3.5" />
+              Clear filters
+            </Button>
+          )}
+        </div>
+        {hasFilters && (
+          <p className="text-xs text-muted-foreground">{filteredApprovals.length} of {(approvals ?? []).length} records</p>
+        )}
       </div>
 
       {isLoading && <div className="text-muted-foreground text-sm py-8 text-center">Loading...</div>}
@@ -97,10 +173,10 @@ export default function AccountingPage() {
             </div>
           )}
 
-          {(approvals ?? []).length === 0 && (
+          {filteredApprovals.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <CheckCircle className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p>No approval requests</p>
+              <p>{hasFilters ? "No approvals match the current filters." : "No approval requests"}</p>
             </div>
           )}
         </div>

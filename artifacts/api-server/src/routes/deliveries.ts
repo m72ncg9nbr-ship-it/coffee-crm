@@ -104,6 +104,9 @@ async function enrichDeliveries(deliveries: (typeof deliveriesTable.$inferSelect
       arrivalMarkedAt: d.arrivalMarkedAt?.toISOString() ?? null,
       documentationUploadedAt: d.documentationUploadedAt?.toISOString() ?? null,
       invoiceTriggeredAt: d.invoiceTriggeredAt?.toISOString() ?? null,
+      issueReportedAt: (d as any).issueReportedAt ? new Date((d as any).issueReportedAt).toISOString() : null,
+      issueResolvedAt: (d as any).issueResolvedAt ? new Date((d as any).issueResolvedAt).toISOString() : null,
+      resolutionNote: (d as any).resolutionNote ?? null,
       createdAt: d.createdAt.toISOString(),
       updatedAt: d.updatedAt.toISOString(),
     };
@@ -303,7 +306,7 @@ router.patch("/deliveries/:id", requireAuth as any, async (req, res): Promise<vo
 
   const user = (req as any).user;
 
-  // Drivers can only update their own deliveries, and only the status field
+  // Drivers can only update their own deliveries, and only allowed status transitions
   if (user?.role === "driver") {
     const [existing] = await db.select().from(deliveriesTable).where(eq(deliveriesTable.id, params.data.id));
     if (!existing) {
@@ -315,18 +318,37 @@ router.patch("/deliveries/:id", requireAuth as any, async (req, res): Promise<vo
       return;
     }
     const allowed: any = {};
-    if (parsed.data.status === "arrived") allowed.status = "arrived";
+    // arrived → arrived (mark arrival)
+    if (parsed.data.status === "arrived" && ["assigned"].includes(existing.status)) {
+      allowed.status = "arrived";
+    }
+    // arrived → issue_reported (report an issue)
+    if (parsed.data.status === "issue_reported" && existing.status === "arrived") {
+      allowed.status = "issue_reported";
+      if (parsed.data.deviationType) allowed.deviationType = parsed.data.deviationType;
+      if (parsed.data.deviationNote) allowed.deviationNote = parsed.data.deviationNote;
+      allowed.issueReportedAt = new Date();
+    }
+    // issue_reported → arrived (resolve issue)
+    if (parsed.data.status === "arrived" && existing.status === "issue_reported") {
+      allowed.status = "arrived";
+      if (parsed.data.resolutionNote) allowed.resolutionNote = parsed.data.resolutionNote;
+      allowed.issueResolvedAt = new Date();
+    }
     if (Object.keys(allowed).length === 0) {
-      res.status(403).json({ error: "Drivers may only mark delivery as arrived" });
+      res.status(403).json({ error: "Drivers may only mark arrived, report issues, or resolve issues" });
       return;
     }
-    parsed.data = allowed;
+    parsed.data = allowed as typeof parsed.data;
   }
 
   const updateValues: any = { ...parsed.data };
 
-  if (parsed.data.status === "arrived") {
+  if (parsed.data.status === "arrived" && !updateValues.issueResolvedAt) {
     updateValues.arrivalMarkedAt = new Date();
+  }
+  if (parsed.data.status === "issue_reported" && !updateValues.issueReportedAt) {
+    updateValues.issueReportedAt = new Date();
   }
   if (parsed.data.driverId) {
     updateValues.plannedByUserId = user.id;
@@ -369,6 +391,26 @@ router.patch("/deliveries/:id", requireAuth as any, async (req, res): Promise<vo
       entityType: "delivery",
       entityId: delivery.id,
       description: `Driver arrived for delivery ${delivery.deliveryNumber ?? `#${delivery.id}`}`,
+      performedBy: user.id,
+    });
+  }
+
+  if ((parsed.data as any).status === "issue_reported") {
+    await logActivity({
+      actionType: "issue_reported",
+      entityType: "delivery",
+      entityId: delivery.id,
+      description: `Issue reported for delivery ${delivery.deliveryNumber ?? `#${delivery.id}`}: ${(parsed.data as any).deviationNote ?? ""}`,
+      performedBy: user.id,
+    });
+  }
+
+  if ((updateValues as any).issueResolvedAt) {
+    await logActivity({
+      actionType: "issue_resolved",
+      entityType: "delivery",
+      entityId: delivery.id,
+      description: `Issue resolved for delivery ${delivery.deliveryNumber ?? `#${delivery.id}`}`,
       performedBy: user.id,
     });
   }

@@ -18,6 +18,16 @@ const STATUS_TRANSITIONS: Record<string, { next: string; label: string; classNam
   assigned: { next: "arrived", label: "Mark Arrived", className: "bg-purple-600 hover:bg-purple-700 text-white border-purple-600" },
 };
 
+const ISSUE_TYPES = [
+  { value: "damaged_goods", label: "Damaged goods" },
+  { value: "missing_items", label: "Missing items" },
+  { value: "customer_absent", label: "Customer not on site" },
+  { value: "wrong_address", label: "Wrong address" },
+  { value: "access_denied", label: "Access denied" },
+  { value: "delayed_delivery", label: "Delayed delivery" },
+  { value: "other", label: "Other" },
+];
+
 const DEVIATION_OPTIONS = [
   { value: "none", label: "No deviation" },
   { value: "damaged_goods", label: "Damaged goods" },
@@ -36,8 +46,8 @@ const DOCUMENT_TYPE_OPTIONS = [
   { value: "other", label: "Other proof" },
 ];
 
-const HISTORY_STATUSES = ["awaiting_accounting_approval", "approved", "issue_reported"];
-const ACTIVE_STATUSES = ["assigned", "arrived"];
+const HISTORY_STATUSES = ["awaiting_accounting_approval", "approved"];
+const ACTIVE_STATUSES = ["assigned", "arrived", "issue_reported"];
 
 type UploadVariables = {
   deliveryId: number;
@@ -96,6 +106,13 @@ export default function DriverPage() {
   const [deviationNote, setDeviationNote] = useState<string>("");
   const [submitNote, setSubmitNote] = useState<string>("");
 
+  // Issue lifecycle state
+  const [issueReportFor, setIssueReportFor] = useState<any | null>(null);
+  const [issueType, setIssueType] = useState<string>("other");
+  const [issueNote, setIssueNote] = useState<string>("");
+  const [resolveFor, setResolveFor] = useState<any | null>(null);
+  const [resolveNote, setResolveNote] = useState<string>("");
+
   const updateDelivery = useUpdateDelivery({
     mutation: {
       onSuccess: () => {
@@ -151,6 +168,31 @@ export default function DriverPage() {
       deviationType: deviationType !== "none" ? deviationType : null,
       deviationNote: deviationType !== "none" && deviationNote ? deviationNote : null,
     });
+  };
+
+  const submitReportIssue = () => {
+    if (!issueReportFor) return;
+    if (!issueNote.trim()) {
+      toast({ title: "Please describe the issue", variant: "destructive" });
+      return;
+    }
+    updateDelivery.mutate({
+      id: issueReportFor.id,
+      data: { status: "issue_reported" as any, deviationType: issueType, deviationNote: issueNote },
+    });
+    setIssueReportFor(null);
+    setIssueType("other");
+    setIssueNote("");
+  };
+
+  const submitResolveIssue = () => {
+    if (!resolveFor) return;
+    updateDelivery.mutate({
+      id: resolveFor.id,
+      data: { status: "arrived" as any, resolutionNote: resolveNote || undefined } as any,
+    });
+    setResolveFor(null);
+    setResolveNote("");
   };
 
   return (
@@ -219,6 +261,8 @@ export default function DriverPage() {
                     onAdvance={next => updateDelivery.mutate({ id: d.id, data: { status: next as any } })}
                     onUpload={() => setUploadFor(d)}
                     onOpenDetails={() => setDetailFor(d.id)}
+                    onReportIssue={() => { setIssueReportFor(d); setIssueType("other"); setIssueNote(""); }}
+                    onResolveIssue={() => { setResolveFor(d); setResolveNote(""); }}
                     isPending={updateDelivery.isPending || uploadDoc.isPending}
                   />
                 ))}
@@ -237,6 +281,8 @@ export default function DriverPage() {
                       onAdvance={next => updateDelivery.mutate({ id: d.id, data: { status: next as any } })}
                       onUpload={() => setUploadFor(d)}
                       onOpenDetails={() => setDetailFor(d.id)}
+                      onReportIssue={() => { setIssueReportFor(d); setIssueType("other"); setIssueNote(""); }}
+                      onResolveIssue={() => { setResolveFor(d); setResolveNote(""); }}
                       isPending={updateDelivery.isPending || uploadDoc.isPending}
                     />
                   ))}
@@ -295,6 +341,98 @@ export default function DriverPage() {
           </>
         )}
       </div>
+
+      {/* ── Report Issue dialog ─────────────────────────────────────────────── */}
+      <Dialog open={!!issueReportFor} onOpenChange={(open) => { if (!open) { setIssueReportFor(null); setIssueNote(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report Issue</DialogTitle>
+            <DialogDescription>
+              Describe the issue. The delivery will be paused and operations notified.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-muted/40 rounded-md p-3 text-sm">
+              <p className="font-medium">{issueReportFor?.customerName}</p>
+              <p className="text-muted-foreground text-xs mt-0.5">{issueReportFor?.deliveryNumber}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Issue type</Label>
+              <Select value={issueType} onValueChange={setIssueType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ISSUE_TYPES.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description *</Label>
+              <Textarea
+                placeholder="Describe what happened..."
+                value={issueNote}
+                onChange={e => setIssueNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIssueReportFor(null); setIssueNote(""); }}>Cancel</Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              disabled={updateDelivery.isPending || !issueNote.trim()}
+              onClick={submitReportIssue}
+            >
+              <AlertCircle className="h-4 w-4 mr-1.5" />
+              Report Issue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Resolve Issue dialog ─────────────────────────────────────────────── */}
+      <Dialog open={!!resolveFor} onOpenChange={(open) => { if (!open) { setResolveFor(null); setResolveNote(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve Issue</DialogTitle>
+            <DialogDescription>
+              Mark the issue as resolved. Delivery will return to arrived status.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-muted/40 rounded-md p-3 text-sm">
+              <p className="font-medium">{resolveFor?.customerName}</p>
+              <p className="text-muted-foreground text-xs mt-0.5">{resolveFor?.deliveryNumber}</p>
+              {resolveFor?.deviationNote && (
+                <p className="text-xs text-orange-700 mt-1.5">
+                  <span className="font-medium">Issue: </span>{resolveFor.deviationNote}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Resolution note (optional)</Label>
+              <Textarea
+                placeholder="How was the issue resolved?"
+                value={resolveNote}
+                onChange={e => setResolveNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResolveFor(null); setResolveNote(""); }}>Cancel</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={updateDelivery.isPending}
+              onClick={submitResolveIssue}
+            >
+              <CheckCircle className="h-4 w-4 mr-1.5" />
+              Mark Resolved
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!uploadFor} onOpenChange={(open) => { if (!open) resetUploadDialog(); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -528,11 +666,13 @@ function DeliveryDetailDialog({ deliveryId, onClose }: { deliveryId: number | nu
   );
 }
 
-function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, isPending, upcoming, historical }: {
+function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, onReportIssue, onResolveIssue, isPending, upcoming, historical }: {
   delivery: any;
   onAdvance?: (next: string) => void;
   onUpload?: () => void;
   onOpenDetails?: () => void;
+  onReportIssue?: () => void;
+  onResolveIssue?: () => void;
   isPending?: boolean;
   upcoming?: boolean;
   historical?: boolean;
@@ -625,7 +765,19 @@ function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, i
           </Button>
         </div>
 
-        {!historical && transition && (
+        {/* Issue reported badge */}
+        {d.status === "issue_reported" && (
+          <div className="flex items-start gap-2 text-orange-800 bg-orange-50 border border-orange-200 rounded-md p-2.5 text-xs">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Issue reported</p>
+              {d.deviationNote && <p className="mt-0.5">{d.deviationNote}</p>}
+              {d.resolutionNote && <p className="mt-0.5 text-green-800">Resolved: {d.resolutionNote}</p>}
+            </div>
+          </div>
+        )}
+
+        {!historical && transition && d.status !== "issue_reported" && (
           <Button
             className={`w-full font-semibold ${transition.className}`}
             onClick={() => onAdvance?.(transition.next)}
@@ -637,13 +789,37 @@ function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, i
         )}
 
         {!historical && d.status === "arrived" && (
+          <div className="space-y-2">
+            <Button
+              className="w-full font-semibold bg-green-600 hover:bg-green-700 text-white border-green-600"
+              onClick={() => onUpload?.()}
+              disabled={isPending}
+              data-testid={`button-upload-${d.id}`}
+            >
+              Upload Documentation
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full text-orange-700 border-orange-300 hover:bg-orange-50"
+              onClick={() => onReportIssue?.()}
+              disabled={isPending}
+              data-testid={`button-report-issue-${d.id}`}
+            >
+              <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
+              Report Issue
+            </Button>
+          </div>
+        )}
+
+        {!historical && d.status === "issue_reported" && (
           <Button
-            className="w-full font-semibold bg-green-600 hover:bg-green-700 text-white border-green-600"
-            onClick={() => onUpload?.()}
+            className="w-full font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => onResolveIssue?.()}
             disabled={isPending}
-            data-testid={`button-upload-${d.id}`}
+            data-testid={`button-resolve-issue-${d.id}`}
           >
-            Upload Documentation
+            <CheckCircle className="h-4 w-4 mr-1.5" />
+            Resolve Issue
           </Button>
         )}
 

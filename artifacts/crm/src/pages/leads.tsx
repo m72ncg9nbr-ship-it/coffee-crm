@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListLeads,
   useCreateLead,
+  useUpdateLead,
   useConvertLead,
   getListCustomersQueryKey,
 } from "@workspace/api-client-react";
@@ -12,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -22,8 +24,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/utils";
-import { Plus, X, UserPlus, ArrowRightCircle } from "lucide-react";
+import { Plus, X, UserPlus, ArrowRightCircle, SlidersHorizontal, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
 import {
   SEGMENT_OPTIONS,
   PAYMENT_TERMS_OPTIONS,
@@ -33,6 +36,27 @@ import {
   normalisePaymentTerms,
   normaliseChannel,
 } from "@/lib/customer-options";
+
+const IMPORTANCE_OPTIONS = [
+  { value: "normal",       label: "Normal",        className: "bg-gray-100 text-gray-700 border-gray-200" },
+  { value: "important",    label: "Important",     className: "bg-blue-100 text-blue-700 border-blue-200" },
+  { value: "high_potential", label: "High Potential", className: "bg-purple-100 text-purple-700 border-purple-200" },
+];
+
+const REGION_OPTIONS = [
+  "Oslo", "Viken", "Innlandet", "Vestfold og Telemark", "Agder",
+  "Rogaland", "Vestland", "Møre og Romsdal", "Trøndelag",
+  "Nordland", "Troms og Finnmark", "Other",
+];
+
+function ImportanceBadge({ importance }: { importance?: string | null }) {
+  const cfg = IMPORTANCE_OPTIONS.find(o => o.value === (importance ?? "normal")) ?? IMPORTANCE_OPTIONS[0];
+  return (
+    <Badge variant="outline" className={`text-[10px] font-medium ${cfg.className}`}>
+      {cfg.label}
+    </Badge>
+  );
+}
 
 type ConvertForm = {
   companyName: string;
@@ -52,26 +76,45 @@ export default function LeadsPage() {
   const queryClient = useQueryClient();
   const { data: leads, isLoading, refetch } = useListLeads();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     companyName: "", contactPerson: "", phone: "", email: "",
     businessChannel: "horeca", businessType: "", estimatedMonthlyConsumption: "",
-    preferredCoffeeType: "", requestedPaymentTerms: "net_30", extraNotes: ""
+    preferredCoffeeType: "", requestedPaymentTerms: "net_30", extraNotes: "",
+    region: "", importance: "normal",
   });
+
+  // Filters
+  const [creatorFilter, setCreatorFilter]   = useState("all");
+  const [regionFilter,  setRegionFilter]    = useState("all");
+  const [importFilter,  setImportFilter]    = useState("all");
+  const [dateFrom,      setDateFrom]        = useState("");
+  const [dateTo,        setDateTo]          = useState("");
 
   const [convertLeadId, setConvertLeadId] = useState<number | null>(null);
   const [convertForm, setConvertForm] = useState<ConvertForm | null>(null);
+
+  // Only non-drivers can edit importance
+  const canEditImportance = !!user && user.role !== "driver";
 
   const createLead = useCreateLead({
     mutation: {
       onSuccess: () => {
         refetch();
         setShowForm(false);
-        setForm({ companyName: "", contactPerson: "", phone: "", email: "", businessChannel: "horeca", businessType: "", estimatedMonthlyConsumption: "", preferredCoffeeType: "", requestedPaymentTerms: "net_30", extraNotes: "" });
+        setForm({ companyName: "", contactPerson: "", phone: "", email: "", businessChannel: "horeca", businessType: "", estimatedMonthlyConsumption: "", preferredCoffeeType: "", requestedPaymentTerms: "net_30", extraNotes: "", region: "", importance: "normal" });
         toast({ title: "Lead submitted successfully" });
       },
       onError: () => toast({ title: "Failed to submit lead", variant: "destructive" })
     }
+  });
+
+  const updateLead = useUpdateLead({
+    mutation: {
+      onSuccess: () => { refetch(); toast({ title: "Lead updated" }); },
+      onError: () => toast({ title: "Failed to update lead", variant: "destructive" }),
+    },
   });
 
   const convertLead = useConvertLead({
@@ -147,12 +190,47 @@ export default function LeadsPage() {
     createLead.mutate({ data: { ...form, estimatedMonthlyConsumption: form.estimatedMonthlyConsumption || undefined } as any });
   };
 
+  // Build creator list for filter
+  const creatorOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const l of (leads ?? []) as any[]) {
+      if (l.createdBy && l.createdByName) seen.set(String(l.createdBy), l.createdByName);
+    }
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }, [leads]);
+
+  // Build region list for filter
+  const regionOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const l of (leads ?? []) as any[]) {
+      if (l.region) seen.add(l.region);
+    }
+    return Array.from(seen).sort();
+  }, [leads]);
+
+  const hasFilters = creatorFilter !== "all" || regionFilter !== "all" || importFilter !== "all" || dateFrom || dateTo;
+
+  function clearFilters() {
+    setCreatorFilter("all"); setRegionFilter("all"); setImportFilter("all");
+    setDateFrom(""); setDateTo("");
+  }
+
+  const filtered = useMemo(() => {
+    let list = (leads ?? []) as any[];
+    if (creatorFilter !== "all") list = list.filter(l => String(l.createdBy) === creatorFilter);
+    if (regionFilter  !== "all") list = list.filter(l => l.region === regionFilter);
+    if (importFilter  !== "all") list = list.filter(l => (l.importance ?? "normal") === importFilter);
+    if (dateFrom) list = list.filter(l => l.createdAt >= dateFrom);
+    if (dateTo)   list = list.filter(l => l.createdAt <= dateTo + "T23:59:59Z");
+    return list;
+  }, [leads, creatorFilter, regionFilter, importFilter, dateFrom, dateTo]);
+
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Leads</h1>
-          <p className="text-muted-foreground text-sm">{leads?.length ?? 0} lead intake records</p>
+          <p className="text-muted-foreground text-sm">{filtered.length}{hasFilters ? ` of ${(leads ?? []).length}` : ""} lead intake records</p>
         </div>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
           {showForm ? <X className="h-4 w-4 mr-1.5" /> : <Plus className="h-4 w-4 mr-1.5" />}
@@ -217,6 +295,25 @@ export default function LeadsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label>Region</Label>
+                <Select value={form.region || "_none"} onValueChange={v => setForm(p => ({ ...p, region: v === "_none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select region..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">— No region —</SelectItem>
+                    {REGION_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Importance</Label>
+                <Select value={form.importance} onValueChange={v => setForm(p => ({ ...p, importance: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {IMPORTANCE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5 col-span-2">
                 <Label>Notes</Label>
                 <textarea
@@ -236,9 +333,56 @@ export default function LeadsPage() {
         </Card>
       )}
 
+      {/* ── Filter bar ─────────────────────────────────────────────────────────── */}
+      <div className="bg-muted/20 border rounded-lg p-3 space-y-2">
+        <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          <span>Filters</span>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          {creatorOptions.length > 0 && (
+            <Select value={creatorFilter} onValueChange={setCreatorFilter}>
+              <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder="All creators" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All creators</SelectItem>
+                {creatorOptions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          {regionOptions.length > 0 && (
+            <Select value={regionFilter} onValueChange={setRegionFilter}>
+              <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder="All regions" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All regions</SelectItem>
+                {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={importFilter} onValueChange={setImportFilter}>
+            <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder="All importance" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All importance</SelectItem>
+              {IMPORTANCE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">Created</span>
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-8 text-xs w-36" />
+            <span className="text-xs text-muted-foreground">–</span>
+            <Input type="date" value={dateTo}   onChange={e => setDateTo(e.target.value)}   className="h-8 text-xs w-36" />
+          </div>
+          {hasFilters && (
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700" onClick={clearFilters}>
+              <X className="h-3.5 w-3.5" />
+              Clear filters
+            </Button>
+          )}
+        </div>
+      </div>
+
       <div className="space-y-3">
         {isLoading && <div className="text-muted-foreground text-sm py-8 text-center">Loading...</div>}
-        {!isLoading && (leads ?? []).map((lead: any) => {
+        {!isLoading && filtered.map((lead: any) => {
           const isQualified = lead.qualificationResult === "auto_qualified";
           const followUpOverdue = lead.followUpDueAt && !lead.followUpCompletedAt && new Date(lead.followUpDueAt).getTime() <= Date.now();
           const isConverted = lead.status === "converted_to_customer";
@@ -250,10 +394,14 @@ export default function LeadsPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-sm">{lead.companyName}</span>
                     <StatusBadge status={lead.status} />
+                    <ImportanceBadge importance={lead.importance} />
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${isQualified ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
                       {isQualified ? "Auto-qualified" : "Needs review"}
                     </span>
                     <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full capitalize">{lead.businessChannel}</span>
+                    {lead.region && (
+                      <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{lead.region}</span>
+                    )}
                   </div>
                   <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
                     <span>{lead.contactPerson}</span>
@@ -261,6 +409,12 @@ export default function LeadsPage() {
                     {lead.email && <span>{lead.email}</span>}
                     {lead.businessType && <span className="capitalize">{lead.businessType}</span>}
                     {lead.estimatedMonthlyConsumption && <span>{lead.estimatedMonthlyConsumption} kg/mo est.</span>}
+                    {lead.createdByName && (
+                      <span className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {lead.createdByName}
+                      </span>
+                    )}
                   </div>
                   {lead.qualificationReason && (
                     <p className="text-xs text-muted-foreground"><span className="font-medium">Scoring:</span> {lead.qualificationReason}</p>
@@ -274,6 +428,20 @@ export default function LeadsPage() {
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <p className="text-xs text-muted-foreground">{formatDateTime(lead.createdAt)}</p>
+                  {/* Importance edit (non-driver only) */}
+                  {canEditImportance && !isConverted && (
+                    <Select
+                      value={lead.importance ?? "normal"}
+                      onValueChange={v => updateLead.mutate({ id: lead.id, data: { importance: v } })}
+                    >
+                      <SelectTrigger className="h-7 text-xs w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {IMPORTANCE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
                   {!isConverted && (
                     <Button
                       size="sm"
@@ -294,10 +462,10 @@ export default function LeadsPage() {
           </Card>
           );
         })}
-        {!isLoading && (leads ?? []).length === 0 && (
+        {!isLoading && filtered.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
             <UserPlus className="h-12 w-12 mx-auto mb-3 opacity-20" />
-            <p>No leads yet</p>
+            <p>{hasFilters ? "No leads match the current filters." : "No leads yet"}</p>
           </div>
         )}
       </div>

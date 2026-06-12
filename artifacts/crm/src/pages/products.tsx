@@ -18,8 +18,11 @@ export default function ProductsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Only owner_admin and general_manager may edit cost price
+  // owner_admin and general_manager may edit cost price
+  // channel_manager and sales may see cost price (read-only)
+  // driver sees nothing
   const canEditCost = user?.role === "owner_admin" || user?.role === "general_manager";
+  const canSeeCost = canEditCost || user?.role === "channel_manager" || user?.role === "sales" || user?.role === "accounting";
 
   const updateProduct = useUpdateProduct({
     mutation: {
@@ -114,7 +117,7 @@ export default function ProductsPage() {
                   <span className="text-sm font-bold text-primary">{formatCurrency(p.unitPrice)}</span>
 
                   {/* Cost price — non-editing display */}
-                  {!isEditing && (
+                  {!isEditing && canSeeCost && (
                     p.costPrice != null
                       ? <span className="text-xs text-muted-foreground">Cost: {formatCurrency(p.costPrice)}</span>
                       : canEditCost

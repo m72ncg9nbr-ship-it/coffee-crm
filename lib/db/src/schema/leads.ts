@@ -1,6 +1,7 @@
-import { pgTable, text, serial, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { usersTable } from "./users";
 
 export const leadsTable = pgTable("leads", {
   id: serial("id").primaryKey(),
@@ -20,6 +21,9 @@ export const leadsTable = pgTable("leads", {
   status: text("status").notNull().default("new"),
   followUpDueAt: timestamp("follow_up_due_at", { withTimezone: true }),
   followUpCompletedAt: timestamp("follow_up_completed_at", { withTimezone: true }),
+  createdBy: integer("created_by").references(() => usersTable.id),
+  region: text("region"),
+  importance: text("importance").notNull().default("normal"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

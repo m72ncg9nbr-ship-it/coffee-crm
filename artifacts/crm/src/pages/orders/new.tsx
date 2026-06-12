@@ -275,9 +275,9 @@ export default function OrderNewPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="w-24">
+                <div className="w-32">
                   <Label>Qty</Label>
-                  <Input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} />
+                  <Input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} className="min-w-0" />
                 </div>
                 <Button type="button" onClick={addItem} disabled={!productPick}>
                   <Plus className="h-4 w-4 mr-1" />Add

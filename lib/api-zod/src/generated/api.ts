@@ -293,6 +293,12 @@ export const ListLeadsResponseItem = zod.object({
   ]),
   qualificationResult: zod.string().nullish(),
   qualificationReason: zod.string().nullish(),
+  createdBy: zod.number().nullish(),
+  createdByName: zod.string().nullish(),
+  region: zod.string().nullish(),
+  importance: zod.string().nullish(),
+  followUpDueAt: zod.string().nullish(),
+  followUpCompletedAt: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -313,6 +319,8 @@ export const CreateLeadBody = zod.object({
   requestedMachineType: zod.string().nullish(),
   requestedPaymentTerms: zod.string().nullish(),
   extraNotes: zod.string().nullish(),
+  region: zod.string().nullish(),
+  importance: zod.string().nullish(),
 });
 
 /**
@@ -368,6 +376,8 @@ export const UpdateLeadBody = zod.object({
   qualificationResult: zod.string().nullish(),
   qualificationReason: zod.string().nullish(),
   extraNotes: zod.string().nullish(),
+  importance: zod.string().nullish(),
+  region: zod.string().nullish(),
 });
 
 export const UpdateLeadResponse = zod.object({
@@ -768,6 +778,9 @@ export const ListDeliveriesResponseItem = zod.object({
   businessChannel: zod.string(),
   deviationType: zod.string().nullish(),
   deviationNote: zod.string().nullish(),
+  issueReportedAt: zod.string().nullish(),
+  issueResolvedAt: zod.string().nullish(),
+  resolutionNote: zod.string().nullish(),
   hasDocument: zod.boolean(),
   arrivalMarkedAt: zod.string().nullish(),
   documentationUploadedAt: zod.string().nullish(),
@@ -913,6 +926,7 @@ export const UpdateDeliveryBody = zod.object({
     .optional(),
   deviationType: zod.string().nullish(),
   deviationNote: zod.string().nullish(),
+  resolutionNote: zod.string().nullish(),
 });
 
 export const UpdateDeliveryResponse = zod.object({

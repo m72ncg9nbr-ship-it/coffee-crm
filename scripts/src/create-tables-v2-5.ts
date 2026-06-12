@@ -57,6 +57,26 @@ async function main() {
     await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS sample_event_name TEXT`);
     console.log("[create-tables-v2-5] orders.sample_event_name — OK");
 
+    // ── leads (V2.5 demo hardening) ───────────────────────────────────────────
+    await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`);
+    console.log("[create-tables-v2-5] leads.created_by — OK");
+
+    await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS region TEXT`);
+    console.log("[create-tables-v2-5] leads.region — OK");
+
+    await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS importance TEXT NOT NULL DEFAULT 'normal'`);
+    console.log("[create-tables-v2-5] leads.importance — OK");
+
+    // ── deliveries (V2.5 issue lifecycle) ────────────────────────────────────
+    await client.query(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS issue_reported_at TIMESTAMPTZ`);
+    console.log("[create-tables-v2-5] deliveries.issue_reported_at — OK");
+
+    await client.query(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS issue_resolved_at TIMESTAMPTZ`);
+    console.log("[create-tables-v2-5] deliveries.issue_resolved_at — OK");
+
+    await client.query(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS resolution_note TEXT`);
+    console.log("[create-tables-v2-5] deliveries.resolution_note — OK");
+
     console.log("\n[create-tables-v2-5] All V2.5 columns are in place.");
   } finally {
     client.release();
