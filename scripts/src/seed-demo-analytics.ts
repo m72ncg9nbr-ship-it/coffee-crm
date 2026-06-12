@@ -4,7 +4,11 @@
  * Idempotent demo data seed for V2.5 analytics/reporting demo.
  * Safe to run multiple times — checks for existing demo records before inserting.
  *
+ * Runs DDL first (Step 0) so the script is self-contained — no need to run
+ * create-tables-v2-5 separately before this script.
+ *
  * What it creates/updates (NEVER deletes existing data):
+ *  0. Ensures all V2.5 hardening columns exist (idempotent DDL)
  *  1. Ensures products have a costPrice (60-70% of unit price)
  *  2. Backfills invoiceDate/dueDate on existing approved orders that lack them
  *  3. Creates demo approved orders with realistic payment scenarios:
@@ -21,6 +25,40 @@
 
 import { pool, db, ordersTable, orderItemsTable, productsTable, customersTable, customerAddressesTable, deliveriesTable, accountingApprovalsTable, usersTable, leadsTable } from "@workspace/db";
 import { eq, isNull, inArray, sql } from "drizzle-orm";
+
+// ── Step 0: Ensure all V2.5 hardening columns exist ───────────────────────────
+async function ensureColumns(client: any) {
+  console.log("[seed-demo-analytics] Step 0: Ensuring V2.5 hardening columns exist...");
+
+  // products
+  await client.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price NUMERIC(10,2)`);
+
+  // order_items
+  await client.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS cost_price_snapshot NUMERIC(10,2)`);
+  await client.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS discount_percent_snapshot NUMERIC(5,2)`);
+
+  // orders
+  await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS invoice_date TEXT`);
+  await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS due_date TEXT`);
+  await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_terms_days INTEGER`);
+  await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'unpaid'`);
+  await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ`);
+  await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS collected_amount NUMERIC(12,2)`);
+  await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS sample_reason TEXT`);
+  await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS sample_event_name TEXT`);
+
+  // leads
+  await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`);
+  await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS region TEXT`);
+  await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS importance TEXT NOT NULL DEFAULT 'normal'`);
+
+  // deliveries — issue lifecycle
+  await client.query(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS issue_reported_at TIMESTAMPTZ`);
+  await client.query(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS issue_resolved_at TIMESTAMPTZ`);
+  await client.query(`ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS resolution_note TEXT`);
+
+  console.log("  → All V2.5 hardening columns verified/added\n");
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -68,6 +106,14 @@ async function nextDeliveryNumber(): Promise<string> {
 
 async function main() {
   console.log("[seed-demo-analytics] Starting...\n");
+
+  // ── 0. Ensure all V2.5 columns exist (DDL, idempotent) ────────────────────
+  const pgClient = await pool.connect();
+  try {
+    await ensureColumns(pgClient);
+  } finally {
+    pgClient.release();
+  }
 
   // ── 1. Ensure products have costPrice ─────────────────────────────────────
   console.log("[seed-demo-analytics] Step 1: Ensuring products have costPrice...");
