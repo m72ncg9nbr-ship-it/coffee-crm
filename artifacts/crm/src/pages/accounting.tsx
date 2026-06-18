@@ -124,12 +124,16 @@ export default function AccountingPage() {
             <span className="text-xs text-muted-foreground">–</span>
             <Input type="date" value={dateTo}   onChange={e => setDateTo(e.target.value)}   className="h-8 text-xs w-36" title="Scheduled date to" />
           </div>
-          {hasFilters && (
-            <Button size="sm" variant="outline" className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700" onClick={clearFilters}>
-              <X className="h-3.5 w-3.5" />
-              Clear filters
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            onClick={clearFilters}
+            disabled={!hasFilters}
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear filters
+          </Button>
         </div>
         {hasFilters && (
           <p className="text-xs text-muted-foreground">{filteredApprovals.length} of {(approvals ?? []).length} records</p>
