@@ -190,22 +190,26 @@ export default function LeadsPage() {
     createLead.mutate({ data: { ...form, estimatedMonthlyConsumption: form.estimatedMonthlyConsumption || undefined } as any });
   };
 
-  // Build creator list for filter
+  // Build creator list for filter (id "unknown" = leads with no createdBy)
   const creatorOptions = useMemo(() => {
     const seen = new Map<string, string>();
+    let hasUnknown = false;
     for (const l of (leads ?? []) as any[]) {
       if (l.createdBy && l.createdByName) seen.set(String(l.createdBy), l.createdByName);
+      else if (!l.createdBy) hasUnknown = true;
     }
-    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+    const opts = Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+    if (hasUnknown) opts.push({ id: "unknown", name: "Unknown / System" });
+    return opts;
   }, [leads]);
 
-  // Build region list for filter
+  // Build region list — static REGION_OPTIONS + any extra values from actual data
   const regionOptions = useMemo(() => {
-    const seen = new Set<string>();
+    const seen = new Set<string>(REGION_OPTIONS);
     for (const l of (leads ?? []) as any[]) {
       if (l.region) seen.add(l.region);
     }
-    return Array.from(seen).sort();
+    return Array.from(seen);
   }, [leads]);
 
   const hasFilters = creatorFilter !== "all" || regionFilter !== "all" || importFilter !== "all" || dateFrom || dateTo;
@@ -217,8 +221,14 @@ export default function LeadsPage() {
 
   const filtered = useMemo(() => {
     let list = (leads ?? []) as any[];
-    if (creatorFilter !== "all") list = list.filter(l => String(l.createdBy) === creatorFilter);
-    if (regionFilter  !== "all") list = list.filter(l => l.region === regionFilter);
+    if (creatorFilter !== "all") {
+      if (creatorFilter === "unknown") list = list.filter(l => !l.createdBy);
+      else list = list.filter(l => String(l.createdBy) === creatorFilter);
+    }
+    if (regionFilter !== "all") {
+      const rf = regionFilter.toLowerCase();
+      list = list.filter(l => (l.region ?? "").toLowerCase() === rf);
+    }
     if (importFilter  !== "all") list = list.filter(l => (l.importance ?? "normal") === importFilter);
     if (dateFrom) list = list.filter(l => l.createdAt >= dateFrom);
     if (dateTo)   list = list.filter(l => l.createdAt <= dateTo + "T23:59:59Z");
@@ -340,24 +350,20 @@ export default function LeadsPage() {
           <span>Filters</span>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          {creatorOptions.length > 0 && (
-            <Select value={creatorFilter} onValueChange={setCreatorFilter}>
-              <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder="All creators" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All creators</SelectItem>
-                {creatorOptions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-          {regionOptions.length > 0 && (
-            <Select value={regionFilter} onValueChange={setRegionFilter}>
-              <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder="All regions" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All regions</SelectItem>
-                {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
+          <Select value={creatorFilter} onValueChange={setCreatorFilter}>
+            <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder="All creators" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All creators</SelectItem>
+              {creatorOptions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={regionFilter} onValueChange={setRegionFilter}>
+            <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder="All regions" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All regions</SelectItem>
+              {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <Select value={importFilter} onValueChange={setImportFilter}>
             <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder="All importance" /></SelectTrigger>
             <SelectContent>
@@ -371,12 +377,16 @@ export default function LeadsPage() {
             <span className="text-xs text-muted-foreground">–</span>
             <Input type="date" value={dateTo}   onChange={e => setDateTo(e.target.value)}   className="h-8 text-xs w-36" />
           </div>
-          {hasFilters && (
-            <Button size="sm" variant="outline" className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700" onClick={clearFilters}>
-              <X className="h-3.5 w-3.5" />
-              Clear filters
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            onClick={clearFilters}
+            disabled={!hasFilters}
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear filters
+          </Button>
         </div>
       </div>
 
@@ -409,12 +419,10 @@ export default function LeadsPage() {
                     {lead.email && <span>{lead.email}</span>}
                     {lead.businessType && <span className="capitalize">{lead.businessType}</span>}
                     {lead.estimatedMonthlyConsumption && <span>{lead.estimatedMonthlyConsumption} kg/mo est.</span>}
-                    {lead.createdByName && (
-                      <span className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {lead.createdByName}
-                      </span>
-                    )}
+                    <span className="flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      {lead.createdByName ?? "Unknown"}
+                    </span>
                   </div>
                   {lead.qualificationReason && (
                     <p className="text-xs text-muted-foreground"><span className="font-medium">Scoring:</span> {lead.qualificationReason}</p>
