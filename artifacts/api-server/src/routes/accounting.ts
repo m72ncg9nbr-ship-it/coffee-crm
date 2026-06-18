@@ -174,7 +174,11 @@ router.post("/accounting/approvals/:deliveryId/approve", requireRole(...FULL_ACC
       .where(
         eq(customersTable.id, delivery.customerId)
       );
-    const ptDays = parsePaymentTermsDays(orderCustomer?.paymentTerms);
+    // Use order-level paymentTermsDays override if set; otherwise fall back to customer terms
+    const [currentOrderForPT] = await db.select({ paymentTermsDays: ordersTable.paymentTermsDays })
+      .from(ordersTable)
+      .where(eq(ordersTable.id, delivery.orderId));
+    const ptDays = currentOrderForPT?.paymentTermsDays ?? parsePaymentTermsDays(orderCustomer?.paymentTerms);
     const dueDateStr = addDaysToDateStr(invoiceDateStr, ptDays);
 
     await db.update(ordersTable)

@@ -359,6 +359,16 @@ router.patch("/orders/:id", requireAuth as any, async (req, res): Promise<void> 
   const [currentOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
   if (!currentOrder) { res.status(404).json({ error: "Order not found" }); return; }
 
+  // Status lock: once in awaiting_accounting_approval or approved, only cancellation is allowed
+  const LOCKED_STATUSES = new Set(["awaiting_accounting_approval", "approved"]);
+  if (LOCKED_STATUSES.has(currentOrder.status)) {
+    const onlyCancelling = parsed.data.status === "cancelled" && Object.keys(parsed.data).length === 1;
+    if (!onlyCancelling) {
+      res.status(409).json({ error: "Status is locked after Accounting Approval workflow starts." });
+      return;
+    }
+  }
+
   const [order] = await db.update(ordersTable).set(parsed.data).where(eq(ordersTable.id, params.data.id)).returning();
   if (!order) {
     res.status(404).json({ error: "Order not found" });
@@ -393,7 +403,7 @@ router.patch("/orders/:id", requireAuth as any, async (req, res): Promise<void> 
   res.json(serializeOrder(finalOrder, customer?.companyName, null));
 });
 
-const ITEM_EDITABLE_STATUSES = new Set(["new", "incomplete"]);
+const ITEM_EDITABLE_STATUSES = new Set(["new", "incomplete", "blocked", "planned", "out_for_delivery"]);
 
 router.post("/orders/:id/items", requireAuth as any, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

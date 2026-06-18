@@ -367,6 +367,8 @@ export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const OrderStatus = {
   new: "new",
+  incomplete: "incomplete",
+  blocked: "blocked",
   planned: "planned",
   out_for_delivery: "out_for_delivery",
   awaiting_accounting_approval: "awaiting_accounting_approval",
@@ -513,6 +515,9 @@ export interface UpdateOrderBody {
   urgency?: UpdateOrderBodyUrgency;
   /** @nullable */
   notes?: string | null;
+  businessChannel?: string;
+  /** @nullable */
+  paymentTermsDays?: number | null;
 }
 
 export type DeliveryCustomerPriority =

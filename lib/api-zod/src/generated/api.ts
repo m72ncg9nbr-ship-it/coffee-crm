@@ -692,6 +692,8 @@ export const UpdateOrderBody = zod.object({
   requestedDeliveryDate: zod.string().nullish(),
   urgency: zod.enum(["low", "normal", "high", "critical"]).optional(),
   notes: zod.string().nullish(),
+  businessChannel: zod.string().optional(),
+  paymentTermsDays: zod.number().nullish(),
 });
 
 export const UpdateOrderResponse = zod.object({

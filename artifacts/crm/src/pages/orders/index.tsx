@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useListOrders, useSendOrderToPlanning, useDeleteOrder, getListOrdersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { StatusBadge, UrgencyBadge } from "@/components/priority-badge";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Send, SlidersHorizontal, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -68,22 +69,46 @@ function ColHeader({ label, col, sortKey, sortDir, onSort, className }: {
   );
 }
 
+type PayStatus = "not_invoiced" | "paid" | "unpaid" | "overdue";
+
+function computePayStatus(o: any): PayStatus {
+  if (o.paymentStatus === "paid") return "paid";
+  if (!o.invoiceDate) return "not_invoiced";
+  const today = new Date().toISOString().split("T")[0];
+  if (o.dueDate && o.dueDate < today) return "overdue";
+  return "unpaid";
+}
+
+function PaymentBadge({ status }: { status: PayStatus }) {
+  if (status === "not_invoiced") return <span className="text-xs text-muted-foreground">—</span>;
+  const cls: Record<string, string> = {
+    paid:    "bg-green-100 text-green-800 border-green-200",
+    unpaid:  "bg-yellow-100 text-yellow-800 border-yellow-200",
+    overdue: "bg-red-100 text-red-800 border-red-200",
+  };
+  const labels: Record<string, string> = { paid: "Paid", unpaid: "Unpaid", overdue: "Overdue" };
+  return <Badge variant="outline" className={`text-xs ${cls[status]}`}>{labels[status]}</Badge>;
+}
+
 export default function OrdersPage() {
-  const [search,     setSearch]     = useState("");
-  const [status,     setStatus]     = useState("all");
-  const [channel,    setChannel]    = useState("all");
-  const [urgency,    setUrgency]    = useState("all");
-  const [dateFrom,   setDateFrom]   = useState("");
-  const [dateTo,     setDateTo]     = useState("");
-  const [totalMin,   setTotalMin]   = useState("");
-  const [totalMax,   setTotalMax]   = useState("");
-  const [sortKey,    setSortKey]    = useState<SortKey>("orderNumber");
-  const [sortDir,    setSortDir]    = useState<SortDir>("desc");
+  const [search,         setSearch]         = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [status,         setStatus]         = useState("all");
+  const [channel,        setChannel]        = useState("all");
+  const [urgency,        setUrgency]        = useState("all");
+  const [dateFrom,       setDateFrom]       = useState("");
+  const [dateTo,         setDateTo]         = useState("");
+  const [totalMin,       setTotalMin]       = useState("");
+  const [totalMax,       setTotalMax]       = useState("");
+  const [paymentFilter,  setPaymentFilter]  = useState("all");
+  const [sortKey,        setSortKey]        = useState<SortKey>("orderNumber");
+  const [sortDir,        setSortDir]        = useState<SortDir>("desc");
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
-  // Fetch all orders (search is client-side below, but we still pass it to the API for server-side text search)
+  // Server-side: order number / text search + status filter
   const params: Record<string, string> = {};
   if (search) params.search = search;
   if (status !== "all") params.status = status;
@@ -118,7 +143,6 @@ export default function OrdersPage() {
     },
   });
 
-  // Build channel options dynamically
   const channelOptions = useMemo(() => {
     const seen = new Set<string>();
     for (const o of (orders ?? []) as any[]) {
@@ -127,25 +151,30 @@ export default function OrdersPage() {
     return Array.from(seen).sort();
   }, [orders]);
 
-  // Client-side filtering (channel, urgency, date, total on top of server-side search/status)
+  // Client-side filtering: customer name, channel, urgency, date, total, payment status
   const filtered = useMemo(() => {
     let list = (orders ?? []) as any[];
+    if (customerSearch.trim()) {
+      const cs = customerSearch.toLowerCase().trim();
+      list = list.filter(o => (o.customerName ?? "").toLowerCase().includes(cs));
+    }
     if (channel !== "all") list = list.filter(o => o.businessChannel === channel);
     if (urgency !== "all") list = list.filter(o => o.urgency === urgency);
     if (dateFrom) list = list.filter(o => o.requestedDeliveryDate && o.requestedDeliveryDate >= dateFrom);
     if (dateTo)   list = list.filter(o => o.requestedDeliveryDate && o.requestedDeliveryDate <= dateTo);
     if (totalMin.trim()) list = list.filter(o => (o.totalAmount ?? 0) >= parseFloat(totalMin));
     if (totalMax.trim()) list = list.filter(o => (o.totalAmount ?? 0) <= parseFloat(totalMax));
+    if (paymentFilter !== "all") list = list.filter(o => computePayStatus(o) === paymentFilter);
     return list;
-  }, [orders, channel, urgency, dateFrom, dateTo, totalMin, totalMax]);
+  }, [orders, customerSearch, channel, urgency, dateFrom, dateTo, totalMin, totalMax, paymentFilter]);
 
   const sorted = useMemo(() => sortOrders(filtered, sortKey, sortDir), [filtered, sortKey, sortDir]);
 
-  const hasFilters = search || status !== "all" || channel !== "all" || urgency !== "all" || dateFrom || dateTo || totalMin || totalMax;
+  const hasFilters = !!(search || customerSearch || status !== "all" || channel !== "all" || urgency !== "all" || dateFrom || dateTo || totalMin || totalMax || paymentFilter !== "all");
 
   function clearFilters() {
-    setSearch(""); setStatus("all"); setChannel("all"); setUrgency("all");
-    setDateFrom(""); setDateTo(""); setTotalMin(""); setTotalMax("");
+    setSearch(""); setCustomerSearch(""); setStatus("all"); setChannel("all"); setUrgency("all");
+    setDateFrom(""); setDateTo(""); setTotalMin(""); setTotalMax(""); setPaymentFilter("all");
   }
 
   return (
@@ -169,13 +198,24 @@ export default function OrdersPage() {
           <SlidersHorizontal className="h-3.5 w-3.5" />
           <span>Filters</span>
         </div>
+
+        {/* Row 1: text searches + status/channel/urgency */}
         <div className="flex flex-wrap gap-2 items-center">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search orders..."
+              placeholder="Order #..."
               value={search}
               onChange={e => setSearch(e.target.value)}
+              className="h-8 text-xs pl-7 w-32"
+            />
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Customer name..."
+              value={customerSearch}
+              onChange={e => setCustomerSearch(e.target.value)}
               className="h-8 text-xs pl-7 w-44"
             />
           </div>
@@ -201,7 +241,7 @@ export default function OrdersPage() {
             </SelectContent>
           </Select>
           <Select value={urgency} onValueChange={setUrgency}>
-            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="All Urgency" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-32"><SelectValue placeholder="All Urgency" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Urgency</SelectItem>
               <SelectItem value="critical">Critical</SelectItem>
@@ -211,15 +251,27 @@ export default function OrdersPage() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Row 2: date range + total range + payment status */}
         <div className="flex flex-wrap gap-2 items-center">
           <span className="text-xs text-muted-foreground whitespace-nowrap">Delivery date</span>
           <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-8 text-xs w-36" />
           <span className="text-xs text-muted-foreground">–</span>
           <Input type="date" value={dateTo}   onChange={e => setDateTo(e.target.value)}   className="h-8 text-xs w-36" />
-          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">Total</span>
-          <Input placeholder="Min" value={totalMin} onChange={e => setTotalMin(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
+          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">Order Total</span>
+          <Input placeholder="From" value={totalMin} onChange={e => setTotalMin(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
           <span className="text-xs text-muted-foreground">–</span>
-          <Input placeholder="Max" value={totalMax} onChange={e => setTotalMax(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
+          <Input placeholder="To"   value={totalMax} onChange={e => setTotalMax(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="All Payment" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Payment</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="unpaid">Unpaid</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+              <SelectItem value="not_invoiced">Not Invoiced</SelectItem>
+            </SelectContent>
+          </Select>
           {hasFilters && (
             <Button size="sm" variant="outline" className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700" onClick={clearFilters}>
               <X className="h-3.5 w-3.5" />
@@ -234,34 +286,36 @@ export default function OrdersPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/30">
-                <ColHeader label="#"            col="orderNumber"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Customer"     col="customer"     sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Channel"      col="channel"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label="#"             col="orderNumber"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label="Customer"      col="customer"     sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label="Channel"       col="channel"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                 <ColHeader label="Delivery Date" col="deliveryDate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Urgency"      col="urgency"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Total"        col="total"        sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Status"       col="status"       sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label="Urgency"       col="urgency"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label="Total"         col="total"        sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label="Status"        col="status"       sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Payment</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {isLoading && (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground text-sm">Loading...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">Loading...</td></tr>
               )}
               {!isLoading && sorted.map((o: any) => (
-                <tr key={o.id} className="hover:bg-muted/20 transition-colors">
+                <tr
+                  key={o.id}
+                  className="hover:bg-muted/20 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/orders/${o.id}`)}
+                >
                   <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{o.orderNumber ?? `#${o.id}`}</td>
-                  <td className="px-4 py-3">
-                    <Link href={`/orders/${o.id}`}>
-                      <span className="text-sm font-medium text-primary hover:underline cursor-pointer">{o.customerName}</span>
-                    </Link>
-                  </td>
+                  <td className="px-4 py-3 text-sm font-medium">{o.customerName}</td>
                   <td className="px-4 py-3 text-sm capitalize">{o.businessChannel}</td>
                   <td className="px-4 py-3 text-sm">{formatDate(o.requestedDeliveryDate)}</td>
                   <td className="px-4 py-3"><UrgencyBadge urgency={o.urgency} /></td>
                   <td className="px-4 py-3 text-sm font-medium">{formatCurrency(o.totalAmount)}</td>
                   <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3"><PaymentBadge status={computePayStatus(o)} /></td>
+                  <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       {(o.status === "incomplete" || o.status === "blocked" || o.status === "new") && (
                         <Button
@@ -289,7 +343,7 @@ export default function OrdersPage() {
                 </tr>
               ))}
               {!isLoading && sorted.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground text-sm">{hasFilters ? "No orders match the current filters." : "No orders found"}</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">{hasFilters ? "No orders match the current filters." : "No orders found"}</td></tr>
               )}
             </tbody>
           </table>
