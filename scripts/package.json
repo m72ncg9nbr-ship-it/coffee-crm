@@ -11,6 +11,7 @@
     "migrate-roles-v2": "tsx ./src/migrate-roles-v2.ts",
     "create-tables-v2-5": "tsx ./src/create-tables-v2-5.ts",
     "seed-demo-analytics": "tsx ./src/seed-demo-analytics.ts",
+    "seed-cosmetics": "tsx ./src/seed-cosmetics.ts",
     "repair-demo-users": "tsx ./src/repair-demo-users.ts",
     "diagnose-auth": "tsx ./src/diagnose-auth.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
