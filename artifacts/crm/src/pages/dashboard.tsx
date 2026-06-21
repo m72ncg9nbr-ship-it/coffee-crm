@@ -1,10 +1,9 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
-  useGetDashboardSummary,
   useGetRecentDeliveries,
   useGetDeliveryDeviations,
-  useGetTodayPriorities,
   useListActivityLogs,
   useListInventoryStock,
 } from "@workspace/api-client-react";
@@ -41,10 +40,18 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<DashTab>("general");
 
   const channelParam = activeTab !== "general" ? activeTab : undefined;
-  const { data: summary } = useGetDashboardSummary({ channel: channelParam } as any);
+  const channelQS = channelParam ? `?channel=${encodeURIComponent(channelParam)}` : "";
+
+  const { data: summary } = useQuery({
+    queryKey: ["dashboard-summary", channelParam ?? "all"],
+    queryFn: () => fetch(`/api/dashboard/summary${channelQS}`, { credentials: "include" }).then(r => r.json()),
+  });
   const { data: recentDeliveries } = useGetRecentDeliveries();
   const { data: deviations } = useGetDeliveryDeviations();
-  const { data: priorities } = useGetTodayPriorities({ channel: channelParam } as any);
+  const { data: priorities } = useQuery({
+    queryKey: ["dashboard-today-priorities", channelParam ?? "all"],
+    queryFn: () => fetch(`/api/dashboard/today-priorities${channelQS}`, { credentials: "include" }).then(r => r.json()),
+  });
   const { data: activityLogs } = useListActivityLogs({ limit: 15 });
   const { data: stockData } = useListInventoryStock();
 
