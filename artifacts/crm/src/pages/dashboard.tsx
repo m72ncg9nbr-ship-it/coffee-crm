@@ -66,6 +66,9 @@ export default function DashboardPage() {
   const stockAlerts: StockAlert[] = [];
   if (showStockOverview && stockData) {
     for (const item of stockData as any[]) {
+      // Filter by active dashboard tab
+      if (activeTab === "cosmetics" && item.businessChannel !== "cosmetics") continue;
+      if (activeTab === "coffee" && item.businessChannel === "cosmetics") continue;
       for (const pool of item.pools ?? []) {
         const { status, label, allocated } = calculateInventoryStatus(
           pool.quantityAvailable,

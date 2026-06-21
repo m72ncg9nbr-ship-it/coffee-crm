@@ -79,8 +79,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Globe className="h-4.5 w-4.5 text-primary-foreground h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <div className="font-bold text-sidebar-foreground text-xs leading-tight truncate">NS Global Ops</div>
-            <div className="text-[10px] text-muted-foreground leading-tight truncate">Coffee &amp; Cosmetics</div>
+            <div className="font-bold text-sidebar-foreground text-xs leading-tight truncate">NS Global</div>
+            <div className="text-[10px] text-muted-foreground leading-tight truncate">Operations Hub</div>
           </div>
         </div>
 

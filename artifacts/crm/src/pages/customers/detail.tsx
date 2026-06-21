@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useGetCustomer, useUpdateCustomer } from "@workspace/api-client-react";
-import { PriorityBadge } from "@/components/priority-badge";
+import { PriorityBadge, StatusBadge } from "@/components/priority-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -21,8 +23,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Mail, Phone, MapPin, Building2, Power, Pencil } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { ArrowLeft, Mail, Phone, MapPin, Building2, Power, Pencil, ChevronDown, ChevronRight, TrendingUp, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   SEGMENT_OPTIONS,
@@ -62,6 +64,17 @@ function fromCustomer(c: any): EditForm {
   };
 }
 
+function PayBadge({ status, dueDate, paidAt }: { status: string; dueDate?: string | null; paidAt?: string | null }) {
+  const today = new Date().toISOString().split("T")[0];
+  if (status === "paid") {
+    const late = paidAt && dueDate && paidAt.slice(0, 10) > dueDate;
+    return <Badge variant="outline" className={late ? "border-yellow-300 bg-yellow-50 text-yellow-800" : "border-green-300 bg-green-50 text-green-800"}>{late ? "Paid Late" : "Paid"}</Badge>;
+  }
+  if (dueDate && dueDate < today) return <Badge variant="outline" className="border-red-300 bg-red-50 text-red-800">Overdue</Badge>;
+  if (dueDate) return <Badge variant="outline" className="border-yellow-300 bg-yellow-50 text-yellow-800">Unpaid</Badge>;
+  return <Badge variant="outline" className="text-muted-foreground">Not invoiced</Badge>;
+}
+
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const { toast } = useToast();
@@ -70,6 +83,22 @@ export default function CustomerDetailPage() {
   });
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+
+  const { data: history, isLoading: histLoading } = useQuery({
+    queryKey: ["customer-history", id],
+    queryFn: () => fetch(`/api/customers/${id}/history`, { credentials: "include" }).then(r => r.json()),
+    enabled: !!id,
+  });
+
+  function toggleOrder(orderId: number) {
+    setExpandedOrders(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  }
 
   useEffect(() => {
     if (!editOpen && customer) setEditForm(fromCustomer(customer));
@@ -242,6 +271,143 @@ export default function CustomerDetailPage() {
               </div>
             </CardContent>
           </Card>
+        )}
+      </div>
+
+      {/* ── Purchase History / Customer 360 ────────────────────────────── */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          Purchase History
+        </h2>
+
+        {histLoading && <p className="text-sm text-muted-foreground">Loading history...</p>}
+
+        {history && (
+          <>
+            {/* Summary stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Card className="shadow-sm">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Total Orders</p>
+                  <p className="text-2xl font-bold">{history.summary.totalOrders}</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-sm">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Total Revenue</p>
+                  <p className="text-2xl font-bold">{formatCurrency(history.summary.totalRevenue)}</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-sm">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Total Paid</p>
+                  <p className="text-2xl font-bold text-green-700">{formatCurrency(history.summary.totalPaid)}</p>
+                </CardContent>
+              </Card>
+              <Card className={`shadow-sm ${history.summary.overdueAmount > 0 ? "border-red-300" : ""}`}>
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Outstanding</p>
+                  <p className={`text-2xl font-bold ${history.summary.outstandingAmount > 0 ? "text-amber-700" : "text-green-700"}`}>
+                    {formatCurrency(history.summary.outstandingAmount)}
+                  </p>
+                  {history.summary.overdueAmount > 0 && (
+                    <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {formatCurrency(history.summary.overdueAmount)} overdue
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Payment behaviour */}
+            <div className="flex flex-wrap gap-4 text-sm px-1">
+              {history.summary.lastOrderDate && (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  Last order: <span className="text-foreground font-medium">{formatDate(history.summary.lastOrderDate)}</span>
+                </span>
+              )}
+              {history.summary.onTimePayments > 0 && (
+                <span className="flex items-center gap-1.5 text-green-700">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  {history.summary.onTimePayments} on-time payment{history.summary.onTimePayments !== 1 ? "s" : ""}
+                </span>
+              )}
+              {history.summary.latePayments > 0 && (
+                <span className="flex items-center gap-1.5 text-amber-700">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {history.summary.latePayments} late payment{history.summary.latePayments !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+
+            {/* Order list */}
+            {history.orders.length === 0 ? (
+              <Card><CardContent className="p-6 text-center text-muted-foreground text-sm">No orders yet</CardContent></Card>
+            ) : (
+              <Card>
+                <div className="divide-y">
+                  {history.orders.map((o: any) => {
+                    const expanded = expandedOrders.has(o.id);
+                    return (
+                      <div key={o.id}>
+                        <button
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
+                          onClick={() => toggleOrder(o.id)}
+                        >
+                          <span className="text-muted-foreground shrink-0">
+                            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </span>
+                          <span className="font-mono text-sm font-medium w-28 shrink-0">{o.orderNumber}</span>
+                          <span className="text-xs text-muted-foreground w-24 shrink-0">{formatDate(o.orderDate)}</span>
+                          <StatusBadge status={o.status} />
+                          <span className="text-xs text-muted-foreground capitalize px-1.5 py-0.5 rounded bg-muted">{o.businessChannel}</span>
+                          <span className="flex-1" />
+                          <span className="text-sm font-semibold w-28 text-right shrink-0">{formatCurrency(o.totalAmount)}</span>
+                          <span className="w-28 text-right shrink-0">
+                            <PayBadge status={o.paymentStatus} dueDate={o.dueDate} paidAt={o.paidAt} />
+                          </span>
+                        </button>
+                        {expanded && o.items.length > 0 && (
+                          <div className="bg-muted/20 border-t px-4 py-3">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="text-muted-foreground">
+                                  <th className="text-left pb-1.5 font-medium">Product</th>
+                                  <th className="text-right pb-1.5 font-medium w-16">Qty</th>
+                                  <th className="text-right pb-1.5 font-medium w-24">Unit Price</th>
+                                  <th className="text-right pb-1.5 font-medium w-24">Line Total</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/50">
+                                {o.items.map((item: any, idx: number) => (
+                                  <tr key={idx}>
+                                    <td className="py-1">{item.productName}</td>
+                                    <td className="text-right py-1">{item.quantity}</td>
+                                    <td className="text-right py-1">{formatCurrency(item.unitPrice)}</td>
+                                    <td className="text-right py-1 font-medium">{formatCurrency(item.lineTotal)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            {o.dueDate && (
+                              <div className="mt-2 text-xs text-muted-foreground flex gap-4">
+                                {o.invoiceDate && <span>Invoice: {formatDate(o.invoiceDate)}</span>}
+                                <span>Due: {formatDate(o.dueDate)}</span>
+                                {o.paidAt && <span>Paid: {formatDate(o.paidAt)}</span>}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+          </>
         )}
       </div>
 

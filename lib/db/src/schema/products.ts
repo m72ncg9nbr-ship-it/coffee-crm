@@ -12,6 +12,7 @@ export const productsTable = pgTable("products", {
   stockStatus: text("stock_status").notNull().default("in_stock"),
   active: boolean("active").notNull().default(true),
   businessChannel: text("business_channel").notNull(),
+  brand: text("brand"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

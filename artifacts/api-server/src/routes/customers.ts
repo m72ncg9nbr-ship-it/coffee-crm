@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, customersTable, customerAddressesTable } from "@workspace/db";
-import { eq, and, ilike, or } from "drizzle-orm";
+import { db, customersTable, customerAddressesTable, ordersTable, orderItemsTable, productsTable } from "@workspace/db";
+import { eq, and, ilike, or, inArray, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
 import {
@@ -237,6 +237,91 @@ router.post("/customers/check-duplicates", requireAuth as any, async (req, res):
       priorityClass: c.priorityClass,
       active: c.active,
     })),
+  });
+});
+
+router.get("/customers/:id/history", requireAuth as any, async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, id));
+  if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
+
+  const orders = await db.select().from(ordersTable)
+    .where(eq(ordersTable.customerId, id))
+    .orderBy(desc(ordersTable.createdAt));
+
+  const orderIds = orders.map(o => o.id);
+  const items: any[] = orderIds.length > 0
+    ? await db.select({
+        orderId: orderItemsTable.orderId,
+        quantity: orderItemsTable.quantity,
+        unitPriceSnapshot: orderItemsTable.unitPriceSnapshot,
+        lineTotal: orderItemsTable.lineTotal,
+        productName: productsTable.productName,
+      }).from(orderItemsTable)
+        .leftJoin(productsTable, eq(orderItemsTable.productId, productsTable.id))
+        .where(inArray(orderItemsTable.orderId, orderIds))
+    : [];
+
+  const itemsByOrder = new Map<number, any[]>();
+  for (const item of items) {
+    if (!itemsByOrder.has(item.orderId)) itemsByOrder.set(item.orderId, []);
+    itemsByOrder.get(item.orderId)!.push(item);
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  let totalRevenue = 0;
+  let totalPaid = 0;
+  let overdueAmount = 0;
+  let lastOrderDate: string | null = null;
+  let onTimePayments = 0;
+  let latePayments = 0;
+
+  const serializedOrders = orders.map(o => {
+    const amount = parseFloat(o.totalAmount);
+    totalRevenue += amount;
+    if (o.paymentStatus === "paid") totalPaid += amount;
+    if (o.invoiceDate && o.dueDate && o.paymentStatus !== "paid" && o.dueDate < today) overdueAmount += amount;
+    if (o.paymentStatus === "paid" && o.paidAt && o.dueDate) {
+      const paidDate = o.paidAt.toISOString().split("T")[0];
+      if (paidDate <= o.dueDate) onTimePayments++;
+      else latePayments++;
+    }
+    const orderDate = o.createdAt.toISOString().split("T")[0];
+    if (!lastOrderDate || orderDate > lastOrderDate) lastOrderDate = orderDate;
+    return {
+      id: o.id,
+      orderNumber: o.orderNumber,
+      orderDate,
+      status: o.status,
+      businessChannel: o.businessChannel,
+      totalAmount: amount,
+      paymentStatus: o.paymentStatus,
+      invoiceDate: o.invoiceDate ?? null,
+      dueDate: o.dueDate ?? null,
+      paidAt: o.paidAt?.toISOString() ?? null,
+      items: (itemsByOrder.get(o.id) ?? []).map((i: any) => ({
+        productName: i.productName ?? "Unknown",
+        quantity: i.quantity,
+        unitPrice: parseFloat(i.unitPriceSnapshot),
+        lineTotal: parseFloat(i.lineTotal),
+      })),
+    };
+  });
+
+  res.json({
+    summary: {
+      totalOrders: orders.length,
+      totalRevenue,
+      totalPaid,
+      outstandingAmount: totalRevenue - totalPaid,
+      overdueAmount,
+      lastOrderDate,
+      onTimePayments,
+      latePayments,
+    },
+    orders: serializedOrders,
   });
 });
 

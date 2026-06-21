@@ -8,6 +8,7 @@ import {
   useCreateOrder,
   useListInventoryStock,
 } from "@workspace/api-client-react";
+import { useChannel } from "@/lib/channel-context";
 import {
   calculateInventoryStatus,
   getPoolNameForSource,
@@ -40,9 +41,24 @@ interface Item {
 
 export default function OrderNewPage() {
   const [, navigate] = useLocation();
+  const { channel: globalChannel } = useChannel();
   const { data: customers } = useListCustomers();
   const { data: products } = useListProducts();
   const { data: stockData } = useListInventoryStock();
+
+  const filteredCustomers = useMemo(() => {
+    const list = (customers ?? []) as any[];
+    if (globalChannel === "all") return list;
+    if (globalChannel === "cosmetics") return list.filter((c: any) => c.businessChannel === "cosmetics");
+    return list.filter((c: any) => c.businessChannel !== "cosmetics");
+  }, [customers, globalChannel]);
+
+  const filteredProducts = useMemo(() => {
+    const list = (products ?? []) as any[];
+    if (globalChannel === "all") return list;
+    if (globalChannel === "cosmetics") return list.filter((p: any) => p.businessChannel === "cosmetics");
+    return list.filter((p: any) => p.businessChannel !== "cosmetics");
+  }, [products, globalChannel]);
 
   const [customerId, setCustomerId] = useState<string>("");
   const [requestedDeliveryDate, setRequestedDeliveryDate] = useState("");
@@ -134,7 +150,7 @@ export default function OrderNewPage() {
     const pid = Number(productPick);
     const qn = Number(qty);
     if (!pid || qn <= 0) return;
-    const p = (products ?? []).find((x: any) => x.id === pid) as any;
+    const p = filteredProducts.find((x: any) => x.id === pid) as any;
     if (!p) return;
     setItems(prev => {
       const existing = prev.find(i => i.productId === pid);
@@ -201,7 +217,7 @@ export default function OrderNewPage() {
                 <Select value={customerId} onValueChange={setCustomerId}>
                   <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
                   <SelectContent>
-                    {(customers ?? []).map((c: any) => (
+                    {filteredCustomers.map((c: any) => (
                       <SelectItem key={c.id} value={String(c.id)}>
                         {c.companyName} ({c.priorityClass})
                       </SelectItem>
@@ -247,7 +263,7 @@ export default function OrderNewPage() {
                   <Select value={productPick} onValueChange={setProductPick}>
                     <SelectTrigger><SelectValue placeholder="Choose product" /></SelectTrigger>
                     <SelectContent>
-                      {(products ?? []).map((p: any) => {
+                      {filteredProducts.map((p: any) => {
                         const ps = poolStockMap.get(p.id);
                         const invStatus = ps
                           ? calculateInventoryStatus(ps.available, ps.reserved)

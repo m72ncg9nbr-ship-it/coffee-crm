@@ -91,67 +91,67 @@ async function ensureColumns(client: any) {
 // ── Product catalog ───────────────────────────────────────────────────────────
 
 const HQ_CLINIQUE_PRODUCTS = [
-  // Moisturizers
-  { sku: "HQC-M01", productName: "Dramatically Different Moisturizing Lotion+",  category: "Moisturizer",   unitPrice: "380", costPrice: "190", brand: "HQ Clinique" },
-  { sku: "HQC-M02", productName: "Moisture Surge 100H Auto-Replenishing Hydrator", category: "Moisturizer", unitPrice: "420", costPrice: "210", brand: "HQ Clinique" },
-  { sku: "HQC-M03", productName: "Smart Night Custom-Repair Moisturizer",          category: "Moisturizer", unitPrice: "520", costPrice: "260", brand: "HQ Clinique" },
-  { sku: "HQC-M04", productName: "Moisture Surge Eye 96-Hour",                    category: "Eye Care",     unitPrice: "440", costPrice: "220", brand: "HQ Clinique" },
-  // Serums
-  { sku: "HQC-S01", productName: "Repairwear Laser Focus Serum",                  category: "Serum",        unitPrice: "650", costPrice: "325", brand: "HQ Clinique" },
-  { sku: "HQC-S02", productName: "Fresh Pressed 10% Vitamin C Booster",           category: "Serum",        unitPrice: "590", costPrice: "295", brand: "HQ Clinique" },
-  { sku: "HQC-S03", productName: "Even Better Clinical Skin Tone Serum",          category: "Serum",        unitPrice: "580", costPrice: "290", brand: "HQ Clinique" },
-  { sku: "HQC-S04", productName: "Smart Resurfacing Serum",                       category: "Serum",        unitPrice: "620", costPrice: "310", brand: "HQ Clinique" },
-  // Cleansers
-  { sku: "HQC-C01", productName: "Fresh Pressed Daily Cleanser with Pure Vitamin C", category: "Cleanser",  unitPrice: "290", costPrice: "145", brand: "HQ Clinique" },
-  { sku: "HQC-C02", productName: "Take The Day Off Cleansing Balm",               category: "Cleanser",     unitPrice: "310", costPrice: "155", brand: "HQ Clinique" },
-  { sku: "HQC-C03", productName: "Liquid Facial Soap – Extra Mild",               category: "Cleanser",     unitPrice: "220", costPrice: "110", brand: "HQ Clinique" },
-  { sku: "HQC-C04", productName: "Anti-Blemish Solutions Cleansing Foam",         category: "Cleanser",     unitPrice: "230", costPrice: "115", brand: "HQ Clinique" },
-  { sku: "HQC-C05", productName: "Rinse-Off Foaming Cleanser",                    category: "Cleanser",     unitPrice: "200", costPrice: "100", brand: "HQ Clinique" },
-  // Toners
-  { sku: "HQC-T01", productName: "Clarifying Lotion 1.0 – Sensitive Skin",        category: "Toner",        unitPrice: "240", costPrice: "120", brand: "HQ Clinique" },
-  { sku: "HQC-T02", productName: "Even Better Pore Refining Toner",               category: "Toner",        unitPrice: "270", costPrice: "135", brand: "HQ Clinique" },
-  // Eye Care
-  { sku: "HQC-E01", productName: "All About Eyes Rich Eye Cream",                 category: "Eye Care",     unitPrice: "460", costPrice: "230", brand: "HQ Clinique" },
-  { sku: "HQC-E02", productName: "Repairwear Anti-Gravity Eye Lifting Cream",     category: "Eye Care",     unitPrice: "560", costPrice: "280", brand: "HQ Clinique" },
-  // Sunscreen
-  { sku: "HQC-SP01", productName: "City Block Sheer SPF 25",                      category: "Sunscreen",    unitPrice: "320", costPrice: "160", brand: "HQ Clinique" },
-  { sku: "HQC-SP02", productName: "Physical Broad Spectrum SPF 50 Mineral Sunscreen", category: "Sunscreen", unitPrice: "360", costPrice: "180", brand: "HQ Clinique" },
-  // Treatments
-  { sku: "HQC-R01", productName: "Turnaround Revitalizing Radiance Treatment",    category: "Treatment",    unitPrice: "490", costPrice: "245", brand: "HQ Clinique" },
-  // Body
-  { sku: "HQC-B01", productName: "Deep Comfort Body Butter",                      category: "Body Care",    unitPrice: "250", costPrice: "125", brand: "HQ Clinique" },
-  { sku: "HQC-B02", productName: "Dramatically Different Body Lotion+",           category: "Body Care",    unitPrice: "290", costPrice: "145", brand: "HQ Clinique" },
+  // Skin Care Cream (6)
+  { sku: "HQC-SC-001", productName: "Acne Control Care Cream",           category: "Skin Care Cream",        unitPrice: "320", costPrice: "160", brand: "HQ Clinique" },
+  { sku: "HQC-SC-002", productName: "Anti-Blemish Cream",                category: "Skin Care Cream",        unitPrice: "300", costPrice: "150", brand: "HQ Clinique" },
+  { sku: "HQC-SC-003", productName: "Intense Moisturizing Care Cream",   category: "Skin Care Cream",        unitPrice: "380", costPrice: "190", brand: "HQ Clinique" },
+  { sku: "HQC-SC-004", productName: "Skin Lift Cream",                   category: "Skin Care Cream",        unitPrice: "420", costPrice: "210", brand: "HQ Clinique" },
+  { sku: "HQC-SC-005", productName: "Anti-Aging Care Cream",             category: "Skin Care Cream",        unitPrice: "440", costPrice: "220", brand: "HQ Clinique" },
+  { sku: "HQC-SC-006", productName: "Eye Control Care Cream",            category: "Skin Care Cream",        unitPrice: "360", costPrice: "180", brand: "HQ Clinique" },
+  // Skin Care Serum (8)
+  { sku: "HQC-SS-001", productName: "Anti-Acne Serum",                   category: "Skin Care Serum",        unitPrice: "380", costPrice: "190", brand: "HQ Clinique" },
+  { sku: "HQC-SS-002", productName: "Anti-Spot Serum",                   category: "Skin Care Serum",        unitPrice: "400", costPrice: "200", brand: "HQ Clinique" },
+  { sku: "HQC-SS-003", productName: "Collagen Serum",                    category: "Skin Care Serum",        unitPrice: "480", costPrice: "240", brand: "HQ Clinique" },
+  { sku: "HQC-SS-004", productName: "Glow Skin Serum",                   category: "Skin Care Serum",        unitPrice: "420", costPrice: "210", brand: "HQ Clinique" },
+  { sku: "HQC-SS-005", productName: "AHA/BHA Serum",                     category: "Skin Care Serum",        unitPrice: "460", costPrice: "230", brand: "HQ Clinique" },
+  { sku: "HQC-SS-006", productName: "Niacinamide Serum",                 category: "Skin Care Serum",        unitPrice: "350", costPrice: "175", brand: "HQ Clinique" },
+  { sku: "HQC-SS-007", productName: "Retinol Serum",                     category: "Skin Care Serum",        unitPrice: "520", costPrice: "260", brand: "HQ Clinique" },
+  { sku: "HQC-SS-008", productName: "Anti-Aging Serum",                  category: "Skin Care Serum",        unitPrice: "500", costPrice: "250", brand: "HQ Clinique" },
+  // Skin Care Tonic (2)
+  { sku: "HQC-ST-001", productName: "Acne Control Face Tonic",           category: "Skin Care Tonic",        unitPrice: "240", costPrice: "120", brand: "HQ Clinique" },
+  { sku: "HQC-ST-002", productName: "Anti Blemish Face Tonic",           category: "Skin Care Tonic",        unitPrice: "260", costPrice: "130", brand: "HQ Clinique" },
+  // Skin Care Cleansing Gel (2)
+  { sku: "HQC-SG-001", productName: "Acne Control Face Cleansing Gel",   category: "Skin Care Cleansing Gel", unitPrice: "220", costPrice: "110", brand: "HQ Clinique" },
+  { sku: "HQC-SG-002", productName: "Anti Blemish Face Cleansing Gel",   category: "Skin Care Cleansing Gel", unitPrice: "220", costPrice: "110", brand: "HQ Clinique" },
+  // Hair Care (2)
+  { sku: "HQC-HC-001", productName: "Hair Care Tonic",                   category: "Hair Care",              unitPrice: "300", costPrice: "150", brand: "HQ Clinique" },
+  { sku: "HQC-HC-002", productName: "Hair Care Serum",                   category: "Hair Care",              unitPrice: "340", costPrice: "170", brand: "HQ Clinique" },
+  // Foot Care (2)
+  { sku: "HQC-FC-001", productName: "Advanced Foot & Nail Spray",        category: "Foot Care",              unitPrice: "200", costPrice: "100", brand: "HQ Clinique" },
+  { sku: "HQC-FC-002", productName: "Foot Care Cream",                   category: "Foot Care",              unitPrice: "180", costPrice: "90",  brand: "HQ Clinique" },
 ];
 
 const HUBISLAB_PRODUCTS = [
-  // Foundation
-  { sku: "HUB-F01", productName: "Pro Foundation SPF 30 – Full Coverage",         category: "Foundation",       unitPrice: "220", costPrice: "99",  brand: "Hubislab" },
-  { sku: "HUB-F02", productName: "Full Coverage Creamy Concealer",                category: "Foundation",       unitPrice: "180", costPrice: "81",  brand: "Hubislab" },
-  { sku: "HUB-F03", productName: "HD Micro-Setting Powder",                       category: "Foundation",       unitPrice: "195", costPrice: "88",  brand: "Hubislab" },
-  { sku: "HUB-F04", productName: "Matte Skin Perfector Primer",                   category: "Foundation",       unitPrice: "165", costPrice: "74",  brand: "Hubislab" },
-  // Colour
-  { sku: "HUB-K01", productName: "Luminous Blush Palette – 4 Shades",             category: "Color Cosmetics",  unitPrice: "240", costPrice: "108", brand: "Hubislab" },
-  { sku: "HUB-K02", productName: "Highlight & Contour Sculpting Kit",             category: "Color Cosmetics",  unitPrice: "285", costPrice: "128", brand: "Hubislab" },
-  { sku: "HUB-K03", productName: "Shimmer Brick Bronzer",                         category: "Color Cosmetics",  unitPrice: "265", costPrice: "119", brand: "Hubislab" },
-  { sku: "HUB-K04", productName: "Pressed Powder Blush – Single",                 category: "Color Cosmetics",  unitPrice: "175", costPrice: "79",  brand: "Hubislab" },
-  // Eye
-  { sku: "HUB-G01", productName: "Baked Eyeshadow Palette – 12 Pan Neutral",      category: "Eye Makeup",       unitPrice: "310", costPrice: "140", brand: "Hubislab" },
-  { sku: "HUB-G02", productName: "Smoky Eye Palette – 8 Pan Drama",               category: "Eye Makeup",       unitPrice: "295", costPrice: "133", brand: "Hubislab" },
-  { sku: "HUB-G03", productName: "Precision Waterproof Eyeliner Pen",             category: "Eye Makeup",       unitPrice: "145", costPrice: "65",  brand: "Hubislab" },
-  { sku: "HUB-G04", productName: "Volume Boost Mascara",                          category: "Eye Makeup",       unitPrice: "155", costPrice: "70",  brand: "Hubislab" },
-  { sku: "HUB-G05", productName: "Lengthening Fiber Mascara",                     category: "Eye Makeup",       unitPrice: "165", costPrice: "74",  brand: "Hubislab" },
-  { sku: "HUB-G06", productName: "Brow Defining Micro Pencil",                    category: "Eye Makeup",       unitPrice: "140", costPrice: "63",  brand: "Hubislab" },
-  // Lip
-  { sku: "HUB-L01", productName: "Matte Liquid Lipstick – 24H Wear",              category: "Lip Color",        unitPrice: "170", costPrice: "77",  brand: "Hubislab" },
-  { sku: "HUB-L02", productName: "Glossy Lip Plumper Gloss",                      category: "Lip Color",        unitPrice: "155", costPrice: "70",  brand: "Hubislab" },
-  { sku: "HUB-L03", productName: "Precision Lip Liner Definer",                   category: "Lip Color",        unitPrice: "130", costPrice: "59",  brand: "Hubislab" },
-  { sku: "HUB-L04", productName: "Long-Wear Satin Lip Colour",                    category: "Lip Color",        unitPrice: "185", costPrice: "83",  brand: "Hubislab" },
-  // Setting
-  { sku: "HUB-ST01", productName: "All-Day Setting Spray – Matte Finish",         category: "Setting",          unitPrice: "195", costPrice: "88",  brand: "Hubislab" },
-  { sku: "HUB-ST02", productName: "Makeup Fixer Mist – Dewy Finish",              category: "Setting",          unitPrice: "175", costPrice: "79",  brand: "Hubislab" },
-  // Tools
-  { sku: "HUB-TL01", productName: "Pro Brush Set – 12 Pieces",                    category: "Makeup Tools",     unitPrice: "350", costPrice: "158", brand: "Hubislab" },
-  { sku: "HUB-TL02", productName: "Beauty Blending Sponge – 3 Pack",              category: "Makeup Tools",     unitPrice: "145", costPrice: "65",  brand: "Hubislab" },
+  // Pure Balance Line (3)
+  { sku: "HUB-PB-001", productName: "Pure Balance Papaya Enzyme Peeling Wash",    category: "Pure Balance Line",  unitPrice: "220", costPrice: "110", brand: "Hubislab" },
+  { sku: "HUB-PB-002", productName: "Pure Balance Refreshing Cleansing Milk",     category: "Pure Balance Line",  unitPrice: "200", costPrice: "100", brand: "Hubislab" },
+  { sku: "HUB-PB-003", productName: "Pure Balance Refreshing Cleansing Gel",      category: "Pure Balance Line",  unitPrice: "200", costPrice: "100", brand: "Hubislab" },
+  // Post Rays (4)
+  { sku: "HUB-PR-001", productName: "Post Rays Derma Regener K Solution",         category: "Post Rays",          unitPrice: "280", costPrice: "140", brand: "Hubislab" },
+  { sku: "HUB-PR-002", productName: "Post Rays Derma Regener Moisturizer",        category: "Post Rays",          unitPrice: "320", costPrice: "160", brand: "Hubislab" },
+  { sku: "HUB-PR-003", productName: "Post Rays Derma Regener K Cream",            category: "Post Rays",          unitPrice: "340", costPrice: "170", brand: "Hubislab" },
+  { sku: "HUB-PR-004", productName: "Post Rays Derma Regener Cell Cream",         category: "Post Rays",          unitPrice: "380", costPrice: "190", brand: "Hubislab" },
+  // Moisture Max (3)
+  { sku: "HUB-MM-001", productName: "Moisture Max Cleansing Foam",                category: "Moisture Max",       unitPrice: "200", costPrice: "100", brand: "Hubislab" },
+  { sku: "HUB-MM-002", productName: "Moisture Max Hydro Moisturizer",             category: "Moisture Max",       unitPrice: "260", costPrice: "130", brand: "Hubislab" },
+  { sku: "HUB-MM-003", productName: "Moisture Max Hydro Cream",                   category: "Moisture Max",       unitPrice: "280", costPrice: "140", brand: "Hubislab" },
+  // A.C Clearing (1)
+  { sku: "HUB-AC-001", productName: "A.C Clearing Active Control Cream",          category: "A.C Clearing",       unitPrice: "260", costPrice: "130", brand: "Hubislab" },
+  // Premium Active (3)
+  { sku: "HUB-PA-001", productName: "Premium Active Revival Essence",             category: "Premium Active",     unitPrice: "320", costPrice: "160", brand: "Hubislab" },
+  { sku: "HUB-PA-002", productName: "Premium Active B-Tx I Ampoule",             category: "Premium Active",     unitPrice: "460", costPrice: "230", brand: "Hubislab" },
+  { sku: "HUB-PA-003", productName: "Premium Active Eternal Eye & Face Cream",   category: "Premium Active",     unitPrice: "480", costPrice: "240", brand: "Hubislab" },
+  // Ampoule (4)
+  { sku: "HUB-AM-001", productName: "Post Rays Chamomile Complex 70 Ampoule",    category: "Ampoule",            unitPrice: "360", costPrice: "180", brand: "Hubislab" },
+  { sku: "HUB-AM-002", productName: "A.C Clearing Tea Tree Complex 50 Ampoule",  category: "Ampoule",            unitPrice: "340", costPrice: "170", brand: "Hubislab" },
+  { sku: "HUB-AM-003", productName: "Moisture Max Hyaluron Complex 165 Ampoule", category: "Ampoule",            unitPrice: "400", costPrice: "200", brand: "Hubislab" },
+  { sku: "HUB-AM-004", productName: "Derma Max Vitamin-C Complex 550 Ampoule",   category: "Ampoule",            unitPrice: "520", costPrice: "260", brand: "Hubislab" },
+  // Protect (2)
+  { sku: "HUB-PT-001", productName: "Herb B Soothing Blemish Balm",              category: "Protect",            unitPrice: "240", costPrice: "120", brand: "Hubislab" },
+  { sku: "HUB-PT-002", productName: "Post Rays Derma Perfect Sunscreen",         category: "Protect",            unitPrice: "280", costPrice: "140", brand: "Hubislab" },
+  // e+ Epiderma Mask (2)
+  { sku: "HUB-EM-001", productName: "e+ Epiderma Nova Cell Soothing Mask",       category: "e+ Epiderma Mask",   unitPrice: "180", costPrice: "90",  brand: "Hubislab" },
+  { sku: "HUB-EM-002", productName: "e+ Epiderma Nova Cell Brightening Mask",    category: "e+ Epiderma Mask",   unitPrice: "180", costPrice: "90",  brand: "Hubislab" },
 ];
 
 // ── Customer catalog ───────────────────────────────────────────────────────────
