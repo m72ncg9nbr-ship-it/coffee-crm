@@ -13,6 +13,7 @@ import { formatDate, formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { DeleteConfirm } from "@/components/delete-confirm";
+import { useChannel } from "@/lib/channel-context";
 
 type SortKey = "orderNumber" | "customer" | "channel" | "deliveryDate" | "urgency" | "total" | "status";
 type SortDir = "asc" | "desc";
@@ -107,6 +108,7 @@ export default function OrdersPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const { channel: globalChannel } = useChannel();
 
   // Server-side: order number / text search + status filter
   const params: Record<string, string> = {};
@@ -146,14 +148,20 @@ export default function OrdersPage() {
   const channelOptions = useMemo(() => {
     const seen = new Set<string>();
     for (const o of (orders ?? []) as any[]) {
-      if (o.businessChannel) seen.add(o.businessChannel);
+      if (!o.businessChannel) continue;
+      if (globalChannel === "cosmetics" && o.businessChannel !== "cosmetics") continue;
+      if (globalChannel === "coffee" && o.businessChannel === "cosmetics") continue;
+      seen.add(o.businessChannel);
     }
     return Array.from(seen).sort();
-  }, [orders]);
+  }, [orders, globalChannel]);
 
-  // Client-side filtering: customer name, channel, urgency, date, total, payment status
+  // Client-side filtering: global channel, customer name, channel, urgency, date, total, payment status
   const filtered = useMemo(() => {
     let list = (orders ?? []) as any[];
+    // Global channel filter (sidebar)
+    if (globalChannel === "cosmetics") list = list.filter(o => o.businessChannel === "cosmetics");
+    else if (globalChannel === "coffee") list = list.filter(o => o.businessChannel !== "cosmetics");
     if (customerSearch.trim()) {
       const cs = customerSearch.toLowerCase().trim();
       list = list.filter(o => (o.customerName ?? "").toLowerCase().includes(cs));
@@ -166,7 +174,7 @@ export default function OrdersPage() {
     if (totalMax.trim()) list = list.filter(o => (o.totalAmount ?? 0) <= parseFloat(totalMax));
     if (paymentFilter !== "all") list = list.filter(o => computePayStatus(o) === paymentFilter);
     return list;
-  }, [orders, customerSearch, channel, urgency, dateFrom, dateTo, totalMin, totalMax, paymentFilter]);
+  }, [orders, globalChannel, customerSearch, channel, urgency, dateFrom, dateTo, totalMin, totalMax, paymentFilter]);
 
   const sorted = useMemo(() => sortOrders(filtered, sortKey, sortDir), [filtered, sortKey, sortDir]);
 

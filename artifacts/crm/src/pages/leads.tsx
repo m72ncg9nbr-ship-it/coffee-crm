@@ -36,6 +36,7 @@ import {
   normalisePaymentTerms,
   normaliseChannel,
 } from "@/lib/customer-options";
+import { useChannel } from "@/lib/channel-context";
 
 const IMPORTANCE_OPTIONS = [
   { value: "normal",       label: "Normal",        className: "bg-gray-100 text-gray-700 border-gray-200" },
@@ -77,6 +78,7 @@ export default function LeadsPage() {
   const { data: leads, isLoading, refetch } = useListLeads();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { channel } = useChannel();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     companyName: "", contactPerson: "", phone: "", email: "",
@@ -221,6 +223,11 @@ export default function LeadsPage() {
 
   const filtered = useMemo(() => {
     let list = (leads ?? []) as any[];
+    // Global channel filter
+    if (channel !== "all") {
+      if (channel === "cosmetics") list = list.filter(l => l.businessChannel === "cosmetics");
+      else list = list.filter(l => l.businessChannel !== "cosmetics");
+    }
     if (creatorFilter !== "all") {
       if (creatorFilter === "unknown") list = list.filter(l => !l.createdBy);
       else list = list.filter(l => String(l.createdBy) === creatorFilter);
@@ -233,7 +240,7 @@ export default function LeadsPage() {
     if (dateFrom) list = list.filter(l => l.createdAt >= dateFrom);
     if (dateTo)   list = list.filter(l => l.createdAt <= dateTo + "T23:59:59Z");
     return list;
-  }, [leads, creatorFilter, regionFilter, importFilter, dateFrom, dateTo]);
+  }, [leads, channel, creatorFilter, regionFilter, importFilter, dateFrom, dateTo]);
 
   return (
     <div className="p-6 space-y-5">
@@ -282,6 +289,7 @@ export default function LeadsPage() {
                     <SelectItem value="horeca">HoReCa</SelectItem>
                     <SelectItem value="office">Office</SelectItem>
                     <SelectItem value="retail">Retail</SelectItem>
+                    <SelectItem value="cosmetics">Cosmetics</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

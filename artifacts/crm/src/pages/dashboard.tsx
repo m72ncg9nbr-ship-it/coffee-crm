@@ -40,10 +40,11 @@ export default function DashboardPage() {
   const { lang } = useLang();
   const [activeTab, setActiveTab] = useState<DashTab>("general");
 
-  const { data: summary } = useGetDashboardSummary();
+  const channelParam = activeTab !== "general" ? activeTab : undefined;
+  const { data: summary } = useGetDashboardSummary({ channel: channelParam } as any);
   const { data: recentDeliveries } = useGetRecentDeliveries();
   const { data: deviations } = useGetDeliveryDeviations();
-  const { data: priorities } = useGetTodayPriorities();
+  const { data: priorities } = useGetTodayPriorities({ channel: channelParam } as any);
   const { data: activityLogs } = useListActivityLogs({ limit: 15 });
   const { data: stockData } = useListInventoryStock();
 
@@ -143,16 +144,16 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Channel-specific note for cosmetics (no data yet until Stage 3) */}
-      {activeTab === "cosmetics" && (
-        <div className="rounded-lg border border-dashed border-purple-300 bg-purple-50/40 px-4 py-3 text-sm text-purple-800">
-          <span className="font-semibold flex items-center gap-1.5">
-            <Sparkles className="h-4 w-4" />
-            Cosmetics channel
-          </span>
-          <span className="text-xs text-purple-700 block mt-1">
-            Cosmetics catalog and demo data will be seeded in Stage 3. Metrics below reflect all-channel totals for now.
-          </span>
+      {/* Channel context indicator */}
+      {activeTab !== "general" && (
+        <div className={`rounded-lg border px-4 py-2.5 flex items-center gap-2 text-sm ${
+          activeTab === "cosmetics"
+            ? "border-purple-200 bg-purple-50/40 text-purple-800"
+            : "border-amber-200 bg-amber-50/40 text-amber-800"
+        }`}>
+          {activeTab === "cosmetics" ? <Sparkles className="h-4 w-4" /> : <Coffee className="h-4 w-4" />}
+          <span className="font-medium capitalize">{activeTab} channel</span>
+          <span className="text-xs opacity-70">— metrics filtered to {activeTab} orders and deliveries only</span>
         </div>
       )}
 

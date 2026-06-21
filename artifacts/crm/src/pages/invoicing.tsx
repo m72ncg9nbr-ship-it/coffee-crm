@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useGetReadyForInvoicing, useMarkOrderPaid } from "@workspace/api-client-react";
+import { useChannel } from "@/lib/channel-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,7 +84,13 @@ function ColHeader({ label, col, sortKey, sortDir, onSort }: {
 export default function InvoicingPage() {
   const { data, isLoading, refetch } = useGetReadyForInvoicing();
   const { toast } = useToast();
-  const list = (data ?? []) as any[];
+  const { channel } = useChannel();
+  const rawList = (data ?? []) as any[];
+  const list = useMemo(() => {
+    if (channel === "cosmetics") return rawList.filter(r => r.businessChannel === "cosmetics");
+    if (channel === "coffee") return rawList.filter(r => r.businessChannel !== "cosmetics");
+    return rawList;
+  }, [rawList, channel]);
 
   // ── Filter state ───────────────────────────────────────────────────────────
   const [orderSearch,    setOrderSearch]    = useState("");

@@ -3,18 +3,44 @@ import { StatusBadge } from "@/components/priority-badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Package, Search, Pencil, Check, X } from "lucide-react";
+import { useChannel } from "@/lib/channel-context";
 
 export default function ProductsPage() {
   const [search, setSearch]       = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [costInput, setCostInput] = useState("");
+  const [brandFilter, setBrandFilter] = useState("all");
 
+  const { channel } = useChannel();
   const { data: products, isLoading, refetch } = useListProducts({ search: search || undefined } as any);
+
+  useEffect(() => { setBrandFilter("all"); }, [channel]);
+
+  const channelProducts = useMemo(() => {
+    const list = (products ?? []) as any[];
+    if (channel === "all") return list;
+    if (channel === "cosmetics") return list.filter((p: any) => p.businessChannel === "cosmetics");
+    return list.filter((p: any) => p.businessChannel !== "cosmetics");
+  }, [products, channel]);
+
+  const brandOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const p of channelProducts) {
+      if ((p as any).brand) seen.add((p as any).brand);
+    }
+    return Array.from(seen).sort();
+  }, [channelProducts]);
+
+  const displayProducts = useMemo(() => {
+    if (brandFilter === "all") return channelProducts;
+    return channelProducts.filter((p: any) => p.brand === brandFilter);
+  }, [channelProducts, brandFilter]);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -60,18 +86,29 @@ export default function ProductsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Products</h1>
-          <p className="text-muted-foreground text-sm">{products?.length ?? 0} items in catalog</p>
+          <p className="text-muted-foreground text-sm">{displayProducts.length} items in catalog</p>
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search products..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 min-w-48 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {brandOptions.length > 0 && (
+          <Select value={brandFilter} onValueChange={setBrandFilter}>
+            <SelectTrigger className="w-40 h-9 text-sm"><SelectValue placeholder="All Brands" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Brands</SelectItem>
+              {brandOptions.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -79,7 +116,7 @@ export default function ProductsPage() {
           <div className="col-span-3 text-center py-8 text-muted-foreground text-sm">Loading...</div>
         )}
 
-        {!isLoading && (products ?? []).map((p: any) => {
+        {!isLoading && displayProducts.map((p: any) => {
           const isEditing = editingId === p.id;
           return (
             <Card key={p.id} className="p-4 flex gap-4">
@@ -110,6 +147,7 @@ export default function ProductsPage() {
                 <p className="text-xs text-muted-foreground mt-0.5 font-mono">{p.sku}</p>
                 <p className="text-xs text-muted-foreground capitalize mt-0.5">
                   {p.category?.replace(/_/g, " ")} · {p.businessChannel}
+                  {p.brand && <span> · {p.brand}</span>}
                 </p>
 
                 {/* Price row */}
@@ -169,7 +207,7 @@ export default function ProductsPage() {
           );
         })}
 
-        {!isLoading && (products ?? []).length === 0 && (
+        {!isLoading && displayProducts.length === 0 && (
           <div className="col-span-3 text-center py-12 text-muted-foreground">
             <Package className="h-12 w-12 mx-auto mb-3 opacity-20" />
             <p>No products found</p>

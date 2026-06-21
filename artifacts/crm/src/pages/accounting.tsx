@@ -10,11 +10,13 @@ import { CheckCircle, XCircle, FileText, CreditCard, SlidersHorizontal, X } from
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
+import { useChannel } from "@/lib/channel-context";
 
 export default function AccountingPage() {
   const { data: approvals, isLoading, refetch } = useListAccountingApprovals();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { channel } = useChannel();
   const [notes, setNotes] = useState<Record<number, string>>({});
 
   // ── Filter state ────────────────────────────────────────────────────────────
@@ -68,6 +70,9 @@ export default function AccountingPage() {
 
   const filteredApprovals = useMemo(() => {
     let list = (approvals ?? []) as any[];
+    // Global channel filter
+    if (channel === "cosmetics") list = list.filter(a => a.businessChannel === "cosmetics");
+    else if (channel === "coffee") list = list.filter(a => a.businessChannel !== "cosmetics");
     if (statusFilter !== "all") list = list.filter(a => a.status === statusFilter);
     if (paymentFilter !== "all") {
       const today = new Date().toISOString().split("T")[0];
@@ -81,7 +86,7 @@ export default function AccountingPage() {
     if (dateFrom) list = list.filter(a => a.scheduledDate && a.scheduledDate >= dateFrom);
     if (dateTo)   list = list.filter(a => a.scheduledDate && a.scheduledDate <= dateTo);
     return list;
-  }, [approvals, statusFilter, paymentFilter, dateFrom, dateTo]);
+  }, [approvals, channel, statusFilter, paymentFilter, dateFrom, dateTo]);
 
   const pending  = filteredApprovals.filter((a: any) => a.status === "pending");
   const reviewed = filteredApprovals.filter((a: any) => a.status !== "pending");

@@ -1,69 +1,64 @@
 import { Router, type IRouter } from "express";
 import { db, customersTable, ordersTable, deliveriesTable, accountingApprovalsTable, usersTable, leadsTable } from "@workspace/db";
-import { eq, and, gte, inArray, isNotNull } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 router.get("/dashboard/summary", requireAuth as any, async (req, res): Promise<void> => {
-  const [totalCustomersResult] = await db.select({ count: sql<number>`count(*)` }).from(customersTable).where(eq(customersTable.active, true));
-  const totalCustomers = Number(totalCustomersResult?.count ?? 0);
+  const channel = (req.query.channel as string | undefined) ?? "all";
 
-  const openOrders = await db.select().from(ordersTable).where(
-    inArray(ordersTable.status, ["new", "planned", "out_for_delivery", "awaiting_accounting_approval"])
-  );
-
-  const plannedDeliveries = await db.select().from(deliveriesTable).where(
-    inArray(deliveriesTable.status, ["assigned", "unassigned"])
-  );
-
-  const outForDelivery = await db.select().from(deliveriesTable).where(
-    inArray(deliveriesTable.status, ["arrived", "awaiting_accounting_approval"])
-  );
+  function applyChannel<T extends { businessChannel: string | null }>(arr: T[]): T[] {
+    if (channel === "all") return arr;
+    if (channel === "cosmetics") return arr.filter(x => x.businessChannel === "cosmetics");
+    return arr.filter(x => x.businessChannel !== "cosmetics");
+  }
 
   const today = new Date().toISOString().split("T")[0];
 
-  const allDeliveries = await db.select().from(deliveriesTable);
-  const delayedDeliveries = allDeliveries.filter(d =>
-    ["assigned", "unassigned"].includes(d.status) &&
-    d.scheduledDate &&
-    d.scheduledDate < today
-  );
+  const [allCustomersRaw, allOrdersRaw, allDeliveriesRaw, allApprovalsRaw] = await Promise.all([
+    db.select().from(customersTable).where(eq(customersTable.active, true)),
+    db.select().from(ordersTable),
+    db.select().from(deliveriesTable),
+    db.select().from(accountingApprovalsTable),
+  ]);
 
-  const awaitingApproval = await db.select().from(accountingApprovalsTable).where(
-    eq(accountingApprovalsTable.status, "pending")
-  );
+  const customers = applyChannel(allCustomersRaw);
+  const orders = applyChannel(allOrdersRaw);
+  const deliveries = applyChannel(allDeliveriesRaw);
 
-  const approvedToday = await db.select().from(accountingApprovalsTable).where(
-    and(
-      eq(accountingApprovalsTable.status, "approved"),
-      gte(accountingApprovalsTable.updatedAt, new Date(today))
-    )
-  );
+  const channelDeliveryIds = new Set(deliveries.map(d => d.id));
+  const approvals = allApprovalsRaw.filter(a => channelDeliveryIds.has(a.deliveryId));
 
-  const allCustomers = await db.select({ priority: customersTable.priorityClass }).from(customersTable).where(eq(customersTable.active, true));
   const priorityDistribution = { A: 0, B: 0, C: 0 };
-  allCustomers.forEach(c => {
-    const p = c.priority as "A" | "B" | "C";
+  customers.forEach(c => {
+    const p = c.priorityClass as "A" | "B" | "C";
     if (p in priorityDistribution) priorityDistribution[p]++;
   });
 
-  // Spec additions
-  const incompleteOrders = await db.select().from(ordersTable).where(
-    inArray(ordersTable.status, ["incomplete", "blocked"])
+  const openOrders = orders.filter(o =>
+    ["new", "planned", "out_for_delivery", "awaiting_accounting_approval"].includes(o.status)
   );
-
-  const readyForInvoicing = await db.select().from(ordersTable).where(
-    and(eq(ordersTable.status, "approved"), isNotNull(ordersTable.invoiceTriggeredAt))
+  const incompleteOrders = orders.filter(o => ["incomplete", "blocked"].includes(o.status));
+  const plannedDeliveries = deliveries.filter(d => ["assigned", "unassigned"].includes(d.status));
+  const outForDelivery = deliveries.filter(d => ["arrived", "awaiting_accounting_approval"].includes(d.status));
+  const delayedDeliveries = deliveries.filter(d =>
+    ["assigned", "unassigned"].includes(d.status) && d.scheduledDate && d.scheduledDate < today
   );
-
-  const unresolvedDeviations = allDeliveries.filter(d =>
+  const awaitingApproval = approvals.filter(a => a.status === "pending");
+  const approvedToday = approvals.filter(a =>
+    a.status === "approved" && a.updatedAt >= new Date(today)
+  );
+  const readyForInvoicing = orders.filter(o =>
+    o.status === "approved" && o.invoiceTriggeredAt != null
+  );
+  const unresolvedDeviations = deliveries.filter(d =>
     d.deviationType !== null && d.status !== "approved"
   );
 
   res.json({
-    totalCustomers,
+    totalCustomers: customers.length,
     aCustomers: priorityDistribution.A,
     openOrders: openOrders.length,
     incompleteOrders: incompleteOrders.length,
@@ -78,18 +73,32 @@ router.get("/dashboard/summary", requireAuth as any, async (req, res): Promise<v
   });
 });
 
-router.get("/dashboard/today-priorities", requireAuth as any, async (_req, res): Promise<void> => {
+router.get("/dashboard/today-priorities", requireAuth as any, async (req, res): Promise<void> => {
   const today = new Date().toISOString().split("T")[0];
+  const channel = (req.query.channel as string | undefined) ?? "all";
 
-  const [allCustomers, allOrders, allDeliveries, allApprovals] = await Promise.all([
+  function applyChannel<T extends { businessChannel: string | null }>(arr: T[]): T[] {
+    if (channel === "all") return arr;
+    if (channel === "cosmetics") return arr.filter(x => x.businessChannel === "cosmetics");
+    return arr.filter(x => x.businessChannel !== "cosmetics");
+  }
+
+  const [allCustomers, allOrdersRaw, allDeliveriesRaw, allApprovals] = await Promise.all([
     db.select().from(customersTable),
     db.select().from(ordersTable),
     db.select().from(deliveriesTable),
     db.select().from(accountingApprovalsTable).where(eq(accountingApprovalsTable.status, "pending")),
   ]);
 
+  const allOrders = applyChannel(allOrdersRaw);
+  const allDeliveries = applyChannel(allDeliveriesRaw);
+
+  const channelDeliveryIds = new Set(allDeliveries.map(d => d.id));
+  const channelApprovals = allApprovals.filter(a => channelDeliveryIds.has(a.deliveryId));
+
   const customerMap = Object.fromEntries(allCustomers.map(c => [c.id, c]));
   const orderMap = Object.fromEntries(allOrders.map(o => [o.id, o]));
+  const fullOrderMap = Object.fromEntries(allOrdersRaw.map(o => [o.id, o]));
 
   // A customers awaiting delivery
   const aCustomerDeliveries = allDeliveries
@@ -144,7 +153,7 @@ router.get("/dashboard/today-priorities", requireAuth as any, async (_req, res):
     }));
 
   // Awaiting accounting approval
-  const awaitingApproval = allApprovals.map(a => {
+  const awaitingApproval = channelApprovals.map(a => {
     const delivery = allDeliveries.find(d => d.id === a.deliveryId);
     return {
       kind: "awaiting_approval" as const,
@@ -152,7 +161,7 @@ router.get("/dashboard/today-priorities", requireAuth as any, async (_req, res):
       deliveryId: a.deliveryId,
       orderId: a.orderId,
       deliveryNumber: delivery?.deliveryNumber ?? null,
-      orderNumber: a.orderId ? (orderMap[a.orderId]?.orderNumber ?? null) : null,
+      orderNumber: a.orderId ? (fullOrderMap[a.orderId]?.orderNumber ?? null) : null,
       customerName: delivery ? (customerMap[delivery.customerId]?.companyName ?? "Unknown") : "Unknown",
     };
   });
@@ -170,7 +179,8 @@ router.get("/dashboard/today-priorities", requireAuth as any, async (_req, res):
     }));
 
   // Lead follow-ups due (6.9)
-  const allLeads = await db.select().from(leadsTable);
+  const allLeadsRaw = await db.select().from(leadsTable);
+  const allLeads = applyChannel(allLeadsRaw);
   const nowMs = Date.now();
   const overdueLeadFollowUps = allLeads
     .filter(l => !l.followUpCompletedAt && l.followUpDueAt && l.followUpDueAt.getTime() <= nowMs)

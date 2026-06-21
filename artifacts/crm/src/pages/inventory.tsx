@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListInventoryPools,
@@ -23,6 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import { Package, History, Search, ChevronDown, Edit2, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculateInventoryStatus, invStatusBadgeClass } from "@/lib/inventoryStatus";
+import { useChannel } from "@/lib/channel-context";
 
 function stockBadge(available: number, reserved: number) {
   const { status, label } = calculateInventoryStatus(available, reserved);
@@ -61,6 +62,7 @@ export default function InventoryPage() {
   const [adjustDelta, setAdjustDelta] = useState("0");
   const [adjustReason, setAdjustReason] = useState("");
 
+  const { channel } = useChannel();
   const { data: pools }    = useListInventoryPools();
   const { data: stock, isLoading } = useListInventoryStock();
   const { data: movements } = useListInventoryMovements({ limit: 50 });
@@ -93,11 +95,16 @@ export default function InventoryPage() {
     },
   });
 
-  const filtered = (stock ?? []).filter((p: any) =>
-    !search ||
-    p.productName.toLowerCase().includes(search.toLowerCase()) ||
-    p.sku.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    let list = (stock ?? []) as any[];
+    if (channel === "cosmetics") list = list.filter(p => p.businessChannel === "cosmetics");
+    else if (channel === "coffee") list = list.filter(p => p.businessChannel !== "cosmetics");
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(p => p.productName.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+    }
+    return list;
+  }, [stock, channel, search]);
 
   function toggleExpand(productId: number) {
     setExpandedId(prev => (prev === productId ? null : productId));

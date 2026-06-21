@@ -43,7 +43,12 @@ async function loadApprovedOrders(filters: any) {
     orders = orders.filter(o => o.createdAt.toISOString().split("T")[0] <= filters.dateTo);
   }
   if (filters.channel) {
-    orders = orders.filter(o => o.businessChannel === filters.channel);
+    if (filters.channel === "cosmetics") {
+      orders = orders.filter(o => o.businessChannel === "cosmetics");
+    } else {
+      // coffee = everything that is not cosmetics (handles legacy horeca/retail/office sub-channels)
+      orders = orders.filter(o => o.businessChannel !== "cosmetics");
+    }
   }
   if (filters.customerId) {
     orders = orders.filter(o => o.customerId === Number(filters.customerId));
@@ -412,7 +417,10 @@ router.get("/reports/samples", requireAuth as any, async (req, res): Promise<voi
 
   if (filters.dateFrom) orders = orders.filter(o => o.createdAt.toISOString().split("T")[0] >= filters.dateFrom!);
   if (filters.dateTo)   orders = orders.filter(o => o.createdAt.toISOString().split("T")[0] <= filters.dateTo!);
-  if (filters.channel)  orders = orders.filter(o => o.businessChannel === filters.channel);
+  if (filters.channel) {
+    if (filters.channel === "cosmetics") orders = orders.filter(o => o.businessChannel === "cosmetics");
+    else orders = orders.filter(o => o.businessChannel !== "cosmetics");
+  }
   if (filters.createdBy) orders = orders.filter(o => o.createdBy === Number(filters.createdBy));
 
   const orderIds    = orders.map(o => o.id);

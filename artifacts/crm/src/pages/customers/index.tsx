@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -22,6 +22,7 @@ import {
   CHANNEL_OPTIONS,
   type PriorityClass,
 } from "@/lib/customer-options";
+import { useChannel } from "@/lib/channel-context";
 
 type CreateForm = {
   contactPerson: string;
@@ -56,12 +57,21 @@ export default function CustomersPage() {
   const [dupeChecked, setDupeChecked] = useState(false);
   const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE_FORM);
 
+  const { channel } = useChannel();
+
   const params: Record<string, string> = {};
   if (search) params.search = search;
   if (priority !== "all") params.priority = priority;
   if (activeFilter !== "all") params.active = activeFilter;
 
   const { data: customers, isLoading } = useListCustomers(params as any);
+
+  const displayCustomers = useMemo(() => {
+    const list = (customers ?? []) as any[];
+    if (channel === "all") return list;
+    if (channel === "cosmetics") return list.filter((c: any) => c.businessChannel === "cosmetics");
+    return list.filter((c: any) => c.businessChannel !== "cosmetics");
+  }, [customers, channel]);
 
   const checkDupes = useCheckCustomerDuplicates({
     mutation: {
@@ -136,7 +146,9 @@ export default function CustomersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Customers</h1>
-          <p className="text-muted-foreground text-sm">{customers?.length ?? 0} records</p>
+          <p className="text-muted-foreground text-sm">
+            {displayCustomers.length}{channel !== "all" ? ` of ${customers?.length ?? 0}` : ""} records
+          </p>
         </div>
         <Button size="sm" onClick={openCreateDialog}>
           <Plus className="h-4 w-4 mr-1.5" />
@@ -373,7 +385,7 @@ export default function CustomersPage() {
               {isLoading && (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">Loading...</td></tr>
               )}
-              {!isLoading && (customers ?? []).map((c: any) => (
+              {!isLoading && displayCustomers.map((c: any) => (
                 <tr key={c.id} className="hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3">
                     <PriorityBadge priority={c.priorityClass} />
@@ -397,7 +409,7 @@ export default function CustomersPage() {
                   </td>
                 </tr>
               ))}
-              {!isLoading && (customers ?? []).length === 0 && (
+              {!isLoading && displayCustomers.length === 0 && (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">No customers found</td></tr>
               )}
             </tbody>

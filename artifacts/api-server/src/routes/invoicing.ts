@@ -45,6 +45,7 @@ router.get("/invoicing/ready", requireRole(...FULL_ACCESS_ACCOUNTING) as any, as
     return {
       orderId: o.id,
       orderNumber: o.orderNumber,
+      businessChannel: o.businessChannel,
       customerId: o.customerId,
       customerName: customer?.companyName ?? "Unknown",
       customerPriority: customer?.priorityClass ?? "C",

@@ -28,7 +28,8 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { TrendingUp, DollarSign, ShoppingCart, Package, MapPin, TestTube } from "lucide-react";
+import { TrendingUp, DollarSign, ShoppingCart, Package, MapPin, TestTube, Globe, Coffee, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // ── colour palette ─────────────────────────────────────────────────────────────
 const COLORS = ["#f97316", "#3b82f6", "#10b981", "#8b5cf6", "#ef4444", "#14b8a6", "#f59e0b", "#6366f1"];
@@ -188,14 +189,32 @@ function ProfitRow({ row }: { row: ProfitabilityItem }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
+type ReportChannel = "all" | "coffee" | "cosmetics";
+
+const CHANNEL_TABS: { value: ReportChannel; label: string; icon: React.ReactNode }[] = [
+  { value: "all",       label: "All Channels", icon: <Globe className="h-3.5 w-3.5" /> },
+  { value: "coffee",    label: "Coffee",       icon: <Coffee className="h-3.5 w-3.5" /> },
+  { value: "cosmetics", label: "Cosmetics",    icon: <Sparkles className="h-3.5 w-3.5" /> },
+];
+
 export default function ReportsPage() {
+  const [reportChannel, setReportChannel] = useState<ReportChannel>("all");
   const [filters, setFilters] = useState<ReportFiltersParams>({});
 
-  const { data: sales, isLoading: salesLoading, isError: salesError } = useGetReportsSales(filters);
-  const { data: profit, isLoading: profitLoading, isError: profitError } = useGetReportsProfitability(filters);
-  const { data: coll, isLoading: collLoading, isError: collError } = useGetReportsCollection(filters);
-  const { data: samples, isLoading: samplesLoading, isError: samplesError } = useGetReportsSamples(filters);
-  const { data: regional, isLoading: regionalLoading, isError: regionalError } = useGetReportsRegional(filters);
+  const activeFilters: ReportFiltersParams = {
+    ...filters,
+    channel: reportChannel === "all" ? undefined : reportChannel,
+  };
+
+  function handleChannelChange(ch: ReportChannel) {
+    setReportChannel(ch);
+  }
+
+  const { data: sales, isLoading: salesLoading, isError: salesError } = useGetReportsSales(activeFilters);
+  const { data: profit, isLoading: profitLoading, isError: profitError } = useGetReportsProfitability(activeFilters);
+  const { data: coll, isLoading: collLoading, isError: collError } = useGetReportsCollection(activeFilters);
+  const { data: samples, isLoading: samplesLoading, isError: samplesError } = useGetReportsSamples(activeFilters);
+  const { data: regional, isLoading: regionalLoading, isError: regionalError } = useGetReportsRegional(activeFilters);
 
   return (
     <div className="p-6 space-y-5">
@@ -205,6 +224,25 @@ export default function ReportsPage() {
           <p className="text-muted-foreground text-sm">Approved orders only</p>
         </div>
         <DateFilterBar filters={filters} onChange={setFilters} />
+      </div>
+
+      {/* Channel selector */}
+      <div className="flex gap-1 border-b pb-0">
+        {CHANNEL_TABS.map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => handleChannelChange(tab.value)}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+              reportChannel === tab.value
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/40"
+            )}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       <Tabs defaultValue="sales" className="space-y-4">

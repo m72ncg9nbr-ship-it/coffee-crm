@@ -89,6 +89,7 @@ async function enrichApprovals(approvals: (typeof accountingApprovalsTable.$infe
         quantity: i.quantity,
         lineTotal: parseFloat(i.lineTotal),
       })),
+      businessChannel: delivery?.businessChannel ?? null,
       driverName: delivery?.driverId ? (driverMap[delivery.driverId] ?? null) : null,
       scheduledDate: delivery?.scheduledDate ?? null,
       hasDocument: !!doc,

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { DeleteConfirm } from "@/components/delete-confirm";
+import { useChannel } from "@/lib/channel-context";
 
 // ── Board column definitions ──────────────────────────────────────────────────
 const BOARD_COLUMNS = [
@@ -102,6 +103,7 @@ export default function DeliveriesPage() {
   const queryClient = useQueryClient();
   const { toast }   = useToast();
   const { user }    = useAuth();
+  const { channel } = useChannel();
   const canDelete = !!user &&
     ["owner_admin", "general_manager", "channel_manager", "sales"].includes(user.role);
 
@@ -134,6 +136,10 @@ export default function DeliveriesPage() {
   const filtered = useMemo(() => {
     let list = (deliveries ?? []) as any[];
 
+    // Global channel filter
+    if (channel === "cosmetics") list = list.filter(d => d.businessChannel === "cosmetics");
+    else if (channel === "coffee") list = list.filter(d => d.businessChannel !== "cosmetics");
+
     if (customerSearch.trim()) {
       const q = customerSearch.toLowerCase();
       list = list.filter(d => d.customerName?.toLowerCase().includes(q));
@@ -157,7 +163,7 @@ export default function DeliveriesPage() {
     if (issueFilter === "no_issue") list = list.filter(d => d.status !== "issue_reported");
 
     return list;
-  }, [deliveries, customerSearch, deliverySearch, orderSearch,
+  }, [deliveries, channel, customerSearch, deliverySearch, orderSearch,
       driverFilter, statusFilter, priorityFilter,
       dateFrom, dateTo, delayFilter, issueFilter]);
 
