@@ -3,7 +3,9 @@ import { useLocation } from "wouter";
 import { useLogin, getGetCurrentUserQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
-import { Coffee } from "lucide-react";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
+import { Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +24,7 @@ export default function LoginPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { lang, setLang } = useLang();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -34,12 +37,12 @@ export default function LoginPage() {
 
   const login = useLogin({
     mutation: {
-      onSuccess: (data) => {
+      onSuccess: (data: unknown) => {
         queryClient.setQueryData(getGetCurrentUserQueryKey(), (data as any)?.user ?? data);
         queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
       },
       onError: () => {
-        setError("Invalid username or password");
+        setError(t("invalidCredentials", lang));
       }
     }
   });
@@ -52,25 +55,44 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-100 to-amber-50 flex items-center justify-center p-4">
+      {/* Language toggle */}
+      <div className="absolute top-4 right-4 flex items-center gap-1 bg-white/80 rounded-lg border px-2 py-1 shadow-sm">
+        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+        <button
+          type="button"
+          onClick={() => setLang("en")}
+          className={`text-xs px-1.5 py-0.5 rounded transition-colors ${lang === "en" ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          EN
+        </button>
+        <button
+          type="button"
+          onClick={() => setLang("tr")}
+          className={`text-xs px-1.5 py-0.5 rounded transition-colors ${lang === "tr" ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          TR
+        </button>
+      </div>
+
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center shadow-md">
-            <Coffee className="h-7 w-7 text-primary-foreground" />
+            <Globe className="h-7 w-7 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Coffee CRM</h1>
-            <p className="text-sm text-muted-foreground">Distribution Operations</p>
+            <h1 className="text-2xl font-bold text-foreground">{t("appName", lang)}</h1>
+            <p className="text-sm text-muted-foreground">{t("appSubtitle", lang)}</p>
           </div>
         </div>
         <Card className="shadow-lg">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Sign in to your account</CardTitle>
-            <CardDescription>Enter your credentials to access the system</CardDescription>
+            <CardTitle className="text-lg">{t("signIn", lang)}</CardTitle>
+            <CardDescription>{t("enterCredentials", lang)}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username">{t("username", lang)}</Label>
                 <Input
                   id="username"
                   value={username}
@@ -80,7 +102,7 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("password", lang)}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -92,11 +114,11 @@ export default function LoginPage() {
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button type="submit" className="w-full" disabled={login.isPending}>
-                {login.isPending ? "Signing in..." : "Sign in"}
+                {login.isPending ? t("signingIn", lang) : t("signInBtn", lang)}
               </Button>
             </form>
             <div className="mt-5 pt-4 border-t">
-              <p className="text-xs text-muted-foreground font-medium mb-2">Demo accounts (click to fill):</p>
+              <p className="text-xs text-muted-foreground font-medium mb-2">{t("demoAccounts", lang)}</p>
               <div className="grid grid-cols-2 gap-1.5 text-xs">
                 {[
                   { u: "admin",   p: "admin123",  label: "Owner Admin" },

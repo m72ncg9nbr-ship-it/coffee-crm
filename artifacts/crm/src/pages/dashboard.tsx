@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import {
   useGetDashboardSummary,
@@ -12,6 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge, PriorityBadge, UrgencyBadge } from "@/components/priority-badge";
 import { formatDateTime, formatDate } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import {
   calculateInventoryStatus,
   invStatusBadgeClass,
@@ -20,11 +24,22 @@ import {
 } from "@/lib/inventoryStatus";
 import {
   Users, ShoppingCart, Truck, AlertTriangle, ClipboardCheck, CheckCircle,
-  Star, FileWarning, Receipt, AlertCircle, Warehouse,
+  Star, FileWarning, Receipt, AlertCircle, Warehouse, Coffee, Sparkles, Globe,
 } from "lucide-react";
+
+type DashTab = "general" | "coffee" | "cosmetics";
+
+const TAB_META: { value: DashTab; labelKey: "generalDashboard" | "coffeeDashboard" | "cosmeticsDashboard"; icon: React.ReactNode }[] = [
+  { value: "general",   labelKey: "generalDashboard",   icon: <Globe className="h-4 w-4" /> },
+  { value: "coffee",    labelKey: "coffeeDashboard",    icon: <Coffee className="h-4 w-4" /> },
+  { value: "cosmetics", labelKey: "cosmeticsDashboard", icon: <Sparkles className="h-4 w-4" /> },
+];
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { lang } = useLang();
+  const [activeTab, setActiveTab] = useState<DashTab>("general");
+
   const { data: summary } = useGetDashboardSummary();
   const { data: recentDeliveries } = useGetRecentDeliveries();
   const { data: deviations } = useGetDeliveryDeviations();
@@ -34,7 +49,6 @@ export default function DashboardPage() {
 
   const showStockOverview = !!user && ["owner_admin", "general_manager", "channel_manager"].includes(user.role);
 
-  // Compute per-pool alerts from inventory data (client-side)
   type StockAlert = {
     productId: number;
     productName: string;
@@ -72,7 +86,6 @@ export default function DashboardPage() {
         }
       }
     }
-    // out_of_stock first, then low_stock; alphabetically by product within each group
     stockAlerts.sort((a, b) => {
       if (a.status !== b.status) return a.status === "out_of_stock" ? -1 : 1;
       return a.productName.localeCompare(b.productName);
@@ -83,17 +96,17 @@ export default function DashboardPage() {
   const p: any = priorities ?? {};
 
   const stats = [
-    { label: "Total Customers", value: s.totalCustomers ?? 0, icon: Users, color: "text-blue-600" },
-    { label: "A Customers", value: s.aCustomers ?? 0, icon: Star, color: "text-amber-600" },
-    { label: "Open Orders", value: s.openOrders ?? 0, icon: ShoppingCart, color: "text-amber-600" },
-    { label: "Incomplete", value: s.incompleteOrders ?? 0, icon: FileWarning, color: "text-orange-600" },
-    { label: "Planned", value: s.plannedDeliveries ?? 0, icon: Truck, color: "text-purple-600" },
-    { label: "Out for Delivery", value: s.outForDelivery ?? 0, icon: Truck, color: "text-yellow-600" },
-    { label: "Delayed", value: s.delayedDeliveries ?? 0, icon: AlertTriangle, color: "text-red-600" },
-    { label: "Awaiting Approval", value: s.awaitingAccountingApproval ?? 0, icon: ClipboardCheck, color: "text-orange-600" },
-    { label: "Approved Today", value: s.approvedToday ?? 0, icon: CheckCircle, color: "text-green-600" },
-    { label: "Ready for Invoicing", value: s.readyForInvoicing ?? 0, icon: Receipt, color: "text-emerald-600" },
-    { label: "Open Deviations", value: s.unresolvedDeviations ?? 0, icon: AlertCircle, color: "text-red-700" },
+    { labelKey: "totalCustomers"  as const, value: s.totalCustomers ?? 0,               icon: Users,         color: "text-blue-600" },
+    { labelKey: "aCustomers"      as const, value: s.aCustomers ?? 0,                   icon: Star,          color: "text-amber-600" },
+    { labelKey: "openOrders"      as const, value: s.openOrders ?? 0,                   icon: ShoppingCart,  color: "text-amber-600" },
+    { labelKey: "incomplete"      as const, value: s.incompleteOrders ?? 0,             icon: FileWarning,   color: "text-orange-600" },
+    { labelKey: "planned"         as const, value: s.plannedDeliveries ?? 0,            icon: Truck,         color: "text-purple-600" },
+    { labelKey: "outForDelivery"  as const, value: s.outForDelivery ?? 0,               icon: Truck,         color: "text-yellow-600" },
+    { labelKey: "delayed"         as const, value: s.delayedDeliveries ?? 0,            icon: AlertTriangle, color: "text-red-600" },
+    { labelKey: "awaitingApproval" as const, value: s.awaitingAccountingApproval ?? 0, icon: ClipboardCheck, color: "text-orange-600" },
+    { labelKey: "approvedToday"   as const, value: s.approvedToday ?? 0,               icon: CheckCircle,   color: "text-green-600" },
+    { labelKey: "readyInvoicing"  as const, value: s.readyForInvoicing ?? 0,           icon: Receipt,       color: "text-emerald-600" },
+    { labelKey: "openDeviations"  as const, value: s.unresolvedDeviations ?? 0,        icon: AlertCircle,   color: "text-red-700" },
   ];
 
   const sectionCount = (p.aCustomerDeliveries?.length ?? 0)
@@ -107,18 +120,51 @@ export default function DashboardPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">Operational overview</p>
+        <h1 className="text-2xl font-bold text-foreground">{t("dashboard", lang)}</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">{t("operationalOverview", lang)}</p>
       </div>
 
+      {/* Channel tabs */}
+      <div className="flex gap-1 border-b pb-0">
+        {TAB_META.map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveTab(tab.value)}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+              activeTab === tab.value
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/40"
+            )}
+          >
+            {tab.icon}
+            {t(tab.labelKey, lang)}
+          </button>
+        ))}
+      </div>
+
+      {/* Channel-specific note for cosmetics (no data yet until Stage 3) */}
+      {activeTab === "cosmetics" && (
+        <div className="rounded-lg border border-dashed border-purple-300 bg-purple-50/40 px-4 py-3 text-sm text-purple-800">
+          <span className="font-semibold flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4" />
+            Cosmetics channel
+          </span>
+          <span className="text-xs text-purple-700 block mt-1">
+            Cosmetics catalog and demo data will be seeded in Stage 3. Metrics below reflect all-channel totals for now.
+          </span>
+        </div>
+      )}
+
+      {/* Stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">
         {stats.map(stat => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.label} className="shadow-sm">
+            <Card key={stat.labelKey} className="shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-2">
-                  <p className="text-xs text-muted-foreground leading-tight">{stat.label}</p>
+                  <p className="text-xs text-muted-foreground leading-tight">{t(stat.labelKey, lang)}</p>
                   <Icon className={`h-4 w-4 shrink-0 ${stat.color}`} />
                 </div>
                 <p className="text-2xl font-bold">{stat.value}</p>
@@ -128,17 +174,17 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Stock Overview — admin / operations / sales only */}
+      {/* Stock Overview */}
       {showStockOverview && stockData && (
         <Card className={stockAlerts.length > 0 ? "border-amber-300" : ""}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Warehouse className="h-4 w-4 text-muted-foreground" />
-              Stock Overview
+              {t("stockOverview", lang)}
               {stockAlerts.length > 0 && (
                 <span className="text-xs text-muted-foreground font-normal">
-                  ({stockAlerts.filter(a => a.status === "out_of_stock").length} out of stock,{" "}
-                  {stockAlerts.filter(a => a.status === "low_stock").length} low)
+                  ({stockAlerts.filter(a => a.status === "out_of_stock").length} {t("outOfStock", lang)},{" "}
+                  {stockAlerts.filter(a => a.status === "low_stock").length} {t("lowStock", lang)})
                 </span>
               )}
             </CardTitle>
@@ -147,7 +193,7 @@ export default function DashboardPage() {
             {stockAlerts.length === 0 ? (
               <p className="text-sm text-green-700 flex items-center gap-1.5">
                 <CheckCircle className="h-4 w-4" />
-                All pools healthy — no low-stock or out-of-stock items.
+                {t("allPoolsHealthy", lang)}
               </p>
             ) : (
               <div className="divide-y">
@@ -162,13 +208,13 @@ export default function DashboardPage() {
                         <p className="text-sm font-medium leading-tight">{a.productName}</p>
                         <p className="text-xs text-muted-foreground font-mono mt-0.5">{a.sku}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Pool: <span className="font-medium">{a.poolLabel}</span>
+                          {t("pool", lang)}: <span className="font-medium">{a.poolLabel}</span>
                           <span className="mx-1.5 opacity-40">·</span>
-                          Allocated: <span className="font-medium">{a.allocated}</span>
+                          {t("allocated", lang)}: <span className="font-medium">{a.allocated}</span>
                           <span className="mx-1.5 opacity-40">·</span>
-                          Reserved: <span className="font-medium">{a.reserved}</span>
+                          {t("reserved", lang)}: <span className="font-medium">{a.reserved}</span>
                           <span className="mx-1.5 opacity-40">·</span>
-                          Available: <span className="font-medium">{a.available}</span>
+                          {t("available", lang)}: <span className="font-medium">{a.available}</span>
                           {a.allocated > 0 && (
                             <span className="text-muted-foreground/60"> ({pct}%)</span>
                           )}
@@ -191,13 +237,13 @@ export default function DashboardPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Star className="h-4 w-4 text-amber-600" />
-            Today's Priorities
-            <span className="text-xs text-muted-foreground font-normal">({sectionCount} items)</span>
+            {t("todaysPriorities", lang)}
+            <span className="text-xs text-muted-foreground font-normal">({sectionCount} {t("items", lang)})</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {sectionCount === 0 && (
-            <p className="text-sm text-muted-foreground py-2">All caught up — no priority items right now.</p>
+            <p className="text-sm text-muted-foreground py-2">{t("noPriorities", lang)}</p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <PriorityList title="A Customers awaiting delivery" empty="No A customers waiting" items={p.aCustomerDeliveries ?? []} render={(it: any) => (
@@ -324,7 +370,7 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Activity</CardTitle>
+              <CardTitle className="text-sm font-semibold">{t("activity", lang)}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y max-h-64 overflow-y-auto">
