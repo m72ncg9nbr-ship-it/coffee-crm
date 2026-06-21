@@ -282,7 +282,7 @@ export default function ActionCenterPage() {
       </div>
 
       {/* ── Filters ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-3 items-center">
+      <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap gap-2 items-center">
         {/* Type */}
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-52">

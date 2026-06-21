@@ -57,7 +57,7 @@ function ColHeader({ label, col, sortKey, sortDir, onSort, className }: {
   const active = sortKey === col;
   return (
     <th
-      className={`px-4 py-3 text-left text-xs font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground whitespace-nowrap ${className ?? ""}`}
+      className={`px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide cursor-pointer select-none hover:text-foreground whitespace-nowrap ${className ?? ""}`}
       onClick={() => onSort(col)}
     >
       <span className="flex items-center gap-1">
@@ -293,7 +293,7 @@ export default function OrdersPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b bg-muted/30">
+              <tr className="border-b bg-muted/40">
                 <ColHeader label="#"             col="orderNumber"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                 <ColHeader label="Customer"      col="customer"     sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                 <ColHeader label="Channel"       col="channel"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
@@ -301,8 +301,8 @@ export default function OrdersPage() {
                 <ColHeader label="Urgency"       col="urgency"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                 <ColHeader label="Total"         col="total"        sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                 <ColHeader label="Status"        col="status"       sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Payment</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Payment</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">

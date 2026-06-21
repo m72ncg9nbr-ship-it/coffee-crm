@@ -107,17 +107,17 @@ export default function DashboardPage() {
   const p: any = priorities ?? {};
 
   const stats = [
-    { labelKey: "totalCustomers"  as const, value: s.totalCustomers ?? 0,               icon: Users,         color: "text-blue-600" },
-    { labelKey: "aCustomers"      as const, value: s.aCustomers ?? 0,                   icon: Star,          color: "text-amber-600" },
-    { labelKey: "openOrders"      as const, value: s.openOrders ?? 0,                   icon: ShoppingCart,  color: "text-amber-600" },
-    { labelKey: "incomplete"      as const, value: s.incompleteOrders ?? 0,             icon: FileWarning,   color: "text-orange-600" },
-    { labelKey: "planned"         as const, value: s.plannedDeliveries ?? 0,            icon: Truck,         color: "text-purple-600" },
-    { labelKey: "outForDelivery"  as const, value: s.outForDelivery ?? 0,               icon: Truck,         color: "text-yellow-600" },
-    { labelKey: "delayed"         as const, value: s.delayedDeliveries ?? 0,            icon: AlertTriangle, color: "text-red-600" },
-    { labelKey: "awaitingApproval" as const, value: s.awaitingAccountingApproval ?? 0, icon: ClipboardCheck, color: "text-orange-600" },
-    { labelKey: "approvedToday"   as const, value: s.approvedToday ?? 0,               icon: CheckCircle,   color: "text-green-600" },
-    { labelKey: "readyInvoicing"  as const, value: s.readyForInvoicing ?? 0,           icon: Receipt,       color: "text-emerald-600" },
-    { labelKey: "openDeviations"  as const, value: s.unresolvedDeviations ?? 0,        icon: AlertCircle,   color: "text-red-700" },
+    { labelKey: "totalCustomers"  as const, value: s.totalCustomers ?? 0,               icon: Users,         color: "text-blue-600",    accent: "border-l-blue-300" },
+    { labelKey: "aCustomers"      as const, value: s.aCustomers ?? 0,                   icon: Star,          color: "text-amber-600",   accent: "border-l-amber-300" },
+    { labelKey: "openOrders"      as const, value: s.openOrders ?? 0,                   icon: ShoppingCart,  color: "text-amber-600",   accent: "border-l-amber-300" },
+    { labelKey: "incomplete"      as const, value: s.incompleteOrders ?? 0,             icon: FileWarning,   color: "text-orange-600",  accent: "border-l-orange-300" },
+    { labelKey: "planned"         as const, value: s.plannedDeliveries ?? 0,            icon: Truck,         color: "text-purple-600",  accent: "border-l-purple-300" },
+    { labelKey: "outForDelivery"  as const, value: s.outForDelivery ?? 0,               icon: Truck,         color: "text-yellow-600",  accent: "border-l-yellow-300" },
+    { labelKey: "delayed"         as const, value: s.delayedDeliveries ?? 0,            icon: AlertTriangle, color: "text-red-600",     accent: "border-l-red-400" },
+    { labelKey: "awaitingApproval" as const, value: s.awaitingAccountingApproval ?? 0, icon: ClipboardCheck, color: "text-orange-600", accent: "border-l-orange-300" },
+    { labelKey: "approvedToday"   as const, value: s.approvedToday ?? 0,               icon: CheckCircle,   color: "text-green-600",   accent: "border-l-green-300" },
+    { labelKey: "readyInvoicing"  as const, value: s.readyForInvoicing ?? 0,           icon: Receipt,       color: "text-emerald-600", accent: "border-l-emerald-300" },
+    { labelKey: "openDeviations"  as const, value: s.unresolvedDeviations ?? 0,        icon: AlertCircle,   color: "text-red-700",     accent: "border-l-red-500" },
   ];
 
   const sectionCount = (p.aCustomerDeliveries?.length ?? 0)
@@ -150,16 +150,16 @@ export default function DashboardPage() {
       </div>
 
       {/* Channel tabs */}
-      <div className="flex gap-1 border-b pb-0">
+      <div className="inline-flex items-center gap-0.5 bg-muted/50 rounded-lg p-1 border">
         {TAB_META.map(tab => (
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
             className={cn(
-              "flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+              "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
               activeTab === tab.value
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/40"
+                ? "bg-background shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             {tab.icon}
@@ -186,7 +186,7 @@ export default function DashboardPage() {
         {stats.map(stat => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.labelKey} className="shadow-sm">
+            <Card key={stat.labelKey} className={`shadow-sm border-l-4 ${stat.accent}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-2">
                   <p className="text-xs text-muted-foreground leading-tight">{t(stat.labelKey, lang)}</p>

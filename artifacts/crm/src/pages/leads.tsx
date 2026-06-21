@@ -37,6 +37,8 @@ import {
   normaliseChannel,
 } from "@/lib/customer-options";
 import { useChannel } from "@/lib/channel-context";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 
 const IMPORTANCE_OPTIONS = [
   { value: "normal",       label: "Normal",        className: "bg-gray-100 text-gray-700 border-gray-200" },
@@ -79,6 +81,7 @@ export default function LeadsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { channel } = useChannel();
+  const { lang } = useLang();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     companyName: "", contactPerson: "", phone: "", email: "",
@@ -246,7 +249,7 @@ export default function LeadsPage() {
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Leads</h1>
+          <h1 className="text-2xl font-bold">{t("leads", lang)}</h1>
           <p className="text-muted-foreground text-sm">{filtered.length}{hasFilters ? ` of ${(leads ?? []).length}` : ""} lead intake records</p>
         </div>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>

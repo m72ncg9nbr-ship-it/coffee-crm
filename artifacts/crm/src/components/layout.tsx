@@ -82,7 +82,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="min-w-0">
             <div className="font-bold text-sidebar-foreground text-xs leading-tight truncate">NS Global</div>
-            <div className="text-[10px] text-muted-foreground leading-tight truncate">Operations Hub</div>
+            <div className="text-[10px] text-sidebar-foreground/50 leading-tight truncate">Operations Hub</div>
           </div>
         </div>
 
@@ -117,10 +117,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             return (
               <Link key={item.href} href={item.href}>
                 <div className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium cursor-pointer transition-colors mb-0.5",
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium cursor-pointer transition-all mb-0.5 border-l-2",
                   active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    ? "border-l-primary bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                    : "border-l-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 )}>
                   <Icon className="h-4 w-4 shrink-0" />
                   {t(item.labelKey, lang)}
@@ -131,18 +131,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Footer: user + language toggle + sign out */}
-        <div className="p-3 border-t border-sidebar-border space-y-1">
-          {/* Language toggle */}
-          <div className="flex items-center gap-2 px-3 py-1.5">
-            <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <div className="flex gap-1">
+        <div className="border-t border-sidebar-border">
+          {/* User info */}
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0">
+              {user?.fullName?.charAt(0) ?? "?"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-sidebar-foreground truncate">{user?.fullName}</div>
+              <div className="text-xs text-sidebar-foreground/60 capitalize">{user?.role?.replace(/_/g, " ")}</div>
+            </div>
+          </div>
+
+          <div className="px-3 pb-2 flex items-center justify-between gap-2">
+            {/* Language toggle */}
+            <div className="flex items-center gap-1">
+              <Globe className="h-3.5 w-3.5 text-sidebar-foreground/50 shrink-0 mr-0.5" />
               <button
                 onClick={() => setLang("en")}
                 className={cn(
                   "text-xs px-2 py-0.5 rounded transition-colors font-medium",
                   lang === "en"
                     ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground"
                 )}
               >
                 EN
@@ -153,35 +164,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   "text-xs px-2 py-0.5 rounded transition-colors font-medium",
                   lang === "tr"
                     ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground"
                 )}
               >
                 TR
               </button>
             </div>
-          </div>
 
-          {/* User info */}
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0">
-              {user?.fullName?.charAt(0) ?? "?"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-sidebar-foreground truncate">{user?.fullName}</div>
-              <div className="text-xs text-muted-foreground capitalize">{user?.role?.replace(/_/g, " ")}</div>
-            </div>
+            {/* Sign out */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+              onClick={() => logout.mutate(undefined as any)}
+            >
+              <LogOut className="h-3.5 w-3.5 mr-1.5" />
+              {t("signOut", lang)}
+            </Button>
           </div>
-
-          {/* Sign out */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={() => logout.mutate(undefined as any)}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            {t("signOut", lang)}
-          </Button>
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto">

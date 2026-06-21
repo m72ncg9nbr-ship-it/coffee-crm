@@ -23,6 +23,8 @@ import {
   type PriorityClass,
 } from "@/lib/customer-options";
 import { useChannel } from "@/lib/channel-context";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 
 type CreateForm = {
   contactPerson: string;
@@ -58,6 +60,7 @@ export default function CustomersPage() {
   const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE_FORM);
 
   const { channel } = useChannel();
+  const { lang } = useLang();
 
   const params: Record<string, string> = {};
   if (search) params.search = search;
@@ -145,7 +148,7 @@ export default function CustomersPage() {
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Customers</h1>
+          <h1 className="text-2xl font-bold">{t("customers", lang)}</h1>
           <p className="text-muted-foreground text-sm">
             {displayCustomers.length}{channel !== "all" ? ` of ${customers?.length ?? 0}` : ""} records
           </p>
@@ -371,14 +374,14 @@ export default function CustomersPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b bg-muted/30">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Priority</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Company</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Contact</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Channel</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Segment</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Payment</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Status</th>
+              <tr className="border-b bg-muted/40">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Priority</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Company</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Channel</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Segment</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Payment</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y">
