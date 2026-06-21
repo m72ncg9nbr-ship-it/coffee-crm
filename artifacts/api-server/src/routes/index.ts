@@ -13,6 +13,7 @@ import dashboardRouter from "./dashboard";
 import invoicingRouter from "./invoicing";
 import inventoryRouter from "./inventory";
 import reportsRouter from "./reports";
+import actionCenterRouter from "./action-center";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(dashboardRouter);
 router.use(invoicingRouter);
 router.use(inventoryRouter);
 router.use(reportsRouter);
+router.use(actionCenterRouter);
 
 export default router;

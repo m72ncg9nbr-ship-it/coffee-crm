@@ -23,6 +23,7 @@ import {
   BarChart2,
   Coffee,
   Sparkles,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -40,17 +41,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { channel, setChannel } = useChannel();
 
   const navItems = [
-    { href: "/dashboard",  labelKey: "dashboard"       as const, icon: LayoutDashboard, roles: [...SALES_CAPABLE, "accounting"] },
-    { href: "/customers",  labelKey: "customers"        as const, icon: Users,           roles: SALES_CAPABLE },
-    { href: "/leads",      labelKey: "leads"            as const, icon: UserPlus,        roles: SALES_CAPABLE },
-    { href: "/products",   labelKey: "products"         as const, icon: Package,         roles: SALES_CAPABLE },
-    { href: "/inventory",  labelKey: "inventory"        as const, icon: Warehouse,       roles: CHANNEL_OPS },
-    { href: "/orders",     labelKey: "orders"           as const, icon: ShoppingCart,    roles: SALES_CAPABLE },
-    { href: "/deliveries", labelKey: "deliveries"       as const, icon: Truck,           roles: CHANNEL_OPS },
-    { href: "/accounting", labelKey: "approvals"        as const, icon: ClipboardCheck,  roles: FULL_ACCOUNTING },
-    { href: "/invoicing",  labelKey: "readyForInvoicing" as const, icon: Receipt,        roles: FULL_ACCOUNTING },
-    { href: "/activity",   labelKey: "activity"         as const, icon: Activity,        roles: CHANNEL_OPS },
-    { href: "/reports",    labelKey: "reports"          as const, icon: BarChart2,       roles: ["owner_admin", "general_manager", "accounting", "channel_manager", "sales"] },
+    { href: "/action-center", labelKey: "actionCenter"     as const, icon: Zap,            roles: [...SALES_CAPABLE, "accounting"] },
+    { href: "/dashboard",     labelKey: "dashboard"        as const, icon: LayoutDashboard, roles: [...SALES_CAPABLE, "accounting"] },
+    { href: "/customers",     labelKey: "customers"        as const, icon: Users,           roles: SALES_CAPABLE },
+    { href: "/leads",         labelKey: "leads"            as const, icon: UserPlus,        roles: SALES_CAPABLE },
+    { href: "/products",      labelKey: "products"         as const, icon: Package,         roles: SALES_CAPABLE },
+    { href: "/inventory",     labelKey: "inventory"        as const, icon: Warehouse,       roles: CHANNEL_OPS },
+    { href: "/orders",        labelKey: "orders"           as const, icon: ShoppingCart,    roles: SALES_CAPABLE },
+    { href: "/deliveries",    labelKey: "deliveries"       as const, icon: Truck,           roles: CHANNEL_OPS },
+    { href: "/accounting",    labelKey: "approvals"        as const, icon: ClipboardCheck,  roles: FULL_ACCOUNTING },
+    { href: "/invoicing",     labelKey: "readyForInvoicing" as const, icon: Receipt,        roles: FULL_ACCOUNTING },
+    { href: "/activity",      labelKey: "activity"         as const, icon: Activity,        roles: CHANNEL_OPS },
+    { href: "/reports",       labelKey: "reports"          as const, icon: BarChart2,       roles: ["owner_admin", "general_manager", "accounting", "channel_manager", "sales"] },
   ];
 
   const logout = useLogout({

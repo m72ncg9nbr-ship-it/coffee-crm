@@ -22,6 +22,7 @@ import InvoicingPage from "@/pages/invoicing";
 import ActivityPage from "@/pages/activity";
 import ReportsPage from "@/pages/reports";
 import DriverPage from "@/pages/driver";
+import ActionCenterPage from "@/pages/action-center";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -72,6 +73,12 @@ function AppRoutes() {
       <Route path="/driver">
         <ProtectedRoute roles={["driver"]}>
           <DriverPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/action-center">
+        <ProtectedRoute roles={[...SALES_CAPABLE, "accounting"]}>
+          <Layout><ActionCenterPage /></Layout>
         </ProtectedRoute>
       </Route>
 
