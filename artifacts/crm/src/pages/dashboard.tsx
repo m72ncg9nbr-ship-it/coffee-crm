@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import {
   useGetDashboardSummary,
@@ -120,6 +120,20 @@ export default function DashboardPage() {
     + (p.awaitingApproval?.length ?? 0)
     + (p.unresolvedDeviations?.length ?? 0)
     + (p.overdueLeadFollowUps?.length ?? 0);
+
+  const filteredRecentDeliveries = useMemo(() => {
+    const list = (recentDeliveries ?? []) as any[];
+    if (activeTab === "general") return list;
+    if (activeTab === "cosmetics") return list.filter((x: any) => x.businessChannel === "cosmetics");
+    return list.filter((x: any) => x.businessChannel !== "cosmetics");
+  }, [recentDeliveries, activeTab]);
+
+  const filteredDeviations = useMemo(() => {
+    const list = (deviations ?? []) as any[];
+    if (activeTab === "general") return list;
+    if (activeTab === "cosmetics") return list.filter((x: any) => x.businessChannel === "cosmetics");
+    return list.filter((x: any) => x.businessChannel !== "cosmetics");
+  }, [deviations, activeTab]);
 
   return (
     <div className="p-6 space-y-6">
@@ -333,7 +347,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
-              {(recentDeliveries ?? []).slice(0, 8).map((d: any) => (
+              {filteredRecentDeliveries.slice(0, 8).map((d: any) => (
                 <div key={d.id} className="flex items-center gap-3 px-4 py-3">
                   <PriorityBadge priority={d.customerPriority} />
                   <div className="flex-1 min-w-0">
@@ -344,7 +358,7 @@ export default function DashboardPage() {
                   <StatusBadge status={d.status} />
                 </div>
               ))}
-              {(!recentDeliveries || recentDeliveries.length === 0) && (
+              {filteredRecentDeliveries.length === 0 && (
                 <p className="text-sm text-muted-foreground px-4 py-8 text-center">No recent deliveries</p>
               )}
             </div>
@@ -358,14 +372,14 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
-                {(deviations ?? []).slice(0, 5).map((d: any) => (
+                {filteredDeviations.slice(0, 5).map((d: any) => (
                   <div key={d.id} className="px-4 py-3">
                     <p className="text-sm font-medium truncate">{d.customerName}</p>
                     <p className="text-xs text-orange-700 mt-0.5 capitalize">{d.deviationType?.replace(/_/g, " ")}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{d.deviationNote}</p>
                   </div>
                 ))}
-                {(!deviations || deviations.length === 0) && (
+                {filteredDeviations.length === 0 && (
                   <p className="text-sm text-muted-foreground px-4 py-6 text-center">No deviations</p>
                 )}
               </div>
