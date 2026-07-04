@@ -29,6 +29,7 @@ import {
   Globe,
   Coffee,
   Sparkles,
+  ShieldAlert,
 } from "lucide-react";
 
 // ── Type metadata ─────────────────────────────────────────────────────────────
@@ -40,7 +41,8 @@ type ActionType =
   | "low_stock"
   | "high_potential_follow_up"
   | "delayed_delivery"
-  | "stuck_order";
+  | "stuck_order"
+  | "payment_rule_blocked";
 
 const TYPE_ICON: Record<ActionType, React.ElementType> = {
   overdue_payment:        CreditCard,
@@ -50,6 +52,7 @@ const TYPE_ICON: Record<ActionType, React.ElementType> = {
   high_potential_follow_up: UserPlus,
   delayed_delivery:       Truck,
   stuck_order:            ShoppingCart,
+  payment_rule_blocked:   ShieldAlert,
 };
 
 const TYPE_COLORS: Record<ActionType, { bg: string; icon: string; badge: string }> = {
@@ -60,6 +63,7 @@ const TYPE_COLORS: Record<ActionType, { bg: string; icon: string; badge: string 
   high_potential_follow_up: { bg: "bg-blue-50",   icon: "text-blue-500",   badge: "bg-blue-100 text-blue-700 border-blue-200" },
   delayed_delivery:         { bg: "bg-rose-50",   icon: "text-rose-500",   badge: "bg-rose-100 text-rose-700 border-rose-200" },
   stuck_order:              { bg: "bg-amber-50",  icon: "text-amber-600",  badge: "bg-amber-100 text-amber-700 border-amber-200" },
+  payment_rule_blocked:     { bg: "bg-red-50",    icon: "text-red-600",    badge: "bg-red-100 text-red-800 border-red-300" },
 };
 
 // ── Priority metadata ─────────────────────────────────────────────────────────
@@ -81,12 +85,13 @@ function priorityLabelKey(p: string): "critical" | "high" | "normal" | "low" {
 function typeLabelKey(type: string) {
   const MAP: Record<string, Parameters<typeof t>[0]> = {
     overdue_payment:          "overduePayment",
-    pending_approval:         "awaitingApproval",
+    pending_approval:         "pendingApproval",
     unresolved_issue:         "unresolvedIssue",
     low_stock:                "lowStockAlert",
     high_potential_follow_up: "highPotentialFollowUp",
     delayed_delivery:         "delayedDelivery",
     stuck_order:              "stuckOrder",
+    payment_rule_blocked:     "paymentRuleBlocked",
   };
   return MAP[type] ?? "type";
 }
@@ -297,6 +302,7 @@ export default function ActionCenterPage() {
             <SelectItem value="high_potential_follow_up">{t("highPotentialFollowUp", lang)}</SelectItem>
             <SelectItem value="delayed_delivery">{t("delayedDelivery", lang)}</SelectItem>
             <SelectItem value="stuck_order">{t("stuckOrder", lang)}</SelectItem>
+            <SelectItem value="payment_rule_blocked">{t("paymentRuleBlocked", lang)}</SelectItem>
           </SelectContent>
         </Select>
 

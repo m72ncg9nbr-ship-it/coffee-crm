@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db, ordersTable, orderItemsTable, customersTable, customerAddressesTable, deliveriesTable, deliveryDocumentsTable, accountingApprovalsTable, inventoryAllocationsTable, usersTable, productsTable } from "@workspace/db";
 import { eq, inArray, and, sql, desc } from "drizzle-orm";
-import { requireAuth, requireRole, SALES_CAPABLE, FULL_ACCESS_ACCOUNTING } from "../middlewares/auth";
+import { requireAuth, requireRole, SALES_CAPABLE, FULL_ACCESS_ACCOUNTING, FULL_ACCESS } from "../middlewares/auth";
+import { evaluateCustomerOrderPolicy } from "../lib/orderPolicy";
 import { logActivity } from "../lib/activity";
 import { allocateStockForOrder, releaseStockForOrder } from "../lib/inventory";
 import { parsePaymentTermsDays, addDaysToDateStr } from "../lib/paymentTerms";
@@ -182,7 +183,39 @@ router.post("/orders", requireAuth as any, async (req, res): Promise<void> => {
 
   // V2.5: load customer discount + products cost prices for snapshots
   const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, parsed.data.customerId));
-  const discountPct = customer?.discountLevel != null ? parseFloat(customer.discountLevel) : 0;
+  if (!customer) {
+    res.status(404).json({ error: "Customer not found" });
+    return;
+  }
+
+  // Payment/order blocking policy check
+  const policy = await evaluateCustomerOrderPolicy(customer);
+  if (policy.status === "blocked") {
+    const overrideReason = ((req.body as any).overrideReason ?? "").trim();
+    const isAdminGm = (FULL_ACCESS as readonly string[]).includes(user.role);
+    if (policy.canOverride && isAdminGm && overrideReason) {
+      await logActivity({
+        actionType: "order_policy_overridden",
+        entityType: "customer",
+        entityId: customer.id,
+        description: `Order policy override for "${customer.companyName}": ${overrideReason}`,
+        performedBy: user.id,
+        metadata: { reasonCode: policy.reasonCode, overdueAmount: policy.overdueAmount, overrideReason },
+      });
+    } else {
+      res.status(422).json({
+        error: policy.messageEn,
+        policyStatus: "blocked",
+        reasonCode: policy.reasonCode,
+        overdueAmount: policy.overdueAmount,
+        canOverride: policy.canOverride,
+        requiresOverrideReason: policy.canOverride && isAdminGm,
+      });
+      return;
+    }
+  }
+
+  const discountPct = customer.discountLevel != null ? parseFloat(customer.discountLevel) : 0;
 
   const productIds = [...new Set(parsed.data.items.map(i => i.productId))];
   const products = productIds.length > 0
@@ -263,7 +296,7 @@ router.post("/orders", requireAuth as any, async (req, res): Promise<void> => {
     performedBy: user.id,
   });
 
-  res.status(201).json({ ...serializeOrder(finalOrder, customer?.companyName, user.fullName), stockWarnings });
+  res.status(201).json({ ...serializeOrder(finalOrder, customer.companyName, user.fullName), stockWarnings });
 });
 
 router.post("/orders/:id/send-to-planning", requireAuth as any, async (req, res): Promise<void> => {

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   useListCustomers,
   useGetCustomer,
@@ -8,6 +9,8 @@ import {
   useCreateOrder,
   useListInventoryStock,
 } from "@workspace/api-client-react";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 import { useChannel } from "@/lib/channel-context";
 import {
   calculateInventoryStatus,
@@ -41,6 +44,7 @@ interface Item {
 
 export default function OrderNewPage() {
   const [, navigate] = useLocation();
+  const { lang } = useLang();
   const { channel: globalChannel } = useChannel();
   const { data: customers } = useListCustomers();
   const { data: products } = useListProducts();
@@ -68,6 +72,7 @@ export default function OrderNewPage() {
   const [notes, setNotes] = useState("");
   const [sampleReason, setSampleReason] = useState("");
   const [sampleEventName, setSampleEventName] = useState("");
+  const [overrideReason, setOverrideReason] = useState("");
 
   const isSampleOrder = orderSource === "sample" || orderSource === "free_issue";
   const [items, setItems] = useState<Item[]>([]);
@@ -77,6 +82,12 @@ export default function OrderNewPage() {
   const cid = customerId ? Number(customerId) : 0;
   const { data: customer } = useGetCustomer(cid, { query: { enabled: !!cid } as any });
   const { data: addresses } = useListCustomerAddresses(cid, { query: { enabled: !!cid } as any });
+  const { data: orderPolicy } = useQuery({
+    queryKey: ["customer-order-policy", cid],
+    queryFn: () => fetch(`/api/customers/${cid}/order-policy`, { credentials: "include" }).then(r => r.json()),
+    enabled: !!cid,
+  });
+  const policy = orderPolicy as { status: string; reasonCode: string; overdueAmount: number; overdueThreshold: number | null; canOverride: boolean; messageEn: string; messageTr: string } | undefined;
   const c = customer as any;
   const deliveryAddresses = (addresses ?? []).filter((a: any) => a.isDeliveryAddress);
   const defaultAddr = deliveryAddresses.find((a: any) => a.isDefault) ?? deliveryAddresses[0];
@@ -171,6 +182,10 @@ export default function OrderNewPage() {
       toast({ title: "Select a customer", variant: "destructive" });
       return;
     }
+    if (policy?.status === "blocked" && !overrideReason.trim()) {
+      toast({ title: t("overrideRequiresReason", lang), variant: "destructive" });
+      return;
+    }
     create.mutate({
       data: {
         customerId: cid,
@@ -181,6 +196,7 @@ export default function OrderNewPage() {
         notes: notes || undefined,
         sampleReason: isSampleOrder && sampleReason ? sampleReason : undefined,
         sampleEventName: isSampleOrder && sampleEventName ? sampleEventName : undefined,
+        overrideReason: policy?.status === "blocked" && overrideReason.trim() ? overrideReason.trim() : undefined,
         items: items.map(i => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -253,6 +269,58 @@ export default function OrderNewPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Payment policy warning banner */}
+          {cid > 0 && policy?.status === "warning" && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 flex gap-3 items-start">
+              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">{t("policyWarning", lang)}</p>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  {lang === "tr" ? policy.messageTr : policy.messageEn}
+                </p>
+                {policy.overdueAmount > 0 && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    {t("overdueAmount", lang)}: <span className="font-semibold">{policy.overdueAmount.toFixed(2)}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Payment policy blocked banner + override */}
+          {cid > 0 && policy?.status === "blocked" && (
+            <div className="rounded-md border border-red-300 bg-red-50 p-3 space-y-3">
+              <div className="flex gap-3 items-start">
+                <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-800">{t("policyBlocked", lang)}</p>
+                  <p className="text-sm text-red-700 mt-0.5">
+                    {lang === "tr" ? policy.messageTr : policy.messageEn}
+                  </p>
+                  {policy.overdueAmount > 0 && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {t("overdueAmount", lang)}: <span className="font-semibold">{policy.overdueAmount.toFixed(2)}</span>
+                      {policy.overdueThreshold != null && (
+                        <> · Threshold: <span className="font-semibold">{policy.overdueThreshold.toFixed(2)}</span></>
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {policy.canOverride && (
+                <div className="space-y-1.5 border-t border-red-200 pt-3">
+                  <Label className="text-red-800 text-xs font-semibold">{t("overrideReason", lang)} *</Label>
+                  <Input
+                    className="border-red-300 focus:ring-red-400 bg-white"
+                    placeholder="Required — explain why this order should proceed"
+                    value={overrideReason}
+                    onChange={e => setOverrideReason(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-sm">Order Items</CardTitle></CardHeader>
@@ -463,8 +531,12 @@ export default function OrderNewPage() {
                   ))}
                 </div>
               )}
-              <Button type="submit" disabled={!cid || create.isPending} className="w-full mt-3">
-                {create.isPending ? "Creating..." : "Create Order"}
+              <Button
+                type="submit"
+                disabled={!cid || create.isPending || (policy?.status === "blocked" && !policy.canOverride) || (policy?.status === "blocked" && policy.canOverride && !overrideReason.trim())}
+                className="w-full mt-3"
+              >
+                {create.isPending ? "Creating..." : policy?.status === "blocked" ? t("proceedWithOverride", lang) : "Create Order"}
               </Button>
             </CardContent>
           </Card>

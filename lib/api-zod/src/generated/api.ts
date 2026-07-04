@@ -107,6 +107,11 @@ export const CreateCustomerBody = zod.object({
   notes: zod.string().nullish(),
   active: zod.boolean().optional(),
   businessChannel: zod.string(),
+  paymentOrderRuleMode: zod.enum(["no_block", "warning_only", "block_any_overdue", "block_overdue_threshold"]).optional(),
+  overdueThresholdAmount: zod.number().nullish(),
+  gracePeriodDays: zod.number().int().min(0).optional(),
+  allowAdminGmOverride: zod.boolean().optional(),
+  paymentOrderRuleNote: zod.string().nullish(),
 });
 
 /**
@@ -176,6 +181,11 @@ export const UpdateCustomerBody = zod.object({
   notes: zod.string().nullish(),
   active: zod.boolean().optional(),
   businessChannel: zod.string().optional(),
+  paymentOrderRuleMode: zod.enum(["no_block", "warning_only", "block_any_overdue", "block_overdue_threshold"]).optional(),
+  overdueThresholdAmount: zod.number().nullish(),
+  gracePeriodDays: zod.number().int().min(0).optional(),
+  allowAdminGmOverride: zod.boolean().optional(),
+  paymentOrderRuleNote: zod.string().nullish(),
 });
 
 export const UpdateCustomerResponse = zod.object({

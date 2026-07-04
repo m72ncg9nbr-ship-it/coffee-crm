@@ -9,7 +9,7 @@ import {
   customersTable,
   usersTable,
 } from "@workspace/db";
-import { inArray } from "drizzle-orm";
+import { inArray, ne } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -256,6 +256,65 @@ router.get("/action-center", requireAuth as any, async (req, res): Promise<void>
       link: `/orders/${o.id}`,
       createdAt: o.createdAt.toISOString(),
     });
+  }
+
+  // ── 8. Payment Rule Blocked Customers ─────────────────────────────────────
+  try {
+    // Build overdue amount per customer from already-loaded orders
+    const overdueByCustomer = new Map<number, number>();
+    for (const o of applyChannel(allOrders)) {
+      const o2 = o as any;
+      if (o2.paymentStatus === "paid") continue;
+      if (!o2.invoiceDate || !o2.dueDate) continue;
+      if (o2.dueDate >= today) continue;
+      overdueByCustomer.set(o.customerId, (overdueByCustomer.get(o.customerId) ?? 0) + parseFloat(o.totalAmount));
+    }
+
+    if (overdueByCustomer.size > 0) {
+      const overdueCustomerIds = [...overdueByCustomer.keys()];
+      const customersWithRules = await db
+        .select({
+          id: customersTable.id,
+          companyName: customersTable.companyName,
+          businessChannel: customersTable.businessChannel,
+          paymentOrderRuleMode: customersTable.paymentOrderRuleMode,
+          overdueThresholdAmount: customersTable.overdueThresholdAmount,
+        })
+        .from(customersTable)
+        .where(inArray(customersTable.id, overdueCustomerIds));
+
+      for (const customer of customersWithRules) {
+        const mode = customer.paymentOrderRuleMode;
+        if (!mode || mode === "no_block" || mode === "warning_only") continue;
+        const overdueAmt = overdueByCustomer.get(customer.id) ?? 0;
+        const isBlocked =
+          mode === "block_any_overdue" ||
+          (mode === "block_overdue_threshold" &&
+            customer.overdueThresholdAmount != null &&
+            overdueAmt > parseFloat(customer.overdueThresholdAmount));
+        if (!isBlocked) continue;
+        const priority = overdueAmt > 5000 ? "critical" : "high";
+        items.push({
+          id: `payment_rule_blocked_${customer.id}`,
+          type: "payment_rule_blocked",
+          channel: customer.businessChannel,
+          priority,
+          title: customer.companyName,
+          reason: `Orders blocked — overdue: ${overdueAmt.toFixed(2)}`,
+          entityType: "customer",
+          entityId: customer.id,
+          entityRef: null,
+          customerName: customer.companyName,
+          ownerName: null,
+          dueDate: null,
+          ageDays: null,
+          link: `/customers/${customer.id}`,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+  } catch {
+    // Payment rule columns may not exist if migration hasn't run yet
   }
 
   // Sort: critical → high → normal → low, then by ageDays desc

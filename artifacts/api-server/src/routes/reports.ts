@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, ordersTable, orderItemsTable, customersTable, customerAddressesTable, productsTable, usersTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, customersTable, customerAddressesTable, productsTable, usersTable, leadsTable } from "@workspace/db";
 import { eq, inArray, and, gte, lte, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { ReportFilters } from "@workspace/api-zod";
@@ -562,6 +562,367 @@ router.get("/reports/regional", requireAuth as any, async (req, res): Promise<vo
     byRegion: [...regionMap.entries()]
       .map(([region, v]) => ({ region, revenue: round2(v.revenue), orders: v.orders, units: v.units }))
       .sort((a, b) => b.revenue - a.revenue),
+  });
+});
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+function addMonthsStr(dateStr: string, months: number): string {
+  const d = new Date(dateStr + "T00:00:00Z");
+  d.setUTCMonth(d.getUTCMonth() + months);
+  return d.toISOString().split("T")[0];
+}
+
+// ── GET /api/reports/growth ───────────────────────────────────────────────────
+router.get("/reports/growth", requireAuth as any, async (req, res): Promise<void> => {
+  const channel = (req.query.channel as string | undefined);
+  const yearParam = req.query.year ? Number(req.query.year) : undefined;
+  const todayStr = today();
+  const currYear = new Date().getUTCFullYear();
+  const targetYear = yearParam ?? currYear;
+
+  let orders = await db
+    .select({
+      totalAmount: ordersTable.totalAmount,
+      businessChannel: ordersTable.businessChannel,
+      createdAt: ordersTable.createdAt,
+    })
+    .from(ordersTable)
+    .where(eq(ordersTable.status, "approved"));
+
+  if (channel === "cosmetics") orders = orders.filter(o => o.businessChannel === "cosmetics");
+  else if (channel) orders = orders.filter(o => o.businessChannel !== "cosmetics");
+
+  function sumPeriod(from: string, to: string) {
+    const matching = orders.filter(o => {
+      const d = o.createdAt.toISOString().split("T")[0];
+      return d >= from && d <= to;
+    });
+    return {
+      revenue: Math.round(matching.reduce((s, o) => s + parseFloat(o.totalAmount), 0) * 100) / 100,
+      orders: matching.length,
+    };
+  }
+
+  function growthPct(curr: number, prev: number): number | null {
+    if (prev === 0) return curr > 0 ? 100 : null;
+    return Math.round(((curr - prev) / prev) * 1000) / 10;
+  }
+
+  const sixMonthFrom    = addMonthsStr(todayStr, -6);
+  const prevSixFrom     = addMonthsStr(todayStr, -12);
+  const twelveMonthFrom = addMonthsStr(todayStr, -12);
+  const prevTwelveFrom  = addMonthsStr(todayStr, -24);
+
+  const ytdFrom       = `${currYear}-01-01`;
+  const prevYtdFrom   = `${currYear - 1}-01-01`;
+  const prevYtdTo     = `${currYear - 1}-${todayStr.slice(5)}`;
+  const calFrom       = `${targetYear}-01-01`;
+  const calTo         = `${targetYear}-12-31`;
+  const prevCalFrom   = `${targetYear - 1}-01-01`;
+  const prevCalTo     = `${targetYear - 1}-12-31`;
+
+  const sixMoCurr   = sumPeriod(sixMonthFrom, todayStr);
+  const sixMoPrev   = sumPeriod(prevSixFrom, sixMonthFrom);
+  const twelveCurr  = sumPeriod(twelveMonthFrom, todayStr);
+  const twelvePrev  = sumPeriod(prevTwelveFrom, twelveMonthFrom);
+  const ytdCurr     = sumPeriod(ytdFrom, todayStr);
+  const ytdPrev     = sumPeriod(prevYtdFrom, prevYtdTo);
+  const calCurr     = sumPeriod(calFrom, calTo);
+  const calPrev     = sumPeriod(prevCalFrom, prevCalTo);
+
+  // Monthly trend for last 12 months
+  const byMonth = new Map<string, { revenue: number; orders: number }>();
+  for (const o of orders) {
+    const d = o.createdAt.toISOString().split("T")[0];
+    if (d < twelveMonthFrom) continue;
+    const month = d.substring(0, 7);
+    if (!byMonth.has(month)) byMonth.set(month, { revenue: 0, orders: 0 });
+    const e = byMonth.get(month)!;
+    e.revenue += parseFloat(o.totalAmount);
+    e.orders += 1;
+  }
+
+  res.json({
+    sixMonth:     { current: sixMoCurr,  previous: sixMoPrev,   revenueGrowth: growthPct(sixMoCurr.revenue, sixMoPrev.revenue),   ordersGrowth: growthPct(sixMoCurr.orders, sixMoPrev.orders) },
+    twelveMonth:  { current: twelveCurr, previous: twelvePrev,  revenueGrowth: growthPct(twelveCurr.revenue, twelvePrev.revenue),  ordersGrowth: growthPct(twelveCurr.orders, twelvePrev.orders) },
+    ytd:          { year: currYear, current: ytdCurr, previous: ytdPrev, revenueGrowth: growthPct(ytdCurr.revenue, ytdPrev.revenue), ordersGrowth: growthPct(ytdCurr.orders, ytdPrev.orders) },
+    calendarYear: { year: targetYear, current: calCurr, previous: calPrev, revenueGrowth: growthPct(calCurr.revenue, calPrev.revenue), ordersGrowth: growthPct(calCurr.orders, calPrev.orders) },
+    byMonth: [...byMonth.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, v]) => ({ month, revenue: Math.round(v.revenue * 100) / 100, orders: v.orders })),
+  });
+});
+
+// ── GET /api/reports/customer-trend ──────────────────────────────────────────
+router.get("/reports/customer-trend", requireAuth as any, async (req, res): Promise<void> => {
+  const customerId = Number(req.query.customerId);
+  if (!customerId) { res.status(400).json({ error: "customerId required" }); return; }
+
+  const [customer] = await db
+    .select({ id: customersTable.id, companyName: customersTable.companyName })
+    .from(customersTable).where(eq(customersTable.id, customerId));
+  if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
+
+  const orders = await db.select().from(ordersTable)
+    .where(and(eq(ordersTable.customerId, customerId), eq(ordersTable.status, "approved")));
+
+  const orderIds = orders.map(o => o.id);
+  const items    = await loadOrderItems(orderIds);
+  const products = await loadProducts([...new Set(items.map(i => i.productId))]);
+  const productMap = new Map(products.map(p => [p.id, p.productName]));
+
+  const todayStr  = today();
+  const currYear  = new Date().getUTCFullYear();
+  const ytdFrom   = `${currYear}-01-01`;
+  const prevYtdFrom = `${currYear - 1}-01-01`;
+  const prevYtdTo   = `${currYear - 1}-${todayStr.slice(5)}`;
+
+  const byProduct = new Map<number, { name: string; revenue: number; units: number; orders: number }>();
+  const byMonth   = new Map<string, { revenue: number; units: number; orders: number }>();
+  let ytdCurr     = { revenue: 0, orders: 0, units: 0 };
+  let ytdPrev     = { revenue: 0, orders: 0, units: 0 };
+
+  const itemsByOrder = new Map<number, typeof items>();
+  for (const item of items) {
+    if (!itemsByOrder.has(item.orderId)) itemsByOrder.set(item.orderId, []);
+    itemsByOrder.get(item.orderId)!.push(item);
+  }
+
+  for (const order of orders) {
+    const orderItems = itemsByOrder.get(order.id) ?? [];
+    const revenue = orderItems.reduce((s, i) => s + parseFloat(i.lineTotal), 0);
+    const units   = orderItems.reduce((s, i) => s + i.quantity, 0);
+    const month   = order.createdAt.toISOString().substring(0, 7);
+    const d       = order.createdAt.toISOString().split("T")[0];
+
+    if (!byMonth.has(month)) byMonth.set(month, { revenue: 0, units: 0, orders: 0 });
+    const me = byMonth.get(month)!;
+    me.revenue += revenue; me.units += units; me.orders += 1;
+
+    if (d >= ytdFrom && d <= todayStr) { ytdCurr.revenue += revenue; ytdCurr.orders++; ytdCurr.units += units; }
+    if (d >= prevYtdFrom && d <= prevYtdTo) { ytdPrev.revenue += revenue; ytdPrev.orders++; ytdPrev.units += units; }
+
+    for (const item of orderItems) {
+      if (!byProduct.has(item.productId)) byProduct.set(item.productId, { name: productMap.get(item.productId) ?? `#${item.productId}`, revenue: 0, units: 0, orders: 0 });
+      const pe = byProduct.get(item.productId)!;
+      pe.revenue += parseFloat(item.lineTotal); pe.units += item.quantity; pe.orders++;
+    }
+  }
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
+  res.json({
+    customerId,
+    customerName: customer.companyName,
+    totalOrders: orders.length,
+    totalRevenue: round2(orders.reduce((s, o) => s + parseFloat(o.totalAmount), 0)),
+    ytd: {
+      year: currYear,
+      current:  { revenue: round2(ytdCurr.revenue), orders: ytdCurr.orders, units: ytdCurr.units },
+      previous: { revenue: round2(ytdPrev.revenue), orders: ytdPrev.orders, units: ytdPrev.units },
+    },
+    topProducts: [...byProduct.entries()]
+      .map(([id, v]) => ({ productId: id, productName: v.name, revenue: round2(v.revenue), units: v.units, orders: v.orders }))
+      .sort((a, b) => b.revenue - a.revenue).slice(0, 15),
+    byMonth: [...byMonth.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, v]) => ({ month, revenue: round2(v.revenue), units: v.units, orders: v.orders })),
+  });
+});
+
+// ── GET /api/reports/product-performance ─────────────────────────────────────
+router.get("/reports/product-performance", requireAuth as any, async (req, res): Promise<void> => {
+  const channel     = (req.query.channel as string | undefined);
+  const todayStr    = today();
+  const sixAgo      = addMonthsStr(todayStr, -6);
+  const twelveAgo   = addMonthsStr(todayStr, -12);
+
+  let orders = await db.select().from(ordersTable).where(eq(ordersTable.status, "approved"));
+  orders = orders.filter(o => o.createdAt.toISOString().split("T")[0] >= twelveAgo);
+  if (channel === "cosmetics") orders = orders.filter(o => o.businessChannel === "cosmetics");
+  else if (channel) orders = orders.filter(o => o.businessChannel !== "cosmetics");
+
+  const orderIds   = orders.map(o => o.id);
+  const items      = await loadOrderItems(orderIds);
+  const products   = await loadProducts([...new Set(items.map(i => i.productId))]);
+  const productMap = new Map(products.map(p => [p.id, p]));
+  const orderDateMap = new Map(orders.map(o => [o.id, o.createdAt.toISOString().split("T")[0]]));
+
+  type PP = { name: string; sku: string; channel: string; rev12: number; units12: number; orders12: number; revRecent: number; revPrev: number; unitsRecent: number; unitsPrev: number; cost: number | null };
+  const byProduct = new Map<number, PP>();
+
+  for (const item of items) {
+    const d = orderDateMap.get(item.orderId) ?? "";
+    const isRecent = d >= sixAgo;
+    const pid = item.productId;
+    if (!byProduct.has(pid)) {
+      const p = productMap.get(pid);
+      byProduct.set(pid, { name: p?.productName ?? `#${pid}`, sku: p?.sku ?? "", channel: p?.businessChannel ?? "", rev12: 0, units12: 0, orders12: 0, revRecent: 0, revPrev: 0, unitsRecent: 0, unitsPrev: 0, cost: 0 });
+    }
+    const pe = byProduct.get(pid)!;
+    const rev = parseFloat(item.lineTotal);
+    pe.rev12 += rev; pe.units12 += item.quantity; pe.orders12++;
+    if (isRecent) { pe.revRecent += rev; pe.unitsRecent += item.quantity; }
+    else          { pe.revPrev  += rev; pe.unitsPrev  += item.quantity; }
+    if (item.costPriceSnapshot != null && pe.cost != null) pe.cost += parseFloat(item.costPriceSnapshot) * item.quantity;
+    else if (item.costPriceSnapshot == null) pe.cost = null;
+  }
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  function growthPct(curr: number, prev: number): number | null {
+    if (prev === 0) return curr > 0 ? 100 : null;
+    return Math.round(((curr - prev) / prev) * 1000) / 10;
+  }
+
+  const result = [...byProduct.entries()].map(([id, v]) => {
+    const g6 = growthPct(v.revRecent, v.revPrev);
+    const margin = v.cost != null && v.rev12 > 0 ? Math.round(((v.rev12 - v.cost) / v.rev12) * 1000) / 10 : null;
+    let status = "stable";
+    if (v.rev12 < 50 || (g6 != null && g6 < -25))        status = "watchlist";
+    else if (g6 != null && g6 < -5)                       status = "declining";
+    else if (g6 != null && g6 > 10)                       status = "rising";
+    return { productId: id, productName: v.name, sku: v.sku, channel: v.channel, revenue12m: round2(v.rev12), units12m: v.units12, orders12m: v.orders12, revenueRecent6m: round2(v.revRecent), revenuePrev6m: round2(v.revPrev), unitsRecent6m: v.unitsRecent, unitsPrev6m: v.unitsPrev, growth6m: g6, margin, status };
+  }).sort((a, b) => b.revenue12m - a.revenue12m);
+
+  res.json({
+    products:  result,
+    watchlist: result.filter(p => p.status === "watchlist"),
+    rising:    result.filter(p => p.status === "rising"),
+    declining: result.filter(p => p.status === "declining"),
+  });
+});
+
+// ── GET /api/reports/leads-conversion ────────────────────────────────────────
+router.get("/reports/leads-conversion", requireAuth as any, async (req, res): Promise<void> => {
+  const channel  = (req.query.channel as string | undefined);
+  const dateFrom = (req.query.dateFrom as string | undefined);
+  const dateTo   = (req.query.dateTo as string | undefined);
+
+  let leads = await db.select().from(leadsTable);
+  if (channel === "cosmetics") leads = leads.filter(l => l.businessChannel === "cosmetics");
+  else if (channel) leads = leads.filter(l => l.businessChannel !== "cosmetics");
+  if (dateFrom) leads = leads.filter(l => l.createdAt.toISOString().split("T")[0] >= dateFrom);
+  if (dateTo)   leads = leads.filter(l => l.createdAt.toISOString().split("T")[0] <= dateTo);
+
+  const converted = leads.filter(l => l.status === "converted");
+  const conversionRate = leads.length > 0 ? Math.round((converted.length / leads.length) * 1000) / 10 : 0;
+
+  const convDays = converted
+    .filter(l => l.updatedAt && l.createdAt)
+    .map(l => Math.max(0, Math.floor((l.updatedAt.getTime() - l.createdAt.getTime()) / 86_400_000)));
+  const avgConversionDays = convDays.length > 0 ? Math.round(convDays.reduce((s, d) => s + d, 0) / convDays.length) : null;
+
+  const byChannel = new Map<string, { total: number; converted: number }>();
+  const byCreator = new Map<number | string, { total: number; converted: number }>();
+  const byStatus  = new Map<string, number>();
+  const byMonth   = new Map<string, { total: number; converted: number }>();
+
+  for (const l of leads) {
+    const ch  = l.businessChannel;
+    const key = l.createdBy ?? 0;
+    const mo  = l.createdAt.toISOString().substring(0, 7);
+    const isConv = l.status === "converted";
+
+    if (!byChannel.has(ch)) byChannel.set(ch, { total: 0, converted: 0 });
+    byChannel.get(ch)!.total++; if (isConv) byChannel.get(ch)!.converted++;
+
+    if (!byCreator.has(key)) byCreator.set(key, { total: 0, converted: 0 });
+    byCreator.get(key)!.total++; if (isConv) byCreator.get(key)!.converted++;
+
+    byStatus.set(l.status, (byStatus.get(l.status) ?? 0) + 1);
+
+    if (!byMonth.has(mo)) byMonth.set(mo, { total: 0, converted: 0 });
+    byMonth.get(mo)!.total++; if (isConv) byMonth.get(mo)!.converted++;
+  }
+
+  const creatorIds = [...byCreator.keys()].filter(k => k !== 0) as number[];
+  const users = await loadUsers(creatorIds);
+  const userMap = new Map(users.map(u => [u.id, u.fullName]));
+
+  const rate = (v: { total: number; converted: number }) =>
+    v.total > 0 ? Math.round((v.converted / v.total) * 1000) / 10 : 0;
+
+  res.json({
+    total: leads.length,
+    converted: converted.length,
+    conversionRate,
+    avgConversionDays,
+    byStatus: [...byStatus.entries()].map(([status, count]) => ({ status, count })).sort((a, b) => b.count - a.count),
+    byChannel: [...byChannel.entries()].map(([ch, v]) => ({ channel: ch, total: v.total, converted: v.converted, rate: rate(v) })).sort((a, b) => b.total - a.total),
+    byCreator: [...byCreator.entries()].filter(([k]) => k !== 0).map(([k, v]) => ({ creatorId: k, creatorName: userMap.get(k as number) ?? `User ${k}`, total: v.total, converted: v.converted, rate: rate(v) })).sort((a, b) => b.total - a.total),
+    byMonth: [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, v]) => ({ month, total: v.total, converted: v.converted, rate: rate(v) })),
+  });
+});
+
+// ── GET /api/reports/invoice-aging ────────────────────────────────────────────
+router.get("/reports/invoice-aging", requireAuth as any, async (req, res): Promise<void> => {
+  const channel    = (req.query.channel as string | undefined);
+  const customerId = req.query.customerId ? Number(req.query.customerId) : undefined;
+
+  let orders = await db.select().from(ordersTable);
+  orders = orders.filter(o => (o as any).invoiceDate); // only invoiced orders
+  if (channel === "cosmetics") orders = orders.filter(o => o.businessChannel === "cosmetics");
+  else if (channel) orders = orders.filter(o => o.businessChannel !== "cosmetics");
+  if (customerId) orders = orders.filter(o => o.customerId === customerId);
+
+  const customerIds = [...new Set(orders.map(o => o.customerId))];
+  const customers   = await loadCustomers(customerIds);
+  const customerMap = new Map(customers.map(c => [c.id, { name: c.companyName, channel: c.businessChannel }]));
+
+  const todayStr = today();
+
+  type Bucket = { count: number; amount: number };
+  type Row = { notDue: Bucket; days1to30: Bucket; days31to60: Bucket; days61to90: Bucket; days90plus: Bucket };
+  const emptyBucket = (): Bucket => ({ count: 0, amount: 0 });
+  const emptyRow = (): Row => ({ notDue: emptyBucket(), days1to30: emptyBucket(), days31to60: emptyBucket(), days61to90: emptyBucket(), days90plus: emptyBucket() });
+
+  const totals: Row = emptyRow();
+  const byCustomer = new Map<number, Row & { name: string; channel: string }>();
+  const byChannel  = new Map<string, Row>();
+
+  function addBucket(row: Row, key: keyof Row, amount: number) {
+    row[key].count++;
+    row[key].amount = Math.round((row[key].amount + amount) * 100) / 100;
+  }
+
+  for (const order of orders) {
+    const o2  = order as any;
+    const amt = parseFloat(order.totalAmount);
+    const due = o2.dueDate ?? null;
+    const ps  = o2.paymentStatus ?? "unpaid";
+
+    let bucket: keyof Row = "notDue";
+    if (ps !== "paid" && due) {
+      const overdueDays = -dateDiffDays(todayStr, due); // negative means overdue
+      if (overdueDays > 90)      bucket = "days90plus";
+      else if (overdueDays > 60) bucket = "days61to90";
+      else if (overdueDays > 30) bucket = "days31to60";
+      else if (overdueDays > 0)  bucket = "days1to30";
+    }
+
+    addBucket(totals, bucket, amt);
+
+    if (!byCustomer.has(order.customerId)) {
+      const c = customerMap.get(order.customerId);
+      byCustomer.set(order.customerId, { ...emptyRow(), name: c?.name ?? "Unknown", channel: c?.channel ?? "" });
+    }
+    addBucket(byCustomer.get(order.customerId)!, bucket, amt);
+
+    const ch = order.businessChannel;
+    if (!byChannel.has(ch)) byChannel.set(ch, emptyRow());
+    addBucket(byChannel.get(ch)!, bucket, amt);
+  }
+
+  function ser(row: Row) {
+    const overdue = Math.round((row.days1to30.amount + row.days31to60.amount + row.days61to90.amount + row.days90plus.amount) * 100) / 100;
+    const overdueCount = row.days1to30.count + row.days31to60.count + row.days61to90.count + row.days90plus.count;
+    return { notDue: row.notDue, days1to30: row.days1to30, days31to60: row.days31to60, days61to90: row.days61to90, days90plus: row.days90plus, totalOverdue: { count: overdueCount, amount: overdue } };
+  }
+
+  res.json({
+    totals: ser(totals),
+    byChannel: [...byChannel.entries()].map(([ch, v]) => ({ channel: ch, ...ser(v) })).sort((a, b) => b.totalOverdue.amount - a.totalOverdue.amount),
+    byCustomer: [...byCustomer.entries()].map(([id, v]) => ({ customerId: id, customerName: v.name, channel: v.channel, ...ser(v) })).sort((a, b) => b.totalOverdue.amount - a.totalOverdue.amount).slice(0, 30),
   });
 });
 

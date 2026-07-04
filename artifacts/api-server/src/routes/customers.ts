@@ -3,6 +3,7 @@ import { db, customersTable, customerAddressesTable, ordersTable, orderItemsTabl
 import { eq, and, ilike, or, inArray, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { logActivity } from "../lib/activity";
+import { evaluateCustomerOrderPolicy } from "../lib/orderPolicy";
 import {
   CreateCustomerBody,
   UpdateCustomerBody,
@@ -45,6 +46,7 @@ router.get("/customers", requireAuth as any, async (req, res): Promise<void> => 
   res.json(customers.map(c => ({
     ...c,
     discountLevel: c.discountLevel ? parseFloat(c.discountLevel) : null,
+    overdueThresholdAmount: c.overdueThresholdAmount ? parseFloat(c.overdueThresholdAmount) : null,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
   })));
@@ -61,6 +63,7 @@ router.post("/customers", requireAuth as any, async (req, res): Promise<void> =>
   const [customer] = await db.insert(customersTable).values({
     ...parsed.data,
     discountLevel: parsed.data.discountLevel?.toString(),
+    overdueThresholdAmount: parsed.data.overdueThresholdAmount?.toString(),
   }).returning();
 
   await logActivity({
@@ -74,6 +77,7 @@ router.post("/customers", requireAuth as any, async (req, res): Promise<void> =>
   res.status(201).json({
     ...customer,
     discountLevel: customer.discountLevel ? parseFloat(customer.discountLevel) : null,
+    overdueThresholdAmount: customer.overdueThresholdAmount ? parseFloat(customer.overdueThresholdAmount) : null,
     createdAt: customer.createdAt.toISOString(),
     updatedAt: customer.updatedAt.toISOString(),
   });
@@ -98,6 +102,7 @@ router.get("/customers/:id", requireAuth as any, async (req, res): Promise<void>
   res.json({
     ...customer,
     discountLevel: customer.discountLevel ? parseFloat(customer.discountLevel) : null,
+    overdueThresholdAmount: customer.overdueThresholdAmount ? parseFloat(customer.overdueThresholdAmount) : null,
     createdAt: customer.createdAt.toISOString(),
     updatedAt: customer.updatedAt.toISOString(),
     addresses,
@@ -157,6 +162,9 @@ router.patch("/customers/:id", requireAuth as any, async (req, res): Promise<voi
   if (parsed.data.discountLevel !== undefined) {
     updateData.discountLevel = parsed.data.discountLevel?.toString();
   }
+  if (parsed.data.overdueThresholdAmount !== undefined) {
+    updateData.overdueThresholdAmount = parsed.data.overdueThresholdAmount?.toString();
+  }
 
   const [customer] = await db.update(customersTable).set(updateData).where(eq(customersTable.id, params.data.id)).returning();
   if (!customer) {
@@ -207,6 +215,7 @@ router.patch("/customers/:id", requireAuth as any, async (req, res): Promise<voi
   res.json({
     ...customer,
     discountLevel: nextDiscount,
+    overdueThresholdAmount: customer.overdueThresholdAmount ? parseFloat(customer.overdueThresholdAmount) : null,
     createdAt: customer.createdAt.toISOString(),
     updatedAt: customer.updatedAt.toISOString(),
   });
@@ -323,6 +332,17 @@ router.get("/customers/:id/history", requireAuth as any, async (req, res): Promi
     },
     orders: serializedOrders,
   });
+});
+
+router.get("/customers/:id/order-policy", requireAuth as any, async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, id));
+  if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
+
+  const result = await evaluateCustomerOrderPolicy(customer);
+  res.json(result);
 });
 
 router.get("/customers/:id/addresses", requireAuth as any, async (req, res): Promise<void> => {

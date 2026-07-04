@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useGetCustomer, useUpdateCustomer } from "@workspace/api-client-react";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 import { PriorityBadge, StatusBadge } from "@/components/priority-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,11 @@ type EditForm = {
   paymentTerms: string;
   discountLevel: string;
   notes: string;
+  paymentOrderRuleMode: string;
+  overdueThresholdAmount: string;
+  gracePeriodDays: string;
+  allowAdminGmOverride: boolean;
+  paymentOrderRuleNote: string;
 };
 
 function fromCustomer(c: any): EditForm {
@@ -61,6 +68,11 @@ function fromCustomer(c: any): EditForm {
     paymentTerms: normalisePaymentTerms(c.paymentTerms),
     discountLevel: c.discountLevel != null ? String(c.discountLevel) : "",
     notes: c.notes ?? "",
+    paymentOrderRuleMode: c.paymentOrderRuleMode ?? "no_block",
+    overdueThresholdAmount: c.overdueThresholdAmount != null ? String(c.overdueThresholdAmount) : "",
+    gracePeriodDays: c.gracePeriodDays != null ? String(c.gracePeriodDays) : "0",
+    allowAdminGmOverride: c.allowAdminGmOverride ?? false,
+    paymentOrderRuleNote: c.paymentOrderRuleNote ?? "",
   };
 }
 
@@ -78,6 +90,7 @@ function PayBadge({ status, dueDate, paidAt }: { status: string; dueDate?: strin
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const { toast } = useToast();
+  const { lang } = useLang();
   const { data: customer, isLoading, refetch } = useGetCustomer(Number(id), {
     query: { enabled: !!id } as any,
   });
@@ -133,6 +146,8 @@ export default function CustomerDetailPage() {
       toast({ title: "Discount must be a number", variant: "destructive" });
       return;
     }
+    const graceDays = editForm.gracePeriodDays.trim() === "" ? 0 : Number(editForm.gracePeriodDays);
+    const thresholdAmt = editForm.overdueThresholdAmount.trim() === "" ? null : Number(editForm.overdueThresholdAmount);
     updateCustomer.mutate({
       id: Number(id),
       data: {
@@ -147,6 +162,11 @@ export default function CustomerDetailPage() {
         paymentTerms: editForm.paymentTerms,
         discountLevel: discount,
         notes: editForm.notes.trim() || null,
+        paymentOrderRuleMode: editForm.paymentOrderRuleMode as any,
+        overdueThresholdAmount: thresholdAmt,
+        gracePeriodDays: isNaN(graceDays) ? 0 : graceDays,
+        allowAdminGmOverride: editForm.allowAdminGmOverride,
+        paymentOrderRuleNote: editForm.paymentOrderRuleNote.trim() || null,
       } as any,
     });
   };
@@ -243,6 +263,37 @@ export default function CustomerDetailPage() {
             <CardHeader className="pb-3"><CardTitle className="text-sm">Notes</CardTitle></CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">{c.notes}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {c.paymentOrderRuleMode && c.paymentOrderRuleMode !== "no_block" && (
+          <Card className="md:col-span-2 border-amber-200 bg-amber-50/40">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                {t("paymentOrderRule", lang)}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Row label={t("ruleType", lang)} value={
+                <span className="font-medium text-amber-800 capitalize">
+                  {c.paymentOrderRuleMode === "warning_only" ? t("ruleWarningOnly", lang)
+                    : c.paymentOrderRuleMode === "block_any_overdue" ? t("ruleBlockAnyOverdue", lang)
+                    : c.paymentOrderRuleMode === "block_overdue_threshold" ? t("ruleBlockThreshold", lang)
+                    : c.paymentOrderRuleMode}
+                </span>
+              } />
+              {c.overdueThresholdAmount != null && (
+                <Row label={t("overdueThreshold", lang)} value={`${c.overdueThresholdAmount}`} />
+              )}
+              {c.gracePeriodDays > 0 && (
+                <Row label={t("gracePeriodDays", lang)} value={`${c.gracePeriodDays}`} />
+              )}
+              <Row label={t("allowAdminGmOverride", lang)} value={c.allowAdminGmOverride ? "Yes" : "No"} />
+              {c.paymentOrderRuleNote && (
+                <Row label={t("orderPolicyNote", lang)} value={c.paymentOrderRuleNote} />
+              )}
             </CardContent>
           </Card>
         )}
@@ -520,6 +571,70 @@ export default function CustomerDetailPage() {
                   value={editForm.notes}
                   onChange={e => setEditForm(p => p && { ...p, notes: e.target.value })}
                 />
+              </div>
+
+              <div className="border-t pt-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("paymentOrderRule", lang)}</p>
+                <div className="space-y-1.5">
+                  <Label>{t("ruleType", lang)}</Label>
+                  <Select
+                    value={editForm.paymentOrderRuleMode}
+                    onValueChange={v => setEditForm(p => p && { ...p, paymentOrderRuleMode: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no_block">{t("ruleNoBlock", lang)}</SelectItem>
+                      <SelectItem value="warning_only">{t("ruleWarningOnly", lang)}</SelectItem>
+                      <SelectItem value="block_any_overdue">{t("ruleBlockAnyOverdue", lang)}</SelectItem>
+                      <SelectItem value="block_overdue_threshold">{t("ruleBlockThreshold", lang)}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editForm.paymentOrderRuleMode === "block_overdue_threshold" && (
+                  <div className="space-y-1.5">
+                    <Label>{t("overdueThreshold", lang)}</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="e.g. 5000"
+                      value={editForm.overdueThresholdAmount}
+                      onChange={e => setEditForm(p => p && { ...p, overdueThresholdAmount: e.target.value })}
+                    />
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>{t("gracePeriodDays", lang)}</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="0"
+                      value={editForm.gracePeriodDays}
+                      onChange={e => setEditForm(p => p && { ...p, gracePeriodDays: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5 flex flex-col justify-end">
+                    <label className="flex items-center gap-2 cursor-pointer select-none pb-2">
+                      <input
+                        type="checkbox"
+                        checked={editForm.allowAdminGmOverride}
+                        onChange={e => setEditForm(p => p && { ...p, allowAdminGmOverride: e.target.checked })}
+                        className="h-4 w-4 rounded border"
+                      />
+                      <span className="text-sm">{t("allowAdminGmOverride", lang)}</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("orderPolicyNote", lang)}</Label>
+                  <Input
+                    placeholder="Internal note about this rule"
+                    value={editForm.paymentOrderRuleNote}
+                    onChange={e => setEditForm(p => p && { ...p, paymentOrderRuleNote: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
           )}

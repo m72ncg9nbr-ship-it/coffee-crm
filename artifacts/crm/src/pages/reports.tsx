@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   useGetReportsSales,
   useGetReportsProfitability,
@@ -12,11 +13,20 @@ import type {
   ProfitabilityItem,
   CollectionOrderItem,
 } from "@workspace/api-client-react";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   BarChart,
@@ -28,7 +38,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { TrendingUp, DollarSign, ShoppingCart, Package, MapPin, TestTube, Globe, Coffee, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, MapPin, TestTube, Globe, Coffee, Sparkles, BarChart2, Users, Clock, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── colour palette ─────────────────────────────────────────────────────────────
@@ -198,8 +208,11 @@ const CHANNEL_TABS: { value: ReportChannel; label: string; icon: React.ReactNode
 ];
 
 export default function ReportsPage() {
+  const { lang } = useLang();
   const [reportChannel, setReportChannel] = useState<ReportChannel>("all");
   const [filters, setFilters] = useState<ReportFiltersParams>({});
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
+  const [growthYear, setGrowthYear] = useState<string>(String(new Date().getFullYear()));
 
   const activeFilters: ReportFiltersParams = {
     ...filters,
@@ -210,11 +223,49 @@ export default function ReportsPage() {
     setReportChannel(ch);
   }
 
+  const channelQs = reportChannel !== "all" ? `&channel=${reportChannel}` : "";
+
   const { data: sales, isLoading: salesLoading, isError: salesError } = useGetReportsSales(activeFilters);
   const { data: profit, isLoading: profitLoading, isError: profitError } = useGetReportsProfitability(activeFilters);
   const { data: coll, isLoading: collLoading, isError: collError } = useGetReportsCollection(activeFilters);
   const { data: samples, isLoading: samplesLoading, isError: samplesError } = useGetReportsSamples(activeFilters);
   const { data: regional, isLoading: regionalLoading, isError: regionalError } = useGetReportsRegional(activeFilters);
+
+  const { data: growthData, isLoading: growthLoading } = useQuery<any>({
+    queryKey: ["reports-growth", reportChannel, growthYear],
+    queryFn: () => fetch(`/api/reports/growth?year=${growthYear}${channelQs}`, { credentials: "include" }).then(r => r.json()),
+  });
+
+  const { data: allCustomers = [] } = useQuery<any[]>({
+    queryKey: ["customers-for-trend"],
+    queryFn: () => fetch("/api/customers", { credentials: "include" }).then(r => r.json()),
+    staleTime: 120_000,
+  });
+
+  const { data: customerTrend, isLoading: ctLoading } = useQuery<any>({
+    queryKey: ["reports-customer-trend", selectedCustomerId, reportChannel],
+    queryFn: () =>
+      fetch(`/api/reports/customer-trend?customerId=${selectedCustomerId}${channelQs}`, { credentials: "include" }).then(r => r.json()),
+    enabled: !!selectedCustomerId,
+  });
+
+  const { data: productPerf, isLoading: ppLoading } = useQuery<any>({
+    queryKey: ["reports-product-performance", reportChannel],
+    queryFn: () =>
+      fetch(`/api/reports/product-performance${reportChannel !== "all" ? `?channel=${reportChannel}` : ""}`, { credentials: "include" }).then(r => r.json()),
+  });
+
+  const { data: leadConv, isLoading: lcLoading } = useQuery<any>({
+    queryKey: ["reports-leads-conversion", reportChannel],
+    queryFn: () =>
+      fetch(`/api/reports/leads-conversion${reportChannel !== "all" ? `?channel=${reportChannel}` : ""}`, { credentials: "include" }).then(r => r.json()),
+  });
+
+  const { data: aging, isLoading: agingLoading } = useQuery<any>({
+    queryKey: ["reports-invoice-aging", reportChannel],
+    queryFn: () =>
+      fetch(`/api/reports/invoice-aging${reportChannel !== "all" ? `?channel=${reportChannel}` : ""}`, { credentials: "include" }).then(r => r.json()),
+  });
 
   return (
     <div className="p-6 space-y-5">
@@ -261,6 +312,21 @@ export default function ReportsPage() {
           </TabsTrigger>
           <TabsTrigger value="regional" className="gap-1.5">
             <MapPin className="h-3.5 w-3.5" />Regional
+          </TabsTrigger>
+          <TabsTrigger value="growth" className="gap-1.5">
+            <BarChart2 className="h-3.5 w-3.5" />{t("growth", lang)}
+          </TabsTrigger>
+          <TabsTrigger value="customer-trend" className="gap-1.5">
+            <Users className="h-3.5 w-3.5" />{t("customerTrend", lang)}
+          </TabsTrigger>
+          <TabsTrigger value="product-performance" className="gap-1.5">
+            <Package className="h-3.5 w-3.5" />{t("productPerformance", lang)}
+          </TabsTrigger>
+          <TabsTrigger value="lead-conversion" className="gap-1.5">
+            <Target className="h-3.5 w-3.5" />{t("leadsConversion", lang)}
+          </TabsTrigger>
+          <TabsTrigger value="invoice-aging" className="gap-1.5">
+            <Clock className="h-3.5 w-3.5" />{t("invoiceAging", lang)}
           </TabsTrigger>
         </TabsList>
 
@@ -575,6 +641,402 @@ export default function ReportsPage() {
                               <td className="py-1.5 pr-3 text-right">{fmt(r.revenue)}</td>
                               <td className="py-1.5 pr-3 text-right">{r.orders}</td>
                               <td className="py-1.5 text-right">{r.units}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+        </TabsContent>
+        {/* ── Growth ────────────────────────────────────────────────── */}
+        <TabsContent value="growth" className="space-y-5">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Label className="text-xs">{t("yearLabel", lang)}</Label>
+            <Select value={growthYear} onValueChange={setGrowthYear}>
+              <SelectTrigger className="w-28 h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[0, 1, 2, 3].map(offset => {
+                  const y = String(new Date().getFullYear() - offset);
+                  return <SelectItem key={y} value={y}>{y}</SelectItem>;
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          {growthLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {growthData && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <KpiCard
+                  label={t("sixMonthGrowth", lang)}
+                  value={growthData.sixMonth.revenueGrowth != null ? `${growthData.sixMonth.revenueGrowth > 0 ? "+" : ""}${growthData.sixMonth.revenueGrowth}%` : "—"}
+                  sub={`${t("currentPeriod", lang)}: ${fmt(growthData.sixMonth.current.revenue)}`}
+                  icon={growthData.sixMonth.revenueGrowth >= 0 ? TrendingUp : TrendingDown}
+                />
+                <KpiCard
+                  label={t("twelveMonthGrowth", lang)}
+                  value={growthData.twelveMonth.revenueGrowth != null ? `${growthData.twelveMonth.revenueGrowth > 0 ? "+" : ""}${growthData.twelveMonth.revenueGrowth}%` : "—"}
+                  sub={`${t("currentPeriod", lang)}: ${fmt(growthData.twelveMonth.current.revenue)}`}
+                  icon={growthData.twelveMonth.revenueGrowth >= 0 ? TrendingUp : TrendingDown}
+                />
+                <KpiCard
+                  label={`${t("ytdGrowth", lang)} ${growthData.ytd.year}`}
+                  value={growthData.ytd.revenueGrowth != null ? `${growthData.ytd.revenueGrowth > 0 ? "+" : ""}${growthData.ytd.revenueGrowth}%` : "—"}
+                  sub={`${t("currentPeriod", lang)}: ${fmt(growthData.ytd.current.revenue)}`}
+                  icon={TrendingUp}
+                />
+                <KpiCard
+                  label={`${t("calendarYear", lang)} ${growthData.calendarYear.year}`}
+                  value={growthData.calendarYear.revenueGrowth != null ? `${growthData.calendarYear.revenueGrowth > 0 ? "+" : ""}${growthData.calendarYear.revenueGrowth}%` : "—"}
+                  sub={`${t("currentPeriod", lang)}: ${fmt(growthData.calendarYear.current.revenue)}`}
+                  icon={TrendingUp}
+                />
+              </div>
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">{t("revenueGrowth", lang)} — {t("byMonth", lang)}</CardTitle></CardHeader>
+                <CardContent>
+                  <MiniBarChart data={growthData.byMonth} xKey="month" yKey="revenue" color="#10b981" />
+                </CardContent>
+              </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                {[
+                  { label: t("sixMonthGrowth", lang), d: growthData.sixMonth },
+                  { label: t("twelveMonthGrowth", lang), d: growthData.twelveMonth },
+                  { label: `${t("ytdGrowth", lang)} ${growthData.ytd.year}`, d: growthData.ytd },
+                  { label: `${t("calendarYear", lang)} ${growthData.calendarYear.year}`, d: growthData.calendarYear },
+                ].map(({ label, d }) => (
+                  <Card key={label}>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm">{label}</CardTitle></CardHeader>
+                    <CardContent>
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b text-muted-foreground">
+                            <th className="text-left pb-1 pr-3"></th>
+                            <th className="text-right pb-1 pr-3">{t("revenue", lang)}</th>
+                            <th className="text-right pb-1">{t("orders", lang)}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-muted/40">
+                            <td className="py-1 pr-3 font-medium">{t("currentPeriod", lang)}</td>
+                            <td className="py-1 pr-3 text-right">{fmt(d.current.revenue)}</td>
+                            <td className="py-1 text-right">{d.current.orders}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-1 pr-3 text-muted-foreground">{t("previousPeriod", lang)}</td>
+                            <td className="py-1 pr-3 text-right text-muted-foreground">{fmt(d.previous.revenue)}</td>
+                            <td className="py-1 text-right text-muted-foreground">{d.previous.orders}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ── Customer Trend ────────────────────────────────────────── */}
+        <TabsContent value="customer-trend" className="space-y-5">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Label className="text-xs">{t("customer", lang)}</Label>
+            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+              <SelectTrigger className="w-72 h-8 text-sm">
+                <SelectValue placeholder={t("selectCustomer", lang)} />
+              </SelectTrigger>
+              <SelectContent>
+                {allCustomers.map((c: any) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.companyName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {!selectedCustomerId && (
+            <p className="text-sm text-muted-foreground italic py-4">{t("selectCustomer", lang)}</p>
+          )}
+          {ctLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {customerTrend && !customerTrend.error && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <KpiCard label={t("totalOrders", lang)} value={String(customerTrend.totalOrders)} icon={ShoppingCart} />
+                <KpiCard label={t("totalRevenue", lang)} value={fmt(customerTrend.totalRevenue)} icon={DollarSign} />
+                <KpiCard
+                  label={`YTD ${customerTrend.ytd?.year ?? ""}`}
+                  value={fmt(customerTrend.ytd?.current?.revenue)}
+                  sub={`${t("vs", lang)} ${fmt(customerTrend.ytd?.previous?.revenue)}`}
+                  icon={TrendingUp}
+                />
+                <KpiCard label={`YTD ${t("orders", lang)}`} value={String(customerTrend.ytd?.current?.orders ?? 0)} sub={`${t("vs", lang)} ${customerTrend.ytd?.previous?.orders ?? 0}`} />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">{t("topProducts", lang)}</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b text-muted-foreground">
+                            <th className="text-left pb-1 pr-3">{t("product", lang)}</th>
+                            <th className="text-right pb-1 pr-3">{t("revenue", lang)}</th>
+                            <th className="text-right pb-1 pr-3">{t("quantity", lang)}</th>
+                            <th className="text-right pb-1">{t("orders", lang)}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(customerTrend.topProducts ?? []).map((p: any, i: number) => (
+                            <tr key={i} className="border-b border-muted/40 last:border-0">
+                              <td className="py-1.5 pr-3 font-medium max-w-[160px] truncate">{p.productName}</td>
+                              <td className="py-1.5 pr-3 text-right">{fmt(p.revenue)}</td>
+                              <td className="py-1.5 pr-3 text-right">{p.units}</td>
+                              <td className="py-1.5 text-right">{p.orders}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">{t("revenueGrowth", lang)} — {t("byMonth", lang)}</CardTitle></CardHeader>
+                  <CardContent>
+                    <MiniBarChart data={customerTrend.byMonth ?? []} xKey="month" yKey="revenue" color="#3b82f6" />
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ── Product Performance ───────────────────────────────────── */}
+        <TabsContent value="product-performance" className="space-y-5">
+          {ppLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {productPerf && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <KpiCard label={t("rising", lang)} value={String(productPerf.rising?.length ?? 0)} icon={TrendingUp} />
+                <KpiCard label={t("stable", lang)} value={String((productPerf.products?.length ?? 0) - (productPerf.rising?.length ?? 0) - (productPerf.declining?.length ?? 0) - (productPerf.watchlist?.length ?? 0))} />
+                <KpiCard label={t("declining", lang)} value={String(productPerf.declining?.length ?? 0)} icon={TrendingDown} />
+                <KpiCard label={t("watchlist", lang)} value={String(productPerf.watchlist?.length ?? 0)} icon={Package} />
+              </div>
+              {(productPerf.watchlist?.length ?? 0) > 0 && (
+                <Card className="border-amber-200 bg-amber-50/30">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm text-amber-700">{t("watchlist", lang)}</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {productPerf.watchlist.map((p: any) => (
+                        <Badge key={p.productId} variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">{p.productName}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">{t("productPerformance", lang)}</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="text-left pb-1 pr-3">{t("product", lang)}</th>
+                          <th className="text-left pb-1 pr-3">SKU</th>
+                          <th className="text-right pb-1 pr-3">12m Rev</th>
+                          <th className="text-right pb-1 pr-3">{t("growth6m", lang)}</th>
+                          <th className="text-right pb-1 pr-3">Margin</th>
+                          <th className="text-left pb-1">{t("status", lang)}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(productPerf.products ?? []).map((p: any, i: number) => {
+                          const statusStyle: Record<string, string> = {
+                            rising:    "bg-green-100 text-green-800 border-green-200",
+                            stable:    "bg-blue-100 text-blue-800 border-blue-200",
+                            declining: "bg-orange-100 text-orange-800 border-orange-200",
+                            watchlist: "bg-amber-100 text-amber-800 border-amber-200",
+                          };
+                          return (
+                            <tr key={i} className="border-b border-muted/40 last:border-0">
+                              <td className="py-1.5 pr-3 font-medium max-w-[160px] truncate">{p.productName}</td>
+                              <td className="py-1.5 pr-3 font-mono text-muted-foreground">{p.sku}</td>
+                              <td className="py-1.5 pr-3 text-right">{fmt(p.revenue12m)}</td>
+                              <td className={cn("py-1.5 pr-3 text-right font-semibold", p.growth6m > 0 ? "text-green-700" : p.growth6m < 0 ? "text-red-700" : "")}>
+                                {p.growth6m != null ? `${p.growth6m > 0 ? "+" : ""}${p.growth6m}%` : "—"}
+                              </td>
+                              <td className="py-1.5 pr-3 text-right">{p.margin != null ? `${p.margin}%` : "—"}</td>
+                              <td className="py-1.5">
+                                <Badge variant="outline" className={`text-[11px] ${statusStyle[p.status] ?? ""}`}>{p.status}</Badge>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ── Lead Conversion ───────────────────────────────────────── */}
+        <TabsContent value="lead-conversion" className="space-y-5">
+          {lcLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {leadConv && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <KpiCard label={t("total", lang)} value={String(leadConv.total)} icon={Users} />
+                <KpiCard label={t("converted", lang)} value={String(leadConv.converted)} icon={Target} />
+                <KpiCard label={t("conversionRate", lang)} value={fmtPct(leadConv.conversionRate)} icon={TrendingUp} />
+                <KpiCard
+                  label={t("avgConversionDays", lang)}
+                  value={leadConv.avgConversionDays != null ? `${leadConv.avgConversionDays}d` : "—"}
+                  icon={Clock}
+                />
+              </div>
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">{t("byMonth", lang)}</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={leadConv.byMonth ?? []} margin={{ top: 4, right: 8, left: 0, bottom: 40 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} angle={-35} textAnchor="end" interval={0} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="total" name="Total" fill="#94a3b8" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="converted" name="Converted" fill="#10b981" radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">{t("byChannel", lang)}</CardTitle></CardHeader>
+                  <CardContent>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="text-left pb-1 pr-3">{t("channel", lang)}</th>
+                          <th className="text-right pb-1 pr-3">{t("total", lang)}</th>
+                          <th className="text-right pb-1 pr-3">{t("converted", lang)}</th>
+                          <th className="text-right pb-1">{t("conversionRate", lang)}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(leadConv.byChannel ?? []).map((r: any, i: number) => (
+                          <tr key={i} className="border-b border-muted/40 last:border-0">
+                            <td className="py-1.5 pr-3 font-medium capitalize">{r.channel}</td>
+                            <td className="py-1.5 pr-3 text-right">{r.total}</td>
+                            <td className="py-1.5 pr-3 text-right">{r.converted}</td>
+                            <td className="py-1.5 text-right">{fmtPct(r.rate)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">{t("byCreator", lang)}</CardTitle></CardHeader>
+                  <CardContent>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="text-left pb-1 pr-3">{t("user", lang)}</th>
+                          <th className="text-right pb-1 pr-3">{t("total", lang)}</th>
+                          <th className="text-right pb-1 pr-3">{t("converted", lang)}</th>
+                          <th className="text-right pb-1">{t("conversionRate", lang)}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(leadConv.byCreator ?? []).map((r: any, i: number) => (
+                          <tr key={i} className="border-b border-muted/40 last:border-0">
+                            <td className="py-1.5 pr-3 font-medium">{r.creatorName}</td>
+                            <td className="py-1.5 pr-3 text-right">{r.total}</td>
+                            <td className="py-1.5 pr-3 text-right">{r.converted}</td>
+                            <td className="py-1.5 text-right">{fmtPct(r.rate)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ── Invoice Aging ─────────────────────────────────────────── */}
+        <TabsContent value="invoice-aging" className="space-y-5">
+          {agingLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {aging && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <KpiCard label={t("notDue", lang)} value={fmt(aging.totals.notDue.amount)} sub={`${aging.totals.notDue.count} inv.`} />
+                <KpiCard label={t("days1to30", lang)} value={fmt(aging.totals.days1to30.amount)} sub={`${aging.totals.days1to30.count} inv.`} />
+                <KpiCard label={t("days31to60", lang)} value={fmt(aging.totals.days31to60.amount)} sub={`${aging.totals.days31to60.count} inv.`} />
+                <KpiCard label={t("days61to90", lang)} value={fmt(aging.totals.days61to90.amount)} sub={`${aging.totals.days61to90.count} inv.`} />
+                <KpiCard label={t("days90plus", lang)} value={fmt(aging.totals.days90plus.amount)} sub={`${aging.totals.days90plus.count} inv.`} icon={TrendingDown} />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">{t("byChannel", lang)}</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b text-muted-foreground">
+                            <th className="text-left pb-1 pr-3">{t("channel", lang)}</th>
+                            <th className="text-right pb-1 pr-3">{t("notDue", lang)}</th>
+                            <th className="text-right pb-1 pr-3">1-30d</th>
+                            <th className="text-right pb-1 pr-3">31-60d</th>
+                            <th className="text-right pb-1 pr-3">61-90d</th>
+                            <th className="text-right pb-1">{t("days90plus", lang)}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(aging.byChannel ?? []).map((r: any, i: number) => (
+                            <tr key={i} className="border-b border-muted/40 last:border-0">
+                              <td className="py-1.5 pr-3 font-medium capitalize">{r.channel}</td>
+                              <td className="py-1.5 pr-3 text-right">{fmt(r.notDue.amount)}</td>
+                              <td className="py-1.5 pr-3 text-right">{fmt(r.days1to30.amount)}</td>
+                              <td className="py-1.5 pr-3 text-right">{fmt(r.days31to60.amount)}</td>
+                              <td className="py-1.5 pr-3 text-right">{fmt(r.days61to90.amount)}</td>
+                              <td className="py-1.5 text-right text-red-700 font-medium">{fmt(r.days90plus.amount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">{t("totalOverdue", lang)} — {t("customer", lang)} (top 30)</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b text-muted-foreground">
+                            <th className="text-left pb-1 pr-3">{t("customer", lang)}</th>
+                            <th className="text-right pb-1 pr-3">1-30d</th>
+                            <th className="text-right pb-1 pr-3">31-60d</th>
+                            <th className="text-right pb-1 pr-3">61-90d</th>
+                            <th className="text-right pb-1 pr-3">90d+</th>
+                            <th className="text-right pb-1">{t("totalOverdue", lang)}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(aging.byCustomer ?? []).map((r: any, i: number) => (
+                            <tr key={i} className="border-b border-muted/40 last:border-0">
+                              <td className="py-1.5 pr-3 font-medium max-w-[130px] truncate">{r.customerName}</td>
+                              <td className="py-1.5 pr-3 text-right">{fmt(r.days1to30.amount)}</td>
+                              <td className="py-1.5 pr-3 text-right">{fmt(r.days31to60.amount)}</td>
+                              <td className="py-1.5 pr-3 text-right">{fmt(r.days61to90.amount)}</td>
+                              <td className="py-1.5 pr-3 text-right">{fmt(r.days90plus.amount)}</td>
+                              <td className="py-1.5 text-right font-semibold text-red-700">{fmt(r.totalOverdue.amount)}</td>
                             </tr>
                           ))}
                         </tbody>

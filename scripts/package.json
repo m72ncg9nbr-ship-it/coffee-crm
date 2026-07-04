@@ -10,6 +10,7 @@
     "reconcile-inventory-fulfillment": "tsx ./src/reconcile-inventory-fulfillment.ts",
     "migrate-roles-v2": "tsx ./src/migrate-roles-v2.ts",
     "create-tables-v2-5": "tsx ./src/create-tables-v2-5.ts",
+    "create-tables-payment-rules": "tsx ./src/create-tables-payment-rules.ts",
     "seed-demo-analytics": "tsx ./src/seed-demo-analytics.ts",
     "seed-cosmetics": "tsx ./src/seed-cosmetics.ts",
     "repair-demo-users": "tsx ./src/repair-demo-users.ts",

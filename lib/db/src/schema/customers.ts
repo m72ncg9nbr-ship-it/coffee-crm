@@ -20,6 +20,11 @@ export const customersTable = pgTable("customers", {
   createdByUserId: integer("created_by_user_id").references(() => usersTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  paymentOrderRuleMode: text("payment_order_rule_mode").notNull().default("no_block"),
+  overdueThresholdAmount: numeric("overdue_threshold_amount", { precision: 12, scale: 2 }),
+  gracePeriodDays: integer("grace_period_days").notNull().default(0),
+  allowAdminGmOverride: boolean("allow_admin_gm_override").notNull().default(false),
+  paymentOrderRuleNote: text("payment_order_rule_note"),
 });
 
 export const customerAddressesTable = pgTable("customer_addresses", {
