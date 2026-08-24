@@ -3,7 +3,7 @@ import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useGetCustomer, useUpdateCustomer } from "@workspace/api-client-react";
 import { useLang } from "@/lib/lang-context";
-import { t } from "@/lib/i18n";
+import { t, type Lang } from "@/lib/i18n";
 import { PriorityBadge, StatusBadge } from "@/components/priority-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,15 +76,15 @@ function fromCustomer(c: any): EditForm {
   };
 }
 
-function PayBadge({ status, dueDate, paidAt }: { status: string; dueDate?: string | null; paidAt?: string | null }) {
+function PayBadge({ status, dueDate, paidAt, lang }: { status: string; dueDate?: string | null; paidAt?: string | null; lang: Lang }) {
   const today = new Date().toISOString().split("T")[0];
   if (status === "paid") {
     const late = paidAt && dueDate && paidAt.slice(0, 10) > dueDate;
-    return <Badge variant="outline" className={late ? "border-yellow-300 bg-yellow-50 text-yellow-800" : "border-green-300 bg-green-50 text-green-800"}>{late ? "Paid Late" : "Paid"}</Badge>;
+    return <Badge variant="outline" className={late ? "border-yellow-300 bg-yellow-50 text-yellow-800" : "border-green-300 bg-green-50 text-green-800"}>{late ? t("paidLate", lang) : t("paid", lang)}</Badge>;
   }
-  if (dueDate && dueDate < today) return <Badge variant="outline" className="border-red-300 bg-red-50 text-red-800">Overdue</Badge>;
-  if (dueDate) return <Badge variant="outline" className="border-yellow-300 bg-yellow-50 text-yellow-800">Unpaid</Badge>;
-  return <Badge variant="outline" className="text-muted-foreground">Not invoiced</Badge>;
+  if (dueDate && dueDate < today) return <Badge variant="outline" className="border-red-300 bg-red-50 text-red-800">{t("overdue", lang)}</Badge>;
+  if (dueDate) return <Badge variant="outline" className="border-yellow-300 bg-yellow-50 text-yellow-800">{t("unpaid", lang)}</Badge>;
+  return <Badge variant="outline" className="text-muted-foreground">{t("notInvoiced", lang)}</Badge>;
 }
 
 export default function CustomerDetailPage() {
@@ -122,10 +122,10 @@ export default function CustomerDetailPage() {
       onSuccess: () => {
         refetch();
         setEditOpen(false);
-        toast({ title: "Customer updated" });
+        toast({ title: t("customerUpdated", lang) });
       },
       onError: (e: any) =>
-        toast({ title: "Failed to update customer", description: e?.error ?? "", variant: "destructive" }),
+        toast({ title: t("failedToUpdateCustomer", lang), description: e?.error ?? "", variant: "destructive" }),
     },
   });
 
@@ -137,13 +137,13 @@ export default function CustomerDetailPage() {
       editForm.phone.trim().length < 4 ||
       editForm.email.trim().length < 3
     ) {
-      toast({ title: "Company, contact, phone and email are required", variant: "destructive" });
+      toast({ title: t("requiredFieldsError", lang), variant: "destructive" });
       return;
     }
     const discount =
       editForm.discountLevel.trim() === "" ? null : Number(editForm.discountLevel);
     if (discount !== null && Number.isNaN(discount)) {
-      toast({ title: "Discount must be a number", variant: "destructive" });
+      toast({ title: t("discountMustBeNumber", lang), variant: "destructive" });
       return;
     }
     const graceDays = editForm.gracePeriodDays.trim() === "" ? 0 : Number(editForm.gracePeriodDays);
@@ -171,8 +171,8 @@ export default function CustomerDetailPage() {
     });
   };
 
-  if (isLoading) return <div className="p-6 text-muted-foreground">Loading...</div>;
-  if (!customer) return <div className="p-6 text-muted-foreground">Customer not found</div>;
+  if (isLoading) return <div className="p-6 text-muted-foreground">{t("loading", lang)}</div>;
+  if (!customer) return <div className="p-6 text-muted-foreground">{t("customerNotFound", lang)}</div>;
 
   const c = customer as any;
 
@@ -182,7 +182,7 @@ export default function CustomerDetailPage() {
         <Link href="/customers">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1.5" />
-            Customers
+            {t("customers", lang)}
           </Button>
         </Link>
         <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export default function CustomerDetailPage() {
             data-testid="button-edit-customer"
           >
             <Pencil className="h-4 w-4 mr-1.5" />
-            Edit details
+            {t("editDetails", lang)}
           </Button>
           <Button
             variant={c.active ? "outline" : "default"}
@@ -203,7 +203,7 @@ export default function CustomerDetailPage() {
             data-testid="button-toggle-customer-active"
           >
             <Power className="h-4 w-4 mr-1.5" />
-            {c.active ? "Deactivate" : "Activate"}
+            {c.active ? t("deactivate", lang) : t("activate", lang)}
           </Button>
         </div>
       </div>
@@ -217,7 +217,7 @@ export default function CustomerDetailPage() {
             <h1 className="text-2xl font-bold">{c.companyName}</h1>
             <PriorityBadge priority={c.priorityClass} />
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-500"}`}>
-              {c.active ? "Active" : "Inactive"}
+              {c.active ? t("activeStatus", lang) : t("inactiveStatus", lang)}
             </span>
           </div>
           <p className="text-muted-foreground text-sm capitalize">{c.segment?.replace(/_/g, " ")} · {c.customerChannel} · {c.businessChannel}</p>
@@ -226,10 +226,10 @@ export default function CustomerDetailPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm">Contact</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm">{t("contact", lang)}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium w-28 shrink-0">Contact person</span>
+              <span className="font-medium w-28 shrink-0">{t("contactPersonLabel", lang)}</span>
               <span className="text-muted-foreground">{c.contactPerson}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
@@ -244,23 +244,23 @@ export default function CustomerDetailPage() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm">Commercial Terms</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm">{t("commercialTerms", lang)}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <Row label="Payment Terms" value={c.paymentTerms} />
-            <Row label="Discount Level" value={c.discountLevel != null ? `${c.discountLevel}%` : "None"} />
-            <Row label="Priority Class" value={
+            <Row label={t("paymentTermsLabel", lang)} value={c.paymentTerms} />
+            <Row label={t("discountLevel", lang)} value={c.discountLevel != null ? `${c.discountLevel}%` : t("none", lang)} />
+            <Row label={t("priorityClass", lang)} value={
               <div className="flex items-center gap-1.5">
                 <PriorityBadge priority={c.priorityClass} />
-                <span className="text-sm text-muted-foreground">Priority {c.priorityClass}</span>
+                <span className="text-sm text-muted-foreground">{t("priority", lang)} {c.priorityClass}</span>
               </div>
             } />
-            <Row label="Customer Since" value={formatDate(c.createdAt)} />
+            <Row label={t("customerSince", lang)} value={formatDate(c.createdAt)} />
           </CardContent>
         </Card>
 
         {c.notes && (
           <Card className="md:col-span-2">
-            <CardHeader className="pb-3"><CardTitle className="text-sm">Notes</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">{t("notes", lang)}</CardTitle></CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">{c.notes}</p>
             </CardContent>
@@ -290,7 +290,7 @@ export default function CustomerDetailPage() {
               {c.gracePeriodDays > 0 && (
                 <Row label={t("gracePeriodDays", lang)} value={`${c.gracePeriodDays}`} />
               )}
-              <Row label={t("allowAdminGmOverride", lang)} value={c.allowAdminGmOverride ? "Yes" : "No"} />
+              <Row label={t("allowAdminGmOverride", lang)} value={c.allowAdminGmOverride ? t("yes", lang) : t("no", lang)} />
               {c.paymentOrderRuleNote && (
                 <Row label={t("orderPolicyNote", lang)} value={c.paymentOrderRuleNote} />
               )}
@@ -300,7 +300,7 @@ export default function CustomerDetailPage() {
 
         {c.addresses && c.addresses.length > 0 && (
           <Card className="md:col-span-2">
-            <CardHeader className="pb-3"><CardTitle className="text-sm">Addresses</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">{t("addresses", lang)}</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {c.addresses.map((addr: any) => (
@@ -309,10 +309,10 @@ export default function CustomerDetailPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-semibold capitalize">
-                          {[addr.isDeliveryAddress && "delivery", addr.isBillingAddress && "billing"].filter(Boolean).join(" / ") || addr.addressType}
+                          {[addr.isDeliveryAddress && t("deliveryType", lang), addr.isBillingAddress && t("billingType", lang)].filter(Boolean).join(" / ") || addr.addressType}
                         </span>
                         {addr.label && <span className="text-xs text-muted-foreground">· {addr.label}</span>}
-                        {addr.isDefault && <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">Default</span>}
+                        {addr.isDefault && <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">{t("defaultLabel", lang)}</span>}
                       </div>
                       <p className="text-sm">{addr.street}</p>
                       <p className="text-sm text-muted-foreground">{addr.postalCode} {addr.city}, {addr.country}</p>
@@ -329,10 +329,10 @@ export default function CustomerDetailPage() {
       <div className="space-y-4">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
-          Purchase History
+          {t("purchaseHistory", lang)}
         </h2>
 
-        {histLoading && <p className="text-sm text-muted-foreground">Loading history...</p>}
+        {histLoading && <p className="text-sm text-muted-foreground">{t("loadingHistory", lang)}</p>}
 
         {history && (
           <>
@@ -340,32 +340,32 @@ export default function CustomerDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Card className="shadow-sm">
                 <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground mb-1">Total Orders</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("totalOrders", lang)}</p>
                   <p className="text-2xl font-bold">{history.summary.totalOrders}</p>
                 </CardContent>
               </Card>
               <Card className="shadow-sm">
                 <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground mb-1">Total Revenue</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("totalRevenue", lang)}</p>
                   <p className="text-2xl font-bold">{formatCurrency(history.summary.totalRevenue)}</p>
                 </CardContent>
               </Card>
               <Card className="shadow-sm">
                 <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground mb-1">Total Paid</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("totalPaid", lang)}</p>
                   <p className="text-2xl font-bold text-green-700">{formatCurrency(history.summary.totalPaid)}</p>
                 </CardContent>
               </Card>
               <Card className={`shadow-sm ${history.summary.overdueAmount > 0 ? "border-red-300" : ""}`}>
                 <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground mb-1">Outstanding</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("outstanding", lang)}</p>
                   <p className={`text-2xl font-bold ${history.summary.outstandingAmount > 0 ? "text-amber-700" : "text-green-700"}`}>
                     {formatCurrency(history.summary.outstandingAmount)}
                   </p>
                   {history.summary.overdueAmount > 0 && (
                     <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
                       <AlertCircle className="h-3 w-3" />
-                      {formatCurrency(history.summary.overdueAmount)} overdue
+                      {formatCurrency(history.summary.overdueAmount)} {t("overdue", lang)}
                     </p>
                   )}
                 </CardContent>
@@ -377,26 +377,26 @@ export default function CustomerDetailPage() {
               {history.summary.lastOrderDate && (
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" />
-                  Last order: <span className="text-foreground font-medium">{formatDate(history.summary.lastOrderDate)}</span>
+                  {t("lastOrder", lang)} <span className="text-foreground font-medium">{formatDate(history.summary.lastOrderDate)}</span>
                 </span>
               )}
               {history.summary.onTimePayments > 0 && (
                 <span className="flex items-center gap-1.5 text-green-700">
                   <CheckCircle className="h-3.5 w-3.5" />
-                  {history.summary.onTimePayments} on-time payment{history.summary.onTimePayments !== 1 ? "s" : ""}
+                  {history.summary.onTimePayments} {t("onTimePayment", lang)}{lang === "en" && history.summary.onTimePayments !== 1 ? "s" : ""}
                 </span>
               )}
               {history.summary.latePayments > 0 && (
                 <span className="flex items-center gap-1.5 text-amber-700">
                   <AlertCircle className="h-3.5 w-3.5" />
-                  {history.summary.latePayments} late payment{history.summary.latePayments !== 1 ? "s" : ""}
+                  {history.summary.latePayments} {t("latePayment", lang)}{lang === "en" && history.summary.latePayments !== 1 ? "s" : ""}
                 </span>
               )}
             </div>
 
             {/* Order list */}
             {history.orders.length === 0 ? (
-              <Card><CardContent className="p-6 text-center text-muted-foreground text-sm">No orders yet</CardContent></Card>
+              <Card><CardContent className="p-6 text-center text-muted-foreground text-sm">{t("noOrdersYet", lang)}</CardContent></Card>
             ) : (
               <Card>
                 <div className="divide-y">
@@ -418,7 +418,7 @@ export default function CustomerDetailPage() {
                           <span className="flex-1" />
                           <span className="text-sm font-semibold w-28 text-right shrink-0">{formatCurrency(o.totalAmount)}</span>
                           <span className="w-28 text-right shrink-0">
-                            <PayBadge status={o.paymentStatus} dueDate={o.dueDate} paidAt={o.paidAt} />
+                            <PayBadge status={o.paymentStatus} dueDate={o.dueDate} paidAt={o.paidAt} lang={lang} />
                           </span>
                         </button>
                         {expanded && o.items.length > 0 && (
@@ -426,10 +426,10 @@ export default function CustomerDetailPage() {
                             <table className="w-full text-xs">
                               <thead>
                                 <tr className="text-muted-foreground">
-                                  <th className="text-left pb-1.5 font-medium">Product</th>
-                                  <th className="text-right pb-1.5 font-medium w-16">Qty</th>
-                                  <th className="text-right pb-1.5 font-medium w-24">Unit Price</th>
-                                  <th className="text-right pb-1.5 font-medium w-24">Line Total</th>
+                                  <th className="text-left pb-1.5 font-medium">{t("product", lang)}</th>
+                                  <th className="text-right pb-1.5 font-medium w-16">{t("qty", lang)}</th>
+                                  <th className="text-right pb-1.5 font-medium w-24">{t("unitPrice", lang)}</th>
+                                  <th className="text-right pb-1.5 font-medium w-24">{t("lineTotal", lang)}</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-border/50">
@@ -445,9 +445,9 @@ export default function CustomerDetailPage() {
                             </table>
                             {o.dueDate && (
                               <div className="mt-2 text-xs text-muted-foreground flex gap-4">
-                                {o.invoiceDate && <span>Invoice: {formatDate(o.invoiceDate)}</span>}
-                                <span>Due: {formatDate(o.dueDate)}</span>
-                                {o.paidAt && <span>Paid: {formatDate(o.paidAt)}</span>}
+                                {o.invoiceDate && <span>{t("invoice", lang)}: {formatDate(o.invoiceDate)}</span>}
+                                <span>{t("dueDateLabel", lang)}: {formatDate(o.dueDate)}</span>
+                                {o.paidAt && <span>{t("paid", lang)}: {formatDate(o.paidAt)}</span>}
                               </div>
                             )}
                           </div>
@@ -465,15 +465,15 @@ export default function CustomerDetailPage() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Customer</DialogTitle>
+            <DialogTitle>{t("editCustomer", lang)}</DialogTitle>
             <DialogDescription>
-              Update contact, channel, priority, terms or notes. Changes save immediately.
+              {t("editDialogDesc", lang)}
             </DialogDescription>
           </DialogHeader>
           {editForm && (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label>Company name *</Label>
+                <Label>{t("companyNameLabel", lang)} *</Label>
                 <Input
                   value={editForm.companyName}
                   onChange={e => setEditForm(p => p && { ...p, companyName: e.target.value })}
@@ -481,14 +481,14 @@ export default function CustomerDetailPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Contact person *</Label>
+                  <Label>{t("contactPersonLabel", lang)} *</Label>
                   <Input
                     value={editForm.contactPerson}
                     onChange={e => setEditForm(p => p && { ...p, contactPerson: e.target.value })}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Phone *</Label>
+                  <Label>{t("phone", lang)} *</Label>
                   <Input
                     value={editForm.phone}
                     onChange={e => setEditForm(p => p && { ...p, phone: e.target.value })}
@@ -496,7 +496,7 @@ export default function CustomerDetailPage() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Email *</Label>
+                <Label>{t("emailLabel", lang)} *</Label>
                 <Input
                   value={editForm.email}
                   onChange={e => setEditForm(p => p && { ...p, email: e.target.value })}
@@ -504,7 +504,7 @@ export default function CustomerDetailPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Channel</Label>
+                  <Label>{t("channel", lang)}</Label>
                   <Select value={editForm.channel} onValueChange={v => setEditForm(p => p && { ...p, channel: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -515,7 +515,7 @@ export default function CustomerDetailPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Segment</Label>
+                  <Label>{t("segment", lang)}</Label>
                   <Select value={editForm.segment} onValueChange={v => setEditForm(p => p && { ...p, segment: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -528,21 +528,21 @@ export default function CustomerDetailPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Priority class *</Label>
+                  <Label>{t("priorityClassLabel", lang)} *</Label>
                   <Select
                     value={editForm.priorityClass}
                     onValueChange={v => setEditForm(p => p && { ...p, priorityClass: v as PriorityClass })}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="A">A — top priority</SelectItem>
-                      <SelectItem value="B">B — standard</SelectItem>
-                      <SelectItem value="C">C — low priority</SelectItem>
+                      <SelectItem value="A">{t("priorityALabel", lang)}</SelectItem>
+                      <SelectItem value="B">{t("priorityBLabel", lang)}</SelectItem>
+                      <SelectItem value="C">{t("priorityCLabel", lang)}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Payment terms</Label>
+                  <Label>{t("paymentTermsLabel", lang)}</Label>
                   <Select value={editForm.paymentTerms} onValueChange={v => setEditForm(p => p && { ...p, paymentTerms: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -554,7 +554,7 @@ export default function CustomerDetailPage() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Discount % (optional)</Label>
+                <Label>{t("discountOptional", lang)}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -565,7 +565,7 @@ export default function CustomerDetailPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Notes (optional)</Label>
+                <Label>{t("notesOptional", lang)}</Label>
                 <textarea
                   className="w-full border rounded-md px-3 py-2 text-sm resize-none h-20 bg-background"
                   value={editForm.notes}
@@ -630,7 +630,7 @@ export default function CustomerDetailPage() {
                 <div className="space-y-1.5">
                   <Label>{t("orderPolicyNote", lang)}</Label>
                   <Input
-                    placeholder="Internal note about this rule"
+                    placeholder={t("internalNotePlaceholder", lang)}
                     value={editForm.paymentOrderRuleNote}
                     onChange={e => setEditForm(p => p && { ...p, paymentOrderRuleNote: e.target.value })}
                   />
@@ -639,13 +639,13 @@ export default function CustomerDetailPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>{t("cancel", lang)}</Button>
             <Button
               onClick={submitEdit}
               disabled={updateCustomer.isPending}
               data-testid="button-save-customer"
             >
-              {updateCustomer.isPending ? "Saving..." : "Save changes"}
+              {updateCustomer.isPending ? t("saving", lang) : t("saveChanges", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>

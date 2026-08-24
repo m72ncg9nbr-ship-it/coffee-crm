@@ -142,16 +142,16 @@ export default function OrderNewPage() {
         if (warnings.length > 0) {
           setStockWarnings(warnings);
           toast({
-            title: "Order created with stock warnings",
-            description: `${data.orderNumber} — ${warnings.length} item(s) have insufficient stock`,
+            title: t("orderCreatedWithWarnings", lang),
+            description: `${data.orderNumber} — ${warnings.length} ${t("itemsHaveInsufficientStock", lang)}`,
             variant: "destructive",
           });
         } else {
-          toast({ title: "Order created", description: `${data.orderNumber}` });
+          toast({ title: t("orderCreated", lang), description: `${data.orderNumber}` });
           navigate(`/orders/${data.id}`);
         }
       },
-      onError: (e: any) => toast({ title: "Failed to create order", description: e?.error ?? "", variant: "destructive" }),
+      onError: (e: any) => toast({ title: t("failedToCreateOrder", lang), description: e?.error ?? "", variant: "destructive" }),
     },
   });
 
@@ -179,7 +179,7 @@ export default function OrderNewPage() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!cid) {
-      toast({ title: "Select a customer", variant: "destructive" });
+      toast({ title: t("selectCustomerFirst", lang), variant: "destructive" });
       return;
     }
     if (policy?.status === "blocked" && !overrideReason.trim()) {
@@ -215,23 +215,23 @@ export default function OrderNewPage() {
     <div className="p-6 space-y-5 max-w-5xl">
       <div className="flex items-center gap-3">
         <Link href="/orders">
-          <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Button>
+          <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1.5" />{t("back", lang)}</Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">New Order</h1>
-          <p className="text-muted-foreground text-sm">Customer details auto-fill on selection</p>
+          <h1 className="text-2xl font-bold">{t("newOrder", lang)}</h1>
+          <p className="text-muted-foreground text-sm">{t("newOrderSubtitle", lang)}</p>
         </div>
       </div>
 
       <form onSubmit={submit} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm">Customer</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">{t("customer", lang)}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label>Customer *</Label>
+                <Label>{t("customer", lang)} *</Label>
                 <Select value={customerId} onValueChange={setCustomerId}>
-                  <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("selectCustomerPlaceholder", lang)} /></SelectTrigger>
                   <SelectContent>
                     {filteredCustomers.map((c: any) => (
                       <SelectItem key={c.id} value={String(c.id)}>
@@ -250,19 +250,19 @@ export default function OrderNewPage() {
                     <span className="text-muted-foreground">· {c.contactPerson}</span>
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
-                    <span>Phone: {c.phone}</span>
-                    <span>Email: {c.email}</span>
-                    <span>Payment: <span className="capitalize">{c.paymentTerms?.replace(/_/g, " ")}</span></span>
-                    {c.discountLevel && <span>Discount: {c.discountLevel}%</span>}
-                    <span>Channel: <span className="capitalize">{c.businessChannel}</span></span>
+                    <span>{t("phone", lang)}: {c.phone}</span>
+                    <span>{t("emailLabel", lang)}: {c.email}</span>
+                    <span>{t("payment", lang)}: <span className="capitalize">{c.paymentTerms?.replace(/_/g, " ")}</span></span>
+                    {c.discountLevel && <span>{t("discount", lang)}: {c.discountLevel}%</span>}
+                    <span>{t("channel", lang)}: <span className="capitalize">{c.businessChannel}</span></span>
                   </div>
                   {defaultAddr ? (
                     <div className="text-muted-foreground">
-                      Default delivery: {defaultAddr.street}, {defaultAddr.postalCode} {defaultAddr.city}
+                      {t("defaultDelivery", lang)}: {defaultAddr.street}, {defaultAddr.postalCode} {defaultAddr.city}
                     </div>
                   ) : (
                     <div className="text-amber-700 flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" /> No default delivery address on file
+                      <AlertTriangle className="h-3 w-3" /> {t("noDefaultAddress", lang)}
                     </div>
                   )}
                 </div>
@@ -302,7 +302,7 @@ export default function OrderNewPage() {
                     <p className="text-xs text-red-600 mt-1">
                       {t("overdueAmount", lang)}: <span className="font-semibold">{policy.overdueAmount.toFixed(2)}</span>
                       {policy.overdueThreshold != null && (
-                        <> · Threshold: <span className="font-semibold">{policy.overdueThreshold.toFixed(2)}</span></>
+                        <> · {t("thresholdLabel", lang)}: <span className="font-semibold">{policy.overdueThreshold.toFixed(2)}</span></>
                       )}
                     </p>
                   )}
@@ -313,7 +313,7 @@ export default function OrderNewPage() {
                   <Label className="text-red-800 text-xs font-semibold">{t("overrideReason", lang)} *</Label>
                   <Input
                     className="border-red-300 focus:ring-red-400 bg-white"
-                    placeholder="Required — explain why this order should proceed"
+                    placeholder={t("overrideReasonPlaceholder", lang)}
                     value={overrideReason}
                     onChange={e => setOverrideReason(e.target.value)}
                   />
@@ -323,13 +323,13 @@ export default function OrderNewPage() {
           )}
 
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm">Order Items</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">{t("orderItems", lang)}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
-                  <Label>Product</Label>
+                  <Label>{t("product", lang)}</Label>
                   <Select value={productPick} onValueChange={setProductPick}>
-                    <SelectTrigger><SelectValue placeholder="Choose product" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("chooseProduct", lang)} /></SelectTrigger>
                     <SelectContent>
                       {filteredProducts.map((p: any) => {
                         const ps = poolStockMap.get(p.id);
@@ -360,11 +360,11 @@ export default function OrderNewPage() {
                   </Select>
                 </div>
                 <div className="w-32">
-                  <Label>Qty</Label>
+                  <Label>{t("qty", lang)}</Label>
                   <Input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} className="min-w-0" />
                 </div>
                 <Button type="button" onClick={addItem} disabled={!productPick}>
-                  <Plus className="h-4 w-4 mr-1" />Add
+                  <Plus className="h-4 w-4 mr-1" />{t("add", lang)}
                 </Button>
               </div>
 
@@ -380,7 +380,7 @@ export default function OrderNewPage() {
                             // Show badge even when no pool data: "Not Allocated" (gray)
                             const { status, label } = ps
                               ? calculateInventoryStatus(ps.available, ps.reserved)
-                              : { status: "not_allocated" as const, label: "Not Allocated" };
+                              : { status: "not_allocated" as const, label: t("notAllocated", lang) };
                             const cls = invStatusBadgeClass(status);
                             return (
                               <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}`}>
@@ -399,19 +399,19 @@ export default function OrderNewPage() {
                     </div>
                   ))}
                   <div className="p-2.5 bg-muted/30 text-sm font-semibold flex justify-between">
-                    <span>Total</span>
+                    <span>{t("total", lang)}</span>
                     <span>{formatCurrency(total)}</span>
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground italic">No items yet — add at least one</p>
+                <p className="text-xs text-muted-foreground italic">{t("noItemsYet", lang)}</p>
               )}
 
               {cartPoolWarnings.length > 0 && (
                 <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-2.5">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium">Stock warning — {poolLabel} pool:</p>
+                    <p className="font-medium">{t("stockWarning", lang)} — {poolLabel} pool:</p>
                     {cartPoolWarnings.map((item, idx) => {
                       const ps = poolStockMap.get(item.productId)!;
                       const { label, allocated } = calculateInventoryStatus(ps.available, ps.reserved);
@@ -421,7 +421,7 @@ export default function OrderNewPage() {
                         </p>
                       );
                     })}
-                    <p className="mt-0.5 opacity-70">The order will still be saved.</p>
+                    <p className="mt-0.5 opacity-70">{t("orderSavedAnyway", lang)}</p>
                   </div>
                 </div>
               )}
@@ -429,43 +429,43 @@ export default function OrderNewPage() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm">Delivery & Notes</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">{t("deliveryAndNotes", lang)}</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Requested Delivery Date *</Label>
+                <Label>{t("requestedDeliveryDate", lang)}</Label>
                 <Input type="date" value={requestedDeliveryDate} onChange={e => setRequestedDeliveryDate(e.target.value)} />
               </div>
               <div>
-                <Label>Urgency</Label>
+                <Label>{t("urgency", lang)}</Label>
                 <Select value={urgency} onValueChange={setUrgency}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="low">{t("low", lang)}</SelectItem>
+                    <SelectItem value="normal">{t("normal", lang)}</SelectItem>
+                    <SelectItem value="high">{t("high", lang)}</SelectItem>
+                    <SelectItem value="critical">{t("critical", lang)}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Order Source</Label>
+                <Label>{t("orderSourceLabel", lang)}</Label>
                 <Select value={orderSource} onValueChange={setOrderSource}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="phone">Phone</SelectItem>
+                    <SelectItem value="phone">{t("phone", lang)}</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="sales_rep">Sales Rep</SelectItem>
+                    <SelectItem value="sales_rep">{t("salesRep", lang)}</SelectItem>
                     <SelectItem value="b2b">B2B</SelectItem>
-                    <SelectItem value="direct">Direct</SelectItem>
+                    <SelectItem value="direct">{t("direct", lang)}</SelectItem>
                     <SelectItem value="web">Web</SelectItem>
                     <SelectItem value="online">Online</SelectItem>
-                    <SelectItem value="sample">Sample</SelectItem>
-                    <SelectItem value="free_issue">Free Issue</SelectItem>
+                    <SelectItem value="sample">{t("sample", lang)}</SelectItem>
+                    <SelectItem value="free_issue">{t("freeIssue", lang)}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Channel</Label>
+                <Label>{t("channel", lang)}</Label>
                 <Select value={businessChannel} onValueChange={setBusinessChannel}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -476,30 +476,30 @@ export default function OrderNewPage() {
                 </Select>
               </div>
               <div className="col-span-2">
-                <Label>Notes</Label>
+                <Label>{t("notes", lang)}</Label>
                 <textarea
                   className="w-full text-sm border rounded-md p-2 h-20 resize-none bg-background"
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
-                  placeholder="Special instructions, etc."
+                  placeholder={t("specialInstructions", lang)}
                 />
               </div>
               {isSampleOrder && (
                 <>
                   <div className="col-span-2">
-                    <Label>Sample / Free Issue Reason</Label>
+                    <Label>{t("sampleReasonLabel", lang)}</Label>
                     <Input
                       value={sampleReason}
                       onChange={e => setSampleReason(e.target.value)}
-                      placeholder="e.g. New customer intro, product trial..."
+                      placeholder={t("sampleReasonPlaceholder", lang)}
                     />
                   </div>
                   <div className="col-span-2">
-                    <Label>Event / Campaign Name <span className="text-muted-foreground">(optional)</span></Label>
+                    <Label>{t("sampleEventLabel", lang)} <span className="text-muted-foreground">({t("optional", lang)})</span></Label>
                     <Input
                       value={sampleEventName}
                       onChange={e => setSampleEventName(e.target.value)}
-                      placeholder="e.g. Summer 2026 Campaign"
+                      placeholder={t("sampleEventPlaceholder", lang)}
                     />
                   </div>
                 </>
@@ -510,22 +510,22 @@ export default function OrderNewPage() {
 
         <div>
           <Card className="sticky top-4">
-            <CardHeader className="pb-3"><CardTitle className="text-sm">Completeness</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">{t("completeness", lang)}</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              <CheckRow ok={!!cid} label="Customer selected" />
-              <CheckRow ok={hasItems} label="At least one item" />
-              <CheckRow ok={hasDate} label="Delivery date set" />
-              <CheckRow ok={hasAddr} label="Delivery address available" />
+              <CheckRow ok={!!cid} label={t("customerSelectedLabel", lang)} />
+              <CheckRow ok={hasItems} label={t("atLeastOneItem", lang)} />
+              <CheckRow ok={hasDate} label={t("deliveryDateSet", lang)} />
+              <CheckRow ok={hasAddr} label={t("deliveryAddressAvailable", lang)} />
               <div className="pt-2 border-t mt-3 text-xs">
                 {isComplete ? (
-                  <p className="text-green-700">Will be created and immediately set to <strong>planned</strong> with an auto-created delivery.</p>
+                  <p className="text-green-700">{t("orderWillBePlanned", lang)}</p>
                 ) : (
-                  <p className="text-amber-700">Will be saved as <strong>incomplete</strong> until items, a delivery address, and a delivery date are all set.</p>
+                  <p className="text-amber-700">{t("orderWillBeIncomplete", lang)}</p>
                 )}
               </div>
               {stockWarnings.length > 0 && (
                 <div className="text-xs bg-red-50 border border-red-200 rounded p-2 mt-2 space-y-1">
-                  <p className="font-semibold text-red-800">Stock warnings — order was saved:</p>
+                  <p className="font-semibold text-red-800">{t("stockWarningsSaved", lang)}</p>
                   {stockWarnings.map((w, i) => (
                     <p key={i} className="text-red-700">{w.productName}: requested {w.requested}, only {w.available} available in {w.poolName}</p>
                   ))}
@@ -536,7 +536,7 @@ export default function OrderNewPage() {
                 disabled={!cid || create.isPending || (policy?.status === "blocked" && !policy.canOverride) || (policy?.status === "blocked" && policy.canOverride && !overrideReason.trim())}
                 className="w-full mt-3"
               >
-                {create.isPending ? "Creating..." : policy?.status === "blocked" ? t("proceedWithOverride", lang) : "Create Order"}
+                {create.isPending ? t("creating", lang) : policy?.status === "blocked" ? t("proceedWithOverride", lang) : t("createOrder", lang)}
               </Button>
             </CardContent>
           </Card>
