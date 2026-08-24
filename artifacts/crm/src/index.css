@@ -137,6 +137,97 @@
   --sidebar-accent-border: hsl(var(--sidebar-accent));
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   RED / WHITE THEME  —  NS Global brand palette
+   Activated when <html data-theme="red_white"> is set in main.tsx.
+   To revert to the classic warm-espresso look: set APP_THEME = "classic"
+   in src/lib/theme.ts — this entire block stays, but is simply never applied.
+───────────────────────────────────────────────────────────────────────────── */
+[data-theme="red_white"] {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .06);
+  --opaque-button-border-intensity: -10;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .07);
+
+  /* Canvas */
+  --background: 0 0% 98%;
+  --foreground: 0 0% 9%;
+  --border: 0 0% 90%;
+  --input: 0 0% 87%;
+  --ring: 0 68% 40%;
+
+  /* Cards */
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 9%;
+  --card-border: 0 0% 91%;
+
+  /* Popovers / dropdowns */
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 9%;
+  --popover-border: 0 0% 90%;
+
+  /* Brand red — measured, executive */
+  --primary: 0 68% 40%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Neutral secondary surfaces */
+  --secondary: 0 0% 95%;
+  --secondary-foreground: 0 0% 15%;
+
+  /* Muted */
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+
+  /* Accent — pale red tint for hover / highlight */
+  --accent: 0 68% 96%;
+  --accent-foreground: 0 68% 30%;
+
+  /* Destructive — brighter, more saturated red; clearly distinct from brand primary */
+  --destructive: 0 84% 50%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Charts — diverse palette anchored by brand red */
+  --chart-1: 0 68% 42%;
+  --chart-2: 207 75% 48%;
+  --chart-3: 142 52% 40%;
+  --chart-4: 38 92% 50%;
+  --chart-5: 270 60% 52%;
+
+  /* Sidebar — near-black with red active state */
+  --sidebar: 0 0% 9%;
+  --sidebar-foreground: 0 0% 90%;
+  --sidebar-border: 0 0% 16%;
+  --sidebar-primary: 0 68% 48%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 15%;
+  --sidebar-accent-foreground: 0 0% 93%;
+  --sidebar-ring: 0 68% 48%;
+
+  /* Typography */
+  --app-font-sans: 'Inter', sans-serif;
+  --app-font-serif: Georgia, serif;
+  --app-font-mono: Menlo, monospace;
+
+  /* Shape — slightly more rounded than classic */
+  --radius: 0.5rem;
+
+  /* Shadows — clean, not warm */
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow: 0 1px 3px 0 rgba(0,0,0,0.09), 0 1px 2px -1px rgba(0,0,0,0.09);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.07);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.06);
+
+  /* Derived borders (same formula as classic) */
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+}
+
 @layer base {
   * {
     @apply border-border;
