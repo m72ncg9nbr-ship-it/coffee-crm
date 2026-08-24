@@ -387,6 +387,19 @@ export const dict = {
   missingCost:           { en: "Missing Cost",                        tr: "Eksik Maliyet" },
   missingRegion:         { en: "Missing Region",                      tr: "Eksik Bölge" },
   missingPaymentTerms:   { en: "Missing Payment Terms",               tr: "Eksik Ödeme Koşulu" },
+
+  // ── Landing page ─────────────────────────────────────────────────────────────
+  solutions:             { en: "Solutions",                            tr: "Çözümler" },
+  channels:              { en: "Channels",                             tr: "Kanallar" },
+  landingBadge:          { en: "Multi-Channel · Coffee · Cosmetics",   tr: "Çok Kanallı · Kahve · Kozmetik" },
+  landingHeadline:       { en: "Run Coffee & Cosmetics Operations From One Control Center", tr: "Kahve ve Dermokozmetik Operasyonlarını Tek Merkezden Yönetin" },
+  landingSubtitle:       { en: "Track customers, orders, deliveries, payments, profitability, and daily actions across Coffee and Cosmetics channels.", tr: "Coffee ve Cosmetics kanallarında müşteri, sipariş, teslimat, ödeme, kârlılık ve günlük aksiyonları tek platformdan takip edin." },
+  landingRevGrowth:      { en: "Revenue Growth",                       tr: "Gelir Büyümesi" },
+  landingPendingApprovals:{ en: "Pending Approvals",                   tr: "Bekleyen Onaylar" },
+  landingOverduePayments:{ en: "Overdue Payments",                     tr: "Vadesi Geçmiş Ödemeler" },
+  landingActionItems:    { en: "Action Items",                         tr: "Aksiyon Öğeleri" },
+  landingPaymentRisk:    { en: "Payment Risk",                         tr: "Ödeme Riski" },
+  landingTrending:       { en: "vs. last month",                       tr: "geçen aya kıyasla" },
 } as const;
 
 export type DictKey = keyof typeof dict;

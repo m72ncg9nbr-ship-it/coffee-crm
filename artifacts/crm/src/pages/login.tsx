@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { SHOW_LANDING } from "@/lib/theme";
+import LandingPage from "@/pages/landing";
 
 const ROLE_DEFAULT: Record<string, string> = {
   owner_admin:     "/dashboard",
@@ -53,6 +55,78 @@ export default function LoginPage() {
     login.mutate({ data: { username, password } });
   };
 
+  // The login card (no branding header — used inside LandingPage's right panel
+  // and in the classic full-screen view with its own branding block below)
+  const loginFormCard = (
+    <Card className="shadow-lg">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg">{t("signIn", lang)}</CardTitle>
+        <CardDescription>{t("enterCredentials", lang)}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="username">{t("username", lang)}</Label>
+            <Input
+              id="username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="e.g. admin"
+              autoComplete="username"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">{t("password", lang)}</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="w-full" disabled={login.isPending}>
+            {login.isPending ? t("signingIn", lang) : t("signInBtn", lang)}
+          </Button>
+        </form>
+        <div className="mt-5 pt-4 border-t">
+          <p className="text-xs text-muted-foreground font-medium mb-2">{t("demoAccounts", lang)}</p>
+          <div className="grid grid-cols-2 gap-1.5 text-xs">
+            {[
+              { u: "admin",   p: "admin123",  label: "Owner Admin" },
+              { u: "gm1",     p: "gm123",     label: "General Manager" },
+              { u: "ops1",    p: "ops123",     label: "Channel Manager" },
+              { u: "sales1",  p: "sales123",   label: "Sales" },
+              { u: "driver1", p: "driver123",  label: "Driver" },
+              { u: "acct1",   p: "acct123",    label: "Accounting" },
+            ].map(acc => (
+              <button
+                key={acc.u}
+                type="button"
+                onClick={() => { setUsername(acc.u); setPassword(acc.p); setError(""); }}
+                className="text-left px-2 py-1 rounded hover-elevate active-elevate-2 border border-transparent hover:border-border text-muted-foreground transition-colors"
+                data-testid={`button-demo-${acc.u}`}
+              >
+                <span className="font-mono">{acc.u}</span>
+                <span className="text-[10px] block opacity-70">{acc.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  if (SHOW_LANDING) {
+    return (
+      <LandingPage lang={lang} setLang={setLang}>
+        {loginFormCard}
+      </LandingPage>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-100 to-amber-50 flex items-center justify-center p-4">
       {/* Language toggle */}
@@ -84,65 +158,7 @@ export default function LoginPage() {
             <p className="text-sm text-muted-foreground">{t("appSubtitle", lang)}</p>
           </div>
         </div>
-        <Card className="shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">{t("signIn", lang)}</CardTitle>
-            <CardDescription>{t("enterCredentials", lang)}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">{t("username", lang)}</Label>
-                <Input
-                  id="username"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="e.g. admin"
-                  autoComplete="username"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">{t("password", lang)}</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                />
-              </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" className="w-full" disabled={login.isPending}>
-                {login.isPending ? t("signingIn", lang) : t("signInBtn", lang)}
-              </Button>
-            </form>
-            <div className="mt-5 pt-4 border-t">
-              <p className="text-xs text-muted-foreground font-medium mb-2">{t("demoAccounts", lang)}</p>
-              <div className="grid grid-cols-2 gap-1.5 text-xs">
-                {[
-                  { u: "admin",   p: "admin123",  label: "Owner Admin" },
-                  { u: "gm1",     p: "gm123",     label: "General Manager" },
-                  { u: "ops1",    p: "ops123",     label: "Channel Manager" },
-                  { u: "sales1",  p: "sales123",   label: "Sales" },
-                  { u: "driver1", p: "driver123",  label: "Driver" },
-                  { u: "acct1",   p: "acct123",    label: "Accounting" },
-                ].map(acc => (
-                  <button
-                    key={acc.u}
-                    type="button"
-                    onClick={() => { setUsername(acc.u); setPassword(acc.p); setError(""); }}
-                    className="text-left px-2 py-1 rounded hover-elevate active-elevate-2 border border-transparent hover:border-border text-muted-foreground transition-colors"
-                    data-testid={`button-demo-${acc.u}`}
-                  >
-                    <span className="font-mono">{acc.u}</span>
-                    <span className="text-[10px] block opacity-70">{acc.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {loginFormCard}
       </div>
     </div>
   );
