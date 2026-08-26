@@ -176,8 +176,8 @@ export default function DashboardPage() {
             : "border-amber-200 bg-amber-50/40 text-amber-800"
         }`}>
           {activeTab === "cosmetics" ? <Sparkles className="h-4 w-4" /> : <Coffee className="h-4 w-4" />}
-          <span className="font-medium capitalize">{activeTab} channel</span>
-          <span className="text-xs opacity-70">— metrics filtered to {activeTab} orders and deliveries only</span>
+          <span className="font-medium capitalize">{activeTab} {t("channelFilterIndicator", lang)}</span>
+          <span className="text-xs opacity-70">— {t("metricsFilteredTo", lang)} {activeTab} {t("ordersAndDeliveriesOnly", lang)}</span>
         </div>
       )}
 
@@ -271,14 +271,14 @@ export default function DashboardPage() {
             <p className="text-sm text-muted-foreground py-2">{t("noPriorities", lang)}</p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <PriorityList title="A Customers awaiting delivery" empty="No A customers waiting" items={p.aCustomerDeliveries ?? []} render={(it: any) => (
+            <PriorityList title={t("aCustomersAwaitingDelivery", lang)} empty={t("noACustomersWaiting", lang)} items={p.aCustomerDeliveries ?? []} moreLabel={t("moreItems", lang)} render={(it: any) => (
               <Link href="/deliveries"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md">
                 <p className="text-sm font-medium">{it.customerName}</p>
                 <p className="text-xs text-muted-foreground">{it.deliveryNumber} · {formatDate(it.scheduledDate)} · <span className="capitalize">{it.status}</span></p>
               </div></Link>
             )} />
 
-            <PriorityList title="Urgent / critical orders" empty="No urgent orders" items={p.urgentOrders ?? []} render={(it: any) => (
+            <PriorityList title={t("urgentOrCriticalOrders", lang)} empty={t("noUrgentOrders", lang)} items={p.urgentOrders ?? []} moreLabel={t("moreItems", lang)} render={(it: any) => (
               <Link href="/orders"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md flex items-center gap-2">
                 <UrgencyBadge urgency={it.urgency} />
                 <div>
@@ -288,14 +288,14 @@ export default function DashboardPage() {
               </div></Link>
             )} />
 
-            <PriorityList title="Delayed deliveries" empty="No delays" items={p.delayedDeliveries ?? []} render={(it: any) => (
+            <PriorityList title={t("delayedDeliveries", lang)} empty={t("noDelays", lang)} items={p.delayedDeliveries ?? []} moreLabel={t("moreItems", lang)} render={(it: any) => (
               <Link href="/deliveries"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md">
                 <p className="text-sm font-medium">{it.customerName}</p>
-                <p className="text-xs text-red-700">⚠ Was due {formatDate(it.scheduledDate)} · <span className="capitalize">{it.status}</span></p>
+                <p className="text-xs text-red-700">⚠ {t("wasDue", lang)} {formatDate(it.scheduledDate)} · <span className="capitalize">{it.status}</span></p>
               </div></Link>
             )} />
 
-            <PriorityList title="Unassigned deliveries" empty="None waiting" items={p.unassignedDeliveries ?? []} render={(it: any) => (
+            <PriorityList title={t("unassignedDeliveries", lang)} empty={t("noneWaiting", lang)} items={p.unassignedDeliveries ?? []} moreLabel={t("moreItems", lang)} render={(it: any) => (
               <Link href="/deliveries"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md flex items-center gap-2">
                 <PriorityBadge priority={it.customerPriority} />
                 <div>
@@ -305,14 +305,14 @@ export default function DashboardPage() {
               </div></Link>
             )} />
 
-            <PriorityList title="Awaiting accounting approval" empty="None pending" items={p.awaitingApproval ?? []} render={(it: any) => (
+            <PriorityList title={t("awaitingAccountingApproval", lang)} empty={t("nonePending", lang)} items={p.awaitingApproval ?? []} moreLabel={t("moreItems", lang)} render={(it: any) => (
               <Link href="/accounting"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md">
                 <p className="text-sm font-medium">{it.customerName}</p>
                 <p className="text-xs text-muted-foreground">{it.orderNumber} / {it.deliveryNumber}</p>
               </div></Link>
             )} />
 
-            <PriorityList title="Open deviations" empty="No open deviations" items={p.unresolvedDeviations ?? []} render={(it: any) => (
+            <PriorityList title={t("openDeviationsLabel", lang)} empty={t("noOpenDeviations", lang)} items={p.unresolvedDeviations ?? []} moreLabel={t("moreItems", lang)} render={(it: any) => (
               <Link href="/deliveries"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md">
                 <p className="text-sm font-medium">{it.customerName}</p>
                 <p className="text-xs text-red-700 capitalize">{it.deviationType?.replace(/_/g, " ")}</p>
@@ -320,10 +320,10 @@ export default function DashboardPage() {
               </div></Link>
             )} />
 
-            <PriorityList title="Lead follow-ups due" empty="No follow-ups due" items={p.overdueLeadFollowUps ?? []} render={(it: any) => (
+            <PriorityList title={t("leadFollowUpsDue", lang)} empty={t("noFollowUpsDue", lang)} items={p.overdueLeadFollowUps ?? []} moreLabel={t("moreItems", lang)} render={(it: any) => (
               <Link href="/leads"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md">
                 <p className="text-sm font-medium">{it.companyName}</p>
-                <p className="text-xs text-muted-foreground">{it.contactPerson} · <span className="text-amber-700">due {formatDate(it.followUpDueAt)}</span></p>
+                <p className="text-xs text-muted-foreground">{it.contactPerson} · <span className="text-amber-700">{t("dueShort", lang)} {formatDate(it.followUpDueAt)}</span></p>
               </div></Link>
             )} />
           </div>
@@ -333,13 +333,13 @@ export default function DashboardPage() {
       {summary?.priorityDistribution && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Customer Priority Distribution</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t("priorityDistribution", lang)}</CardTitle>
           </CardHeader>
           <CardContent className="flex gap-6">
             {(["A", "B", "C"] as const).map(prio => (
               <div key={prio} className="flex items-center gap-2">
                 <PriorityBadge priority={prio} />
-                <span className="text-sm text-muted-foreground">Priority {prio}:</span>
+                <span className="text-sm text-muted-foreground">{t("priority", lang)} {prio}:</span>
                 <span className="font-semibold">{summary.priorityDistribution[prio]}</span>
               </div>
             ))}
@@ -350,7 +350,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Recent Deliveries</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t("recentDeliveriesLabel", lang)}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
@@ -366,7 +366,7 @@ export default function DashboardPage() {
                 </div>
               ))}
               {filteredRecentDeliveries.length === 0 && (
-                <p className="text-sm text-muted-foreground px-4 py-8 text-center">No recent deliveries</p>
+                <p className="text-sm text-muted-foreground px-4 py-8 text-center">{t("noRecentDeliveries", lang)}</p>
               )}
             </div>
           </CardContent>
@@ -375,7 +375,7 @@ export default function DashboardPage() {
         <div className="space-y-5">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-red-700">Deviations</CardTitle>
+              <CardTitle className="text-sm font-semibold text-red-700">{t("deviationsLabel", lang)}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
@@ -387,7 +387,7 @@ export default function DashboardPage() {
                   </div>
                 ))}
                 {filteredDeviations.length === 0 && (
-                  <p className="text-sm text-muted-foreground px-4 py-6 text-center">No deviations</p>
+                  <p className="text-sm text-muted-foreground px-4 py-6 text-center">{t("noDeviations", lang)}</p>
                 )}
               </div>
             </CardContent>
@@ -414,11 +414,12 @@ export default function DashboardPage() {
   );
 }
 
-function PriorityList({ title, empty, items, render }: {
+function PriorityList({ title, empty, items, render, moreLabel }: {
   title: string;
   empty: string;
   items: any[];
   render: (it: any) => React.ReactNode;
+  moreLabel: string;
 }) {
   return (
     <div className="bg-background rounded-md border p-3">
@@ -428,7 +429,7 @@ function PriorityList({ title, empty, items, render }: {
       ) : (
         <div className="space-y-1 max-h-40 overflow-y-auto">
           {items.slice(0, 6).map((it, i) => <div key={i}>{render(it)}</div>)}
-          {items.length > 6 && <p className="text-xs text-muted-foreground px-2 pt-1">+{items.length - 6} more</p>}
+          {items.length > 6 && <p className="text-xs text-muted-foreground px-2 pt-1">+{items.length - 6} {moreLabel}</p>}
         </div>
       )}
     </div>

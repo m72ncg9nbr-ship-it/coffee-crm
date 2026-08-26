@@ -13,37 +13,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatDate } from "@/lib/utils";
 import { MapPin, Truck, CheckCircle, Navigation, LogOut, Phone, User, FileText, Hash, History, AlertCircle, Camera, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLang } from "@/lib/lang-context";
+import { t, type DictKey } from "@/lib/i18n";
 
-const STATUS_TRANSITIONS: Record<string, { next: string; label: string; className: string }> = {
-  assigned: { next: "arrived", label: "Mark Arrived", className: "bg-purple-600 hover:bg-purple-700 text-white border-purple-600" },
+const STATUS_TRANSITIONS: Record<string, { next: string; labelKey: DictKey; className: string }> = {
+  assigned: { next: "arrived", labelKey: "markArrived", className: "bg-purple-600 hover:bg-purple-700 text-white border-purple-600" },
 };
 
-const ISSUE_TYPES = [
-  { value: "damaged_goods", label: "Damaged goods" },
-  { value: "missing_items", label: "Missing items" },
-  { value: "customer_absent", label: "Customer not on site" },
-  { value: "wrong_address", label: "Wrong address" },
-  { value: "access_denied", label: "Access denied" },
-  { value: "delayed_delivery", label: "Delayed delivery" },
-  { value: "other", label: "Other" },
+const ISSUE_TYPE_KEYS: { value: string; labelKey: DictKey }[] = [
+  { value: "damaged_goods",    labelKey: "issueDamagedGoods" },
+  { value: "missing_items",    labelKey: "issueMissingItems2" },
+  { value: "customer_absent",  labelKey: "issueCustomerAbsent2" },
+  { value: "wrong_address",    labelKey: "issueWrongAddress" },
+  { value: "access_denied",    labelKey: "issueAccessDenied" },
+  { value: "delayed_delivery", labelKey: "issueDelayedDelivery" },
+  { value: "other",            labelKey: "issueOther2" },
 ];
 
-const DEVIATION_OPTIONS = [
-  { value: "none", label: "No deviation" },
-  { value: "damaged_goods", label: "Damaged goods" },
-  { value: "missing_items", label: "Missing items" },
-  { value: "delayed_delivery", label: "Delayed delivery" },
-  { value: "not_delivered", label: "Not delivered" },
-  { value: "customer_absent", label: "Customer not on site" },
-  { value: "wrong_address", label: "Wrong address" },
-  { value: "other", label: "Other" },
+const DEVIATION_OPTION_KEYS: { value: string; labelKey: DictKey }[] = [
+  { value: "none",             labelKey: "noDeviation" },
+  { value: "damaged_goods",    labelKey: "devDamagedGoods" },
+  { value: "missing_items",    labelKey: "devMissingItems" },
+  { value: "delayed_delivery", labelKey: "devDelayedDelivery" },
+  { value: "not_delivered",    labelKey: "notDelivered" },
+  { value: "customer_absent",  labelKey: "devCustomerAbsent" },
+  { value: "wrong_address",    labelKey: "devWrongAddress2" },
+  { value: "other",            labelKey: "devOther2" },
 ];
 
-const DOCUMENT_TYPE_OPTIONS = [
-  { value: "delivery_proof", label: "Signed delivery note" },
-  { value: "waybill", label: "Waybill / dispatch note" },
-  { value: "product_photo", label: "Product photo" },
-  { value: "other", label: "Other proof" },
+const DOCUMENT_TYPE_KEYS: { value: string; labelKey: DictKey }[] = [
+  { value: "delivery_proof", labelKey: "docSignedNote" },
+  { value: "waybill",        labelKey: "docWaybill" },
+  { value: "product_photo",  labelKey: "docProductPhoto" },
+  { value: "other",          labelKey: "docOtherProof" },
 ];
 
 const HISTORY_STATUSES = ["awaiting_accounting_approval", "approved"];
@@ -87,6 +89,7 @@ async function uploadDeliveryDocumentMultipart(vars: UploadVariables): Promise<a
 export default function DriverPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { lang } = useLang();
   const queryClient = useQueryClient();
   const logout = useLogout({
     mutation: {
@@ -117,9 +120,9 @@ export default function DriverPage() {
     mutation: {
       onSuccess: () => {
         refetch();
-        toast({ title: "Status updated" });
+        toast({ title: t("statusUpdated", lang) });
       },
-      onError: () => toast({ title: "Failed to update status", variant: "destructive" })
+      onError: () => toast({ title: t("failedToUpdateStatus", lang), variant: "destructive" })
     }
   });
 
@@ -127,11 +130,11 @@ export default function DriverPage() {
     mutationFn: uploadDeliveryDocumentMultipart,
     onSuccess: () => {
       refetch();
-      toast({ title: "Documentation uploaded" });
+      toast({ title: t("documentUploaded", lang) });
       resetUploadDialog();
     },
     onError: (err: Error) =>
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" }),
+      toast({ title: t("uploadFailed", lang), description: err.message, variant: "destructive" }),
   });
 
   const resetUploadDialog = () => {
@@ -157,7 +160,7 @@ export default function DriverPage() {
   const submitUpload = () => {
     if (!uploadFor) return;
     if (!file) {
-      toast({ title: "Please choose a file", variant: "destructive" });
+      toast({ title: t("pleaseChooseFile", lang), variant: "destructive" });
       return;
     }
     uploadDoc.mutate({
@@ -173,7 +176,7 @@ export default function DriverPage() {
   const submitReportIssue = () => {
     if (!issueReportFor) return;
     if (!issueNote.trim()) {
-      toast({ title: "Please describe the issue", variant: "destructive" });
+      toast({ title: t("pleaseDescribeIssue", lang), variant: "destructive" });
       return;
     }
     updateDelivery.mutate({
@@ -201,7 +204,7 @@ export default function DriverPage() {
         <div className="flex items-center gap-3">
           <Truck className="h-6 w-6" />
           <div className="flex-1">
-            <h1 className="font-bold text-lg">Driver View</h1>
+            <h1 className="font-bold text-lg">{t("driverView", lang)}</h1>
             <p className="text-primary-foreground/80 text-sm">Hi, {user?.fullName}</p>
           </div>
           <Button
@@ -213,7 +216,7 @@ export default function DriverPage() {
             data-testid="button-driver-logout"
           >
             <LogOut className="h-4 w-4 mr-1" />
-            Sign out
+            {t("signOut", lang)}
           </Button>
         </div>
 
@@ -223,7 +226,7 @@ export default function DriverPage() {
             className={`flex-1 py-1.5 text-sm font-medium rounded transition-colors ${tab === "active" ? "bg-white text-primary" : "text-primary-foreground/80"}`}
             data-testid="tab-active"
           >
-            Active ({myActive.length})
+            {t("activeStatus", lang)} ({myActive.length})
           </button>
           <button
             onClick={() => setTab("history")}
@@ -231,26 +234,26 @@ export default function DriverPage() {
             data-testid="tab-history"
           >
             <History className="h-3.5 w-3.5" />
-            History ({myHistory.length})
+            {t("historyTab", lang)} ({myHistory.length})
           </button>
         </div>
       </div>
 
       <div className="p-4 space-y-5 max-w-lg mx-auto">
         {isLoading && (
-          <div className="text-center py-12 text-muted-foreground">Loading your deliveries...</div>
+          <div className="text-center py-12 text-muted-foreground">{t("loading", lang)}</div>
         )}
 
         {!isLoading && tab === "active" && (
           <>
             <section>
               <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                Today — {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+                Today — {new Date().toLocaleDateString(lang === "tr" ? "tr-TR" : "en-GB", { weekday: "long", day: "numeric", month: "long" })}
               </h2>
               {todayDeliveries.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-lg">
                   <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">No deliveries for today</p>
+                  <p className="text-sm">{t("noDeliveriesToday", lang)}</p>
                 </div>
               )}
               <div className="space-y-3">
@@ -271,7 +274,7 @@ export default function DriverPage() {
 
             {upcomingDeliveries.length > 0 && (
               <section>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Upcoming</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">{t("upcomingDeliveries", lang)}</h2>
                 <div className="space-y-3">
                   {upcomingDeliveries.map((d: any) => (
                     <DriverDeliveryCard
@@ -293,8 +296,8 @@ export default function DriverPage() {
             {myActive.length === 0 && (
               <div className="text-center py-16 text-muted-foreground">
                 <Truck className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                <p className="font-medium">No deliveries assigned</p>
-                <p className="text-sm mt-1">Check with operations for your schedule</p>
+                <p className="font-medium">{t("noDeliveriesAssigned", lang)}</p>
+                <p className="text-sm mt-1">{t("checkWithOperations", lang)}</p>
               </div>
             )}
           </>
@@ -304,7 +307,7 @@ export default function DriverPage() {
           <>
             {todayHistory.length > 0 && (
               <section>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Completed today</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">{t("completedToday", lang)}</h2>
                 <div className="space-y-3">
                   {todayHistory.map((d: any) => (
                     <DriverDeliveryCard
@@ -319,7 +322,7 @@ export default function DriverPage() {
             )}
             {earlierHistory.length > 0 && (
               <section>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Earlier</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">{t("earlierDeliveries", lang)}</h2>
                 <div className="space-y-3">
                   {earlierHistory.map((d: any) => (
                     <DriverDeliveryCard
@@ -335,7 +338,7 @@ export default function DriverPage() {
             {myHistory.length === 0 && (
               <div className="text-center py-16 text-muted-foreground">
                 <History className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                <p className="font-medium">No completed deliveries yet</p>
+                <p className="font-medium">{t("noCompletedDeliveries", lang)}</p>
               </div>
             )}
           </>
@@ -346,10 +349,8 @@ export default function DriverPage() {
       <Dialog open={!!issueReportFor} onOpenChange={(open) => { if (!open) { setIssueReportFor(null); setIssueNote(""); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Report Issue</DialogTitle>
-            <DialogDescription>
-              Describe the issue. The delivery will be paused and operations notified.
-            </DialogDescription>
+            <DialogTitle>{t("reportIssue", lang)}</DialogTitle>
+            <DialogDescription>{t("reportIssueDesc", lang)}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-muted/40 rounded-md p-3 text-sm">
@@ -357,20 +358,20 @@ export default function DriverPage() {
               <p className="text-muted-foreground text-xs mt-0.5">{issueReportFor?.deliveryNumber}</p>
             </div>
             <div className="space-y-1.5">
-              <Label>Issue type</Label>
+              <Label>{t("issueTypeLabel", lang)}</Label>
               <Select value={issueType} onValueChange={setIssueType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {ISSUE_TYPES.map(o => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  {ISSUE_TYPE_KEYS.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{t(o.labelKey, lang)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Description *</Label>
+              <Label>{t("descriptionReq", lang)}</Label>
               <Textarea
-                placeholder="Describe what happened..."
+                placeholder={t("describeWhatHappened", lang)}
                 value={issueNote}
                 onChange={e => setIssueNote(e.target.value)}
                 rows={3}
@@ -378,14 +379,14 @@ export default function DriverPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIssueReportFor(null); setIssueNote(""); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setIssueReportFor(null); setIssueNote(""); }}>{t("cancel", lang)}</Button>
             <Button
               className="bg-orange-600 hover:bg-orange-700 text-white"
               disabled={updateDelivery.isPending || !issueNote.trim()}
               onClick={submitReportIssue}
             >
               <AlertCircle className="h-4 w-4 mr-1.5" />
-              Report Issue
+              {t("reportIssue", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -395,10 +396,8 @@ export default function DriverPage() {
       <Dialog open={!!resolveFor} onOpenChange={(open) => { if (!open) { setResolveFor(null); setResolveNote(""); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resolve Issue</DialogTitle>
-            <DialogDescription>
-              Mark the issue as resolved. Delivery will return to arrived status.
-            </DialogDescription>
+            <DialogTitle>{t("resolveIssue", lang)}</DialogTitle>
+            <DialogDescription>{t("resolveIssueDesc", lang)}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-muted/40 rounded-md p-3 text-sm">
@@ -406,14 +405,14 @@ export default function DriverPage() {
               <p className="text-muted-foreground text-xs mt-0.5">{resolveFor?.deliveryNumber}</p>
               {resolveFor?.deviationNote && (
                 <p className="text-xs text-orange-700 mt-1.5">
-                  <span className="font-medium">Issue: </span>{resolveFor.deviationNote}
+                  <span className="font-medium">{t("issueReported", lang)}: </span>{resolveFor.deviationNote}
                 </p>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label>Resolution note (optional)</Label>
+              <Label>{t("resolutionNoteOpt", lang)}</Label>
               <Textarea
-                placeholder="How was the issue resolved?"
+                placeholder={t("howWasIssueResolved", lang)}
                 value={resolveNote}
                 onChange={e => setResolveNote(e.target.value)}
                 rows={3}
@@ -421,14 +420,14 @@ export default function DriverPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setResolveFor(null); setResolveNote(""); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setResolveFor(null); setResolveNote(""); }}>{t("cancel", lang)}</Button>
             <Button
               className="bg-green-600 hover:bg-green-700 text-white"
               disabled={updateDelivery.isPending}
               onClick={submitResolveIssue}
             >
               <CheckCircle className="h-4 w-4 mr-1.5" />
-              Mark Resolved
+              {t("markResolved", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -437,10 +436,8 @@ export default function DriverPage() {
       <Dialog open={!!uploadFor} onOpenChange={(open) => { if (!open) resetUploadDialog(); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Submit Delivery</DialogTitle>
-            <DialogDescription>
-              Attach a document or photo. The delivery is not complete until proof is uploaded.
-            </DialogDescription>
+            <DialogTitle>{t("submitDelivery", lang)}</DialogTitle>
+            <DialogDescription>{t("submitDeliveryDesc", lang)}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-muted/40 rounded-md p-3 text-sm">
@@ -449,19 +446,19 @@ export default function DriverPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Document type</Label>
+              <Label>{t("documentTypeLabel", lang)}</Label>
               <Select value={documentType} onValueChange={setDocumentType}>
                 <SelectTrigger data-testid="select-document-type"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {DOCUMENT_TYPE_OPTIONS.map(o => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  {DOCUMENT_TYPE_KEYS.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{t(o.labelKey, lang)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="driver-file">File / photo</Label>
+              <Label htmlFor="driver-file">{t("filePhoto", lang)}</Label>
               <Input
                 id="driver-file"
                 type="file"
@@ -480,7 +477,7 @@ export default function DriverPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Note (optional)</Label>
+              <Label>{t("noteOptional", lang)}</Label>
               <Textarea
                 placeholder="e.g. Handed over to reception"
                 value={submitNote}
@@ -490,44 +487,40 @@ export default function DriverPage() {
             </div>
 
             <div className="space-y-1.5 border-t pt-3">
-              <Label>Deviation</Label>
+              <Label>{t("deviationLabel", lang)}</Label>
               <Select value={deviationType} onValueChange={setDeviationType}>
                 <SelectTrigger data-testid="select-deviation-type"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {DEVIATION_OPTIONS.map(o => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  {DEVIATION_OPTION_KEYS.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{t(o.labelKey, lang)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             {deviationType !== "none" && (
               <div className="space-y-1.5">
-                <Label>Deviation note</Label>
+                <Label>{t("deviationNoteLabel", lang)}</Label>
                 <Textarea
-                  placeholder="Describe what happened..."
+                  placeholder={t("describeWhatHappened", lang)}
                   value={deviationNote}
                   onChange={e => setDeviationNote(e.target.value)}
                   rows={3}
                 />
-                <p className="text-xs text-orange-700">
-                  Operations will be notified to follow up.
-                </p>
+                <p className="text-xs text-orange-700">{t("operationsNotified", lang)}</p>
               </div>
             )}
 
-            <p className="text-xs text-muted-foreground">
-              The delivery will be sent to accounting for review.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("sentToAccountingReview", lang)}</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={resetUploadDialog}>Cancel</Button>
+            <Button variant="outline" onClick={resetUploadDialog}>{t("cancel", lang)}</Button>
             <Button
               className="bg-green-600 hover:bg-green-700 text-white"
               disabled={uploadDoc.isPending || !file}
               onClick={submitUpload}
               data-testid="button-submit-upload"
             >
-              {uploadDoc.isPending ? "Uploading..." : "Submit"}
+              {uploadDoc.isPending ? t("uploading", lang) : t("submitBtn", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -539,6 +532,7 @@ export default function DriverPage() {
 }
 
 function DeliveryDetailDialog({ deliveryId, onClose }: { deliveryId: number | null; onClose: () => void }) {
+  const { lang } = useLang();
   const { data, isLoading } = useGetDelivery(deliveryId ?? 0, {
     query: { enabled: !!deliveryId } as any,
   });
@@ -548,13 +542,13 @@ function DeliveryDetailDialog({ deliveryId, onClose }: { deliveryId: number | nu
     <Dialog open={!!deliveryId} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Delivery Details</DialogTitle>
+          <DialogTitle>{t("deliveryDetails", lang)}</DialogTitle>
           <DialogDescription>
             {d ? `${d.deliveryNumber} · ${d.orderNumber ?? "—"}` : ""}
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
+        {isLoading && <p className="text-sm text-muted-foreground">{t("loading", lang)}</p>}
 
         {d && (
           <div className="space-y-4 text-sm">
@@ -614,7 +608,7 @@ function DeliveryDetailDialog({ deliveryId, onClose }: { deliveryId: number | nu
 
             {d.items && d.items.length > 0 && (
               <div>
-                <p className="font-semibold mb-2 flex items-center gap-1.5"><Package className="h-3.5 w-3.5" /> Order summary</p>
+                <p className="font-semibold mb-2 flex items-center gap-1.5"><Package className="h-3.5 w-3.5" /> {t("orderSummary", lang)}</p>
                 <ul className="bg-muted/30 rounded-md p-3 space-y-1">
                   {d.items.map((it: any) => (
                     <li key={it.id} className="flex justify-between gap-2">
@@ -628,7 +622,7 @@ function DeliveryDetailDialog({ deliveryId, onClose }: { deliveryId: number | nu
 
             {d.orderNotes && (
               <div>
-                <p className="font-semibold mb-1 flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Special note</p>
+                <p className="font-semibold mb-1 flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> {t("specialNote", lang)}</p>
                 <p className="bg-amber-50 border border-amber-200 rounded-md p-2.5 text-sm">{d.orderNotes}</p>
               </div>
             )}
@@ -645,7 +639,7 @@ function DeliveryDetailDialog({ deliveryId, onClose }: { deliveryId: number | nu
 
             {d.documents && d.documents.length > 0 && (
               <div>
-                <p className="font-semibold mb-1 flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Documents</p>
+                <p className="font-semibold mb-1 flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> {t("documentsLabel", lang)}</p>
                 <ul className="space-y-1">
                   {d.documents.map((doc: any) => (
                     <li key={doc.id} className="text-xs text-muted-foreground">
@@ -659,7 +653,7 @@ function DeliveryDetailDialog({ deliveryId, onClose }: { deliveryId: number | nu
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose}>{t("close", lang)}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -677,6 +671,7 @@ function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, o
   upcoming?: boolean;
   historical?: boolean;
 }) {
+  const { lang } = useLang();
   const transition = STATUS_TRANSITIONS[d.status];
 
   return (
@@ -761,7 +756,7 @@ function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, o
             data-testid={`button-details-${d.id}`}
           >
             <FileText className="h-3.5 w-3.5 mr-1" />
-            Details
+            {t("detailsBtn", lang)}
           </Button>
         </div>
 
@@ -770,9 +765,9 @@ function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, o
           <div className="flex items-start gap-2 text-orange-800 bg-orange-50 border border-orange-200 rounded-md p-2.5 text-xs">
             <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold">Issue reported</p>
+              <p className="font-semibold">{t("issueReported", lang)}</p>
               {d.deviationNote && <p className="mt-0.5">{d.deviationNote}</p>}
-              {d.resolutionNote && <p className="mt-0.5 text-green-800">Resolved: {d.resolutionNote}</p>}
+              {d.resolutionNote && <p className="mt-0.5 text-green-800">{t("markResolved", lang)}: {d.resolutionNote}</p>}
             </div>
           </div>
         )}
@@ -784,7 +779,7 @@ function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, o
             disabled={isPending}
             data-testid={`button-arrived-${d.id}`}
           >
-            {transition.label}
+            {t(transition.labelKey, lang)}
           </Button>
         )}
 
@@ -796,7 +791,7 @@ function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, o
               disabled={isPending}
               data-testid={`button-upload-${d.id}`}
             >
-              Upload Documentation
+              {t("uploadDocumentation", lang)}
             </Button>
             <Button
               variant="outline"
@@ -806,7 +801,7 @@ function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, o
               data-testid={`button-report-issue-${d.id}`}
             >
               <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
-              Report Issue
+              {t("reportIssue", lang)}
             </Button>
           </div>
         )}
@@ -819,19 +814,19 @@ function DriverDeliveryCard({ delivery: d, onAdvance, onUpload, onOpenDetails, o
             data-testid={`button-resolve-issue-${d.id}`}
           >
             <CheckCircle className="h-4 w-4 mr-1.5" />
-            Resolve Issue
+            {t("resolveIssue", lang)}
           </Button>
         )}
 
         {d.status === "awaiting_accounting_approval" && (
           <div className="text-sm text-amber-700 bg-amber-50 rounded-md p-2.5 text-center font-medium">
-            Awaiting accounting review
+            {t("awaitingReview", lang)}
           </div>
         )}
 
         {d.status === "approved" && (
           <div className="text-sm text-green-700 bg-green-50 rounded-md p-2.5 text-center font-medium flex items-center justify-center gap-1.5">
-            <CheckCircle className="h-4 w-4" /> Approved
+            <CheckCircle className="h-4 w-4" /> {t("approved", lang)}
           </div>
         )}
       </CardContent>

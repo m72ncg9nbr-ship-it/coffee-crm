@@ -16,36 +16,38 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { DeleteConfirm } from "@/components/delete-confirm";
 import { useChannel } from "@/lib/channel-context";
+import { useLang } from "@/lib/lang-context";
+import { t, type DictKey } from "@/lib/i18n";
 
 // ── Board column definitions ──────────────────────────────────────────────────
-const BOARD_COLUMNS = [
-  { status: "unassigned",                 label: "Unassigned",        color: "border-gray-300 bg-gray-50" },
-  { status: "assigned",                   label: "Assigned",          color: "border-blue-300 bg-blue-50" },
-  { status: "arrived",                    label: "Arrived",           color: "border-purple-300 bg-purple-50" },
-  { status: "awaiting_accounting_approval", label: "Awaiting Approval", color: "border-amber-300 bg-amber-50" },
-  { status: "approved",                   label: "Approved",          color: "border-green-300 bg-green-50" },
-  { status: "issue_reported",             label: "Issue Reported",    color: "border-red-300 bg-red-50" },
+const BOARD_COLUMNS: { status: string; labelKey: DictKey; color: string }[] = [
+  { status: "unassigned",                   labelKey: "statusUnassigned",   color: "border-gray-300 bg-gray-50" },
+  { status: "assigned",                     labelKey: "statusAssigned",     color: "border-blue-300 bg-blue-50" },
+  { status: "arrived",                      labelKey: "statusArrived",      color: "border-purple-300 bg-purple-50" },
+  { status: "awaiting_accounting_approval", labelKey: "awaitingApproval",   color: "border-amber-300 bg-amber-50" },
+  { status: "approved",                     labelKey: "approved",           color: "border-green-300 bg-green-50" },
+  { status: "issue_reported",               labelKey: "statusIssueReported",color: "border-red-300 bg-red-50" },
 ];
 
 const STATUS_ORDER = BOARD_COLUMNS.map(c => c.status);
 
-// ── Sort options ──────────────────────────────────────────────────────────────
-const SORT_OPTIONS = [
-  { value: "date_asc",          label: "Date ↑ (earliest first)" },
-  { value: "date_desc",         label: "Date ↓ (latest first)" },
-  { value: "customer_asc",      label: "Customer A → Z" },
-  { value: "customer_desc",     label: "Customer Z → A" },
-  { value: "driver_asc",        label: "Driver A → Z" },
-  { value: "driver_desc",       label: "Driver Z → A" },
-  { value: "priority_high",     label: "Priority: Critical first" },
-  { value: "priority_low",      label: "Priority: Low first" },
-  { value: "status",            label: "Status order (board)" },
-  { value: "delayed_first",     label: "Delayed first" },
-  { value: "not_delayed_first", label: "On time first" },
-  { value: "delivery_asc",      label: "Delivery # ↑" },
-  { value: "delivery_desc",     label: "Delivery # ↓" },
-  { value: "order_asc",         label: "Order # ↑" },
-  { value: "order_desc",        label: "Order # ↓" },
+// ── Sort option keys (labels resolved inside component using t()) ─────────────
+const SORT_OPTION_KEYS: { value: string; labelKey: DictKey }[] = [
+  { value: "date_asc",          labelKey: "sortByDeliveryDateAsc" },
+  { value: "date_desc",         labelKey: "sortByDeliveryDateDesc" },
+  { value: "customer_asc",      labelKey: "sortByCustomerAZ" },
+  { value: "customer_desc",     labelKey: "sortByCustomerZA" },
+  { value: "driver_asc",        labelKey: "sortByDriverAZ" },
+  { value: "driver_desc",       labelKey: "sortByDriverAZ" },
+  { value: "priority_high",     labelKey: "sortByUrgencyHigh" },
+  { value: "priority_low",      labelKey: "sortByUrgencyLow" },
+  { value: "status",            labelKey: "sortByStatusAsc" },
+  { value: "delayed_first",     labelKey: "sortOverdueFirst" },
+  { value: "not_delayed_first", labelKey: "sortNotOverdueFirst" },
+  { value: "delivery_asc",      labelKey: "sortByDeliveryDateAsc" },
+  { value: "delivery_desc",     labelKey: "sortByDeliveryDateDesc" },
+  { value: "order_asc",         labelKey: "sortByOrderNumAsc" },
+  { value: "order_desc",        labelKey: "sortByOrderNumDesc" },
 ];
 
 const URGENCY_ORDER: Record<string, number> = { critical: 0, high: 1, normal: 2, low: 3 };
@@ -104,6 +106,7 @@ export default function DeliveriesPage() {
   const { toast }   = useToast();
   const { user }    = useAuth();
   const { channel } = useChannel();
+  const { lang }    = useLang();
   const canDelete = !!user &&
     ["owner_admin", "general_manager", "channel_manager", "sales"].includes(user.role);
 
@@ -183,10 +186,10 @@ export default function DeliveriesPage() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListDeliveriesQueryKey() });
-        toast({ title: "Delivery deleted" });
+        toast({ title: t("deliveryDeleted", lang) });
       },
       onError: (e: any) =>
-        toast({ title: "Could not delete delivery", description: e?.error ?? "Try again", variant: "destructive" }),
+        toast({ title: t("couldNotDeleteDelivery", lang), description: e?.error ?? "Try again", variant: "destructive" }),
     },
   });
 
@@ -207,8 +210,8 @@ export default function DeliveriesPage() {
   // ── Subtitle ────────────────────────────────────────────────────────────────
   const total = deliveries?.length ?? 0;
   const subtitle = hasFilters
-    ? `${sorted.length} of ${total} deliveries`
-    : `${total} deliveries`;
+    ? `${sorted.length} / ${total} ${t("deliveries", lang)}`
+    : `${total} ${t("deliveries", lang)}`;
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -217,7 +220,7 @@ export default function DeliveriesPage() {
       {/* Header row */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Delivery Board</h1>
+          <h1 className="text-2xl font-bold">{t("deliveryBoard", lang)}</h1>
           <p className="text-muted-foreground text-sm">{subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -231,7 +234,7 @@ export default function DeliveriesPage() {
                   : "text-muted-foreground hover:bg-muted"
               )}
             >
-              Board
+              {t("boardView", lang)}
             </button>
             <button
               onClick={() => setView("list")}
@@ -242,7 +245,7 @@ export default function DeliveriesPage() {
                   : "text-muted-foreground hover:bg-muted"
               )}
             >
-              List
+              {t("listView", lang)}
             </button>
           </div>
         </div>
@@ -255,14 +258,14 @@ export default function DeliveriesPage() {
         <div className="flex flex-wrap gap-2 items-center">
           <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground shrink-0">
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>Filters</span>
+            <span>{t("filters", lang)}</span>
           </div>
 
           {/* Customer search */}
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Customer..."
+              placeholder={t("searchCustomer", lang)}
               value={customerSearch}
               onChange={e => setCustomerSearch(e.target.value)}
               className="h-8 text-xs pl-7 w-40"
@@ -273,7 +276,7 @@ export default function DeliveriesPage() {
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Delivery #..."
+              placeholder={t("searchDelivery", lang)}
               value={deliverySearch}
               onChange={e => setDeliverySearch(e.target.value)}
               className="h-8 text-xs pl-7 w-32"
@@ -284,7 +287,7 @@ export default function DeliveriesPage() {
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Order #..."
+              placeholder={t("searchOrder", lang)}
               value={orderSearch}
               onChange={e => setOrderSearch(e.target.value)}
               className="h-8 text-xs pl-7 w-28"
@@ -294,10 +297,10 @@ export default function DeliveriesPage() {
           {/* Driver filter */}
           <Select value={driverFilter} onValueChange={setDriverFilter}>
             <SelectTrigger className="h-8 text-xs w-40">
-              <SelectValue placeholder="All drivers" />
+              <SelectValue placeholder={t("allDrivers", lang)} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All drivers</SelectItem>
+              <SelectItem value="all">{t("allDrivers", lang)}</SelectItem>
               {driverOptions.map(name => (
                 <SelectItem key={name} value={name}>{name}</SelectItem>
               ))}
@@ -307,12 +310,12 @@ export default function DeliveriesPage() {
           {/* Status filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="h-8 text-xs w-44">
-              <SelectValue placeholder="All statuses" />
+              <SelectValue placeholder={t("allStatuses", lang)} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="all">{t("allStatuses", lang)}</SelectItem>
               {BOARD_COLUMNS.map(col => (
-                <SelectItem key={col.status} value={col.status}>{col.label}</SelectItem>
+                <SelectItem key={col.status} value={col.status}>{t(col.labelKey, lang)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -320,14 +323,14 @@ export default function DeliveriesPage() {
           {/* Priority (urgency) filter */}
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="h-8 text-xs w-36">
-              <SelectValue placeholder="All priorities" />
+              <SelectValue placeholder={t("allUrgency", lang)} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All priorities</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="normal">Normal</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="all">{t("allUrgency", lang)}</SelectItem>
+              <SelectItem value="critical">{t("critical", lang)}</SelectItem>
+              <SelectItem value="high">{t("high", lang)}</SelectItem>
+              <SelectItem value="normal">{t("normal", lang)}</SelectItem>
+              <SelectItem value="low">{t("low", lang)}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -336,7 +339,7 @@ export default function DeliveriesPage() {
         <div className="flex flex-wrap gap-2 items-center">
           {/* Date range */}
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Date</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t("date", lang)}</span>
             <Input
               type="date"
               value={dateFrom}
@@ -357,35 +360,35 @@ export default function DeliveriesPage() {
           {/* Delay filter */}
           <Select value={delayFilter} onValueChange={setDelayFilter}>
             <SelectTrigger className="h-8 text-xs w-36">
-              <SelectValue placeholder="Delay: All" />
+              <SelectValue placeholder={t("allStatuses", lang)} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Delay: All</SelectItem>
-              <SelectItem value="delayed">Delayed only</SelectItem>
-              <SelectItem value="not_delayed">Not delayed</SelectItem>
+              <SelectItem value="all">{t("allStatuses", lang)}</SelectItem>
+              <SelectItem value="delayed">{t("delayedOnly", lang)}</SelectItem>
+              <SelectItem value="not_delayed">{t("notDelayed", lang)}</SelectItem>
             </SelectContent>
           </Select>
 
           {/* Issue filter */}
           <Select value={issueFilter} onValueChange={setIssueFilter}>
             <SelectTrigger className="h-8 text-xs w-40">
-              <SelectValue placeholder="Issue: All" />
+              <SelectValue placeholder={t("allStatuses", lang)} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Issue: All</SelectItem>
-              <SelectItem value="issue">Issue reported only</SelectItem>
-              <SelectItem value="no_issue">No issue</SelectItem>
+              <SelectItem value="all">{t("allStatuses", lang)}</SelectItem>
+              <SelectItem value="issue">{t("issueReportedOnly", lang)}</SelectItem>
+              <SelectItem value="no_issue">{t("noIssue", lang)}</SelectItem>
             </SelectContent>
           </Select>
 
           {/* Sort */}
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="h-8 text-xs w-48">
-              <SelectValue placeholder="Sort by..." />
+              <SelectValue placeholder={t("sortBy", lang)} />
             </SelectTrigger>
             <SelectContent>
-              {SORT_OPTIONS.map(opt => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              {SORT_OPTION_KEYS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{t(opt.labelKey, lang)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -399,14 +402,14 @@ export default function DeliveriesPage() {
               onClick={clearFilters}
             >
               <X className="h-3.5 w-3.5" />
-              Clear filters
+              {t("clearFilters", lang)}
             </Button>
           )}
         </div>
       </div>
 
       {isLoading && (
-        <div className="text-muted-foreground text-sm py-8 text-center">Loading deliveries...</div>
+        <div className="text-muted-foreground text-sm py-8 text-center">{t("loading", lang)}</div>
       )}
 
       {/* ── Board view ───────────────────────────────────────────────────────── */}
@@ -419,7 +422,7 @@ export default function DeliveriesPage() {
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  {col.label}
+                  {t(col.labelKey, lang)}
                 </span>
                 <span className="text-xs bg-white rounded-full px-2 py-0.5 font-semibold shadow-sm">
                   {grouped[col.status]?.length ?? 0}
@@ -432,7 +435,7 @@ export default function DeliveriesPage() {
 
               {(grouped[col.status] ?? []).length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-4 italic">
-                  {hasFilters ? "No matches" : "No deliveries"}
+                  {hasFilters ? t("noMatchesInColumn", lang) : t("noDeliveriesInColumn", lang)}
                 </p>
               )}
             </div>
@@ -447,22 +450,22 @@ export default function DeliveriesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  <SortableHeader col="delivery_asc" descVal="delivery_desc" sortBy={sortBy} setSortBy={setSortBy}>Delivery #</SortableHeader>
-                  <SortableHeader col="order_asc" descVal="order_desc" sortBy={sortBy} setSortBy={setSortBy}>Order #</SortableHeader>
-                  <SortableHeader col="customer_asc" descVal="customer_desc" sortBy={sortBy} setSortBy={setSortBy}>Customer</SortableHeader>
-                  <SortableHeader col="date_asc" descVal="date_desc" sortBy={sortBy} setSortBy={setSortBy}>Date</SortableHeader>
-                  <SortableHeader col="driver_asc" descVal="driver_desc" sortBy={sortBy} setSortBy={setSortBy}>Driver</SortableHeader>
-                  <SortableHeader col="priority_high" descVal="priority_low" sortBy={sortBy} setSortBy={setSortBy}>Urgency</SortableHeader>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Deviation</th>
-                  <SortableHeader col="status" descVal="status" sortBy={sortBy} setSortBy={setSortBy}>Status</SortableHeader>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Actions</th>
+                  <SortableHeader col="delivery_asc" descVal="delivery_desc" sortBy={sortBy} setSortBy={setSortBy}>{t("deliveryNum", lang)}</SortableHeader>
+                  <SortableHeader col="order_asc" descVal="order_desc" sortBy={sortBy} setSortBy={setSortBy}>{t("orderNumCol", lang)}</SortableHeader>
+                  <SortableHeader col="customer_asc" descVal="customer_desc" sortBy={sortBy} setSortBy={setSortBy}>{t("customer", lang)}</SortableHeader>
+                  <SortableHeader col="date_asc" descVal="date_desc" sortBy={sortBy} setSortBy={setSortBy}>{t("date", lang)}</SortableHeader>
+                  <SortableHeader col="driver_asc" descVal="driver_desc" sortBy={sortBy} setSortBy={setSortBy}>{t("driverHeader", lang)}</SortableHeader>
+                  <SortableHeader col="priority_high" descVal="priority_low" sortBy={sortBy} setSortBy={setSortBy}>{t("urgency", lang)}</SortableHeader>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">{t("deviationHeader", lang)}</th>
+                  <SortableHeader col="status" descVal="status" sortBy={sortBy} setSortBy={setSortBy}>{t("status", lang)}</SortableHeader>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">{t("actionsHeader", lang)}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {sorted.length === 0 && (
                   <tr>
                     <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">
-                      {hasFilters ? "No deliveries match the current filters." : "No deliveries yet."}
+                      {hasFilters ? t("noDeliveriesMatchFilters", lang) : t("noDeliveriesYet", lang)}
                     </td>
                   </tr>
                 )}
@@ -495,7 +498,7 @@ export default function DeliveriesPage() {
                         {d.driverName ?? (
                           d.status === "unassigned"
                             ? <div className="w-44"><AssignDriverControl deliveryId={d.id} compact /></div>
-                            : <span className="text-muted-foreground">Unassigned</span>
+                            : <span className="text-muted-foreground">{t("statusUnassigned", lang)}</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -534,14 +537,16 @@ export default function DeliveriesPage() {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function OverdueBadge() {
+  const { lang } = useLang();
   return (
     <span className="text-[10px] font-bold uppercase tracking-wider bg-red-600 text-white px-1.5 py-0.5 rounded">
-      Forsinket
+      {t("overdue", lang)}
     </span>
   );
 }
 
 function DeliveryCard({ delivery: d, deleteSlot }: { delivery: any; deleteSlot?: ReactNode }) {
+  const { lang } = useLang();
   const overdue = isOverdue(d);
   return (
     <div className={`bg-white rounded-md shadow-sm border p-3 space-y-2 ${overdue ? "border-red-400 border-2" : ""}`}>
@@ -560,7 +565,7 @@ function DeliveryCard({ delivery: d, deleteSlot }: { delivery: any; deleteSlot?:
       {/* Driver */}
       <div className="text-xs text-muted-foreground flex items-center gap-1">
         <Truck className="h-3 w-3" />
-        {d.driverName ?? "No driver"}
+        {d.driverName ?? t("noDriver", lang)}
       </div>
 
       {/* Delivery # + Order # */}
@@ -630,12 +635,13 @@ function SortableHeader({
 
 function AssignDriverControl({ deliveryId, compact }: { deliveryId: number; compact?: boolean }) {
   const { toast } = useToast();
+  const { lang } = useLang();
   const { data: users } = useListUsers();
   const drivers = (users ?? []).filter((u: any) => u.role === "driver" && u.active);
   const update = useUpdateDelivery({
     mutation: {
-      onSuccess: () => toast({ title: "Driver assigned" }),
-      onError: () => toast({ title: "Failed to assign driver", variant: "destructive" }),
+      onSuccess: () => toast({ title: t("driverAssigned", lang) }),
+      onError: () => toast({ title: t("failedToAssignDriver", lang), variant: "destructive" }),
     },
   });
 
@@ -651,12 +657,12 @@ function AssignDriverControl({ deliveryId, compact }: { deliveryId: number; comp
         >
           <div className="flex items-center gap-1">
             <UserPlus className="h-3 w-3" />
-            <SelectValue placeholder="Assign driver..." />
+            <SelectValue placeholder={t("assignDriver", lang)} />
           </div>
         </SelectTrigger>
         <SelectContent>
           {drivers.length === 0 && (
-            <div className="px-2 py-1.5 text-xs text-muted-foreground">No active drivers</div>
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">{t("noActiveDrivers", lang)}</div>
           )}
           {drivers.map((u: any) => (
             <SelectItem key={u.id} value={String(u.id)}>{u.fullName}</SelectItem>
