@@ -335,8 +335,6 @@ export const dict = {
   back:                    { en: "Back",                                        tr: "Geri" },
   newOrder:                { en: "New Order",                                   tr: "Yeni Sipariş" },
   add:                     { en: "Add",                                         tr: "Ekle" },
-  total:                   { en: "Total",                                       tr: "Toplam" },
-  normal:                  { en: "Normal",                                      tr: "Normal" },
   orderSavedAnyway:        { en: "The order will still be saved.",              tr: "Sipariş yine de kaydedilecek." },
   sampleReasonLabel:       { en: "Sample / Free Issue Reason",                  tr: "Numune / Ücretsiz Ürün Nedeni" },
   sampleReasonPlaceholder: { en: "e.g. New customer intro, product trial...",   tr: "ör. Yeni müşteri tanıtımı, ürün denemesi..." },

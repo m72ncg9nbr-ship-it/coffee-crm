@@ -7,12 +7,41 @@ import {
   useGetReportsSamples,
   useGetReportsRegional,
 } from "@workspace/api-client-react";
-import type {
-  ReportFiltersParams,
-  SalesByDimensionItem,
-  ProfitabilityItem,
-  CollectionOrderItem,
-} from "@workspace/api-client-react";
+import type { ReportFiltersParams } from "@workspace/api-client-react";
+
+type SalesByDimensionItem = {
+  key: string;
+  label: string;
+  revenue: number;
+  orders: number;
+  units: number;
+};
+
+type ProfitabilityItem = {
+  key: string;
+  label: string;
+  grossRevenue: number;
+  discountAmount: number;
+  netRevenue: number;
+  productCost?: number | null;
+  grossProfit?: number | null;
+  valorCost: number;
+  collectionAdjustedProfit?: number | null;
+};
+
+type CollectionOrderItem = {
+  orderId: number;
+  orderNumber?: string | null;
+  customerName: string;
+  channel: string;
+  invoiceDate?: string | null;
+  dueDate?: string | null;
+  paymentStatus: string;
+  paidAt?: string | null;
+  totalAmount: number;
+  collectedAmount?: number | null;
+  delayDays: number;
+};
 import { useLang } from "@/lib/lang-context";
 import { t, type Lang } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
