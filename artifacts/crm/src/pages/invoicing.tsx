@@ -10,20 +10,23 @@ import { PriorityBadge } from "@/components/priority-badge";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
 import { FileCheck, Receipt, CreditCard, AlertCircle, X, SlidersHorizontal, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 
 // ── Payment status badge ───────────────────────────────────────────────────────
 function PaymentStatusBadge({ status }: { status?: string | null }) {
+  const { lang } = useLang();
   if (!status) return null;
-  const map: Record<string, { label: string; className: string }> = {
-    paid:    { label: "Paid",    className: "bg-green-100 text-green-800 border-green-200" },
-    unpaid:  { label: "Unpaid",  className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-    overdue: { label: "Overdue", className: "bg-red-100 text-red-800 border-red-200" },
-    partial: { label: "Partial", className: "bg-blue-100 text-blue-800 border-blue-200" },
+  const map: Record<string, { labelKey: "paid" | "unpaid" | "overdue" | "partialPayment"; className: string }> = {
+    paid:    { labelKey: "paid",           className: "bg-green-100 text-green-800 border-green-200" },
+    unpaid:  { labelKey: "unpaid",         className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+    overdue: { labelKey: "overdue",        className: "bg-red-100 text-red-800 border-red-200" },
+    partial: { labelKey: "partialPayment", className: "bg-blue-100 text-blue-800 border-blue-200" },
   };
-  const cfg = map[status] ?? { label: status, className: "bg-muted text-muted-foreground" };
+  const cfg = map[status];
   return (
-    <Badge variant="outline" className={`text-xs font-medium ${cfg.className}`}>
-      {cfg.label}
+    <Badge variant="outline" className={`text-xs font-medium ${cfg?.className ?? "bg-muted text-muted-foreground"}`}>
+      {cfg ? t(cfg.labelKey, lang) : status}
     </Badge>
   );
 }
@@ -85,6 +88,7 @@ export default function InvoicingPage() {
   const { data, isLoading, refetch } = useGetReadyForInvoicing();
   const { toast } = useToast();
   const { channel } = useChannel();
+  const { lang } = useLang();
   const rawList = (data ?? []) as any[];
   const list = useMemo(() => {
     if (channel === "cosmetics") return rawList.filter(r => r.businessChannel === "cosmetics");
@@ -120,9 +124,9 @@ export default function InvoicingPage() {
     mutation: {
       onSuccess: () => {
         refetch();
-        toast({ title: "Order marked as paid" });
+        toast({ title: t("orderMarkedAsPaid", lang) });
       },
-      onError: () => toast({ title: "Failed to mark as paid", variant: "destructive" }),
+      onError: () => toast({ title: t("failedToMarkAsPaid", lang), variant: "destructive" }),
     },
   });
 
@@ -175,9 +179,9 @@ export default function InvoicingPage() {
   return (
     <div className="p-6 space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">Ready for Invoicing</h1>
+        <h1 className="text-2xl font-bold">{t("invoicing", lang)}</h1>
         <p className="text-muted-foreground text-sm">
-          Approved orders — invoice, due date, and payment tracking
+          {t("invoicingSubtitle", lang)}
         </p>
       </div>
 
@@ -185,14 +189,14 @@ export default function InvoicingPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Total records</p>
+            <p className="text-xs text-muted-foreground">{t("totalRecords", lang)}</p>
             <p className="text-2xl font-bold">{list.length}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(totalAmount)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Unpaid</p>
+            <p className="text-xs text-muted-foreground">{t("unpaid", lang)}</p>
             <p className="text-2xl font-bold text-yellow-700">{unpaidList.length}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(unpaidAmount)}</p>
           </CardContent>
@@ -200,7 +204,7 @@ export default function InvoicingPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <AlertCircle className="h-3 w-3 text-red-500" />Overdue
+              <AlertCircle className="h-3 w-3 text-red-500" />{t("overdue", lang)}
             </p>
             <p className="text-2xl font-bold text-red-600">{overdueList.length}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(overdueAmount)}</p>
@@ -210,7 +214,7 @@ export default function InvoicingPage() {
           <CardContent className="p-4 flex items-center gap-3">
             <Receipt className="h-8 w-8 text-green-600 shrink-0" />
             <div>
-              <p className="text-xs text-muted-foreground">Collected</p>
+              <p className="text-xs text-muted-foreground">{t("collected", lang)}</p>
               <p className="text-sm font-bold text-green-700">{formatCurrency(collectedAmount)}</p>
             </div>
           </CardContent>
@@ -221,53 +225,53 @@ export default function InvoicingPage() {
       <div className="bg-muted/20 border rounded-lg p-3 space-y-2">
         <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
           <SlidersHorizontal className="h-3.5 w-3.5" />
-          <span>Filters</span>
+          <span>{t("filters", lang)}</span>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <Input placeholder="Order #..." value={orderSearch}    onChange={e => setOrderSearch(e.target.value)}    className="h-8 text-xs w-28" />
           <Input placeholder="Customer..." value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} className="h-8 text-xs w-40" />
           <Input placeholder="Delivery #..." value={deliverySearch} onChange={e => setDeliverySearch(e.target.value)} className="h-8 text-xs w-32" />
           <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="Payment status" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder={t("allPayments", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All payments</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="unpaid">Unpaid</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
+              <SelectItem value="all">{t("allPayments", lang)}</SelectItem>
+              <SelectItem value="paid">{t("paid", lang)}</SelectItem>
+              <SelectItem value="unpaid">{t("unpaid", lang)}</SelectItem>
+              <SelectItem value="overdue">{t("overdue", lang)}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={docsFilter} onValueChange={setDocsFilter}>
-            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="Docs" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder={t("allDocsFilter", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All docs</SelectItem>
-              <SelectItem value="with_docs">With docs</SelectItem>
-              <SelectItem value="without_docs">No docs</SelectItem>
+              <SelectItem value="all">{t("allDocsFilter", lang)}</SelectItem>
+              <SelectItem value="with_docs">{t("withDocsFilter", lang)}</SelectItem>
+              <SelectItem value="without_docs">{t("noDocsFilter", lang)}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Delivery date</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">{t("deliveryHeader", lang)}</span>
           <Input type="date" value={delivDateFrom} onChange={e => setDelivDateFrom(e.target.value)} className="h-8 text-xs w-36" />
           <span className="text-xs text-muted-foreground">–</span>
           <Input type="date" value={delivDateTo}   onChange={e => setDelivDateTo(e.target.value)}   className="h-8 text-xs w-36" />
-          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">Invoice date</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{t("invoiceDateHeader", lang)}</span>
           <Input type="date" value={invDateFrom}   onChange={e => setInvDateFrom(e.target.value)}   className="h-8 text-xs w-36" />
           <span className="text-xs text-muted-foreground">–</span>
           <Input type="date" value={invDateTo}     onChange={e => setInvDateTo(e.target.value)}     className="h-8 text-xs w-36" />
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Due date</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">{t("dueDateHeader", lang)}</span>
           <Input type="date" value={dueDateFrom} onChange={e => setDueDateFrom(e.target.value)} className="h-8 text-xs w-36" />
           <span className="text-xs text-muted-foreground">–</span>
           <Input type="date" value={dueDateTo}   onChange={e => setDueDateTo(e.target.value)}   className="h-8 text-xs w-36" />
-          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">Total</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{t("total", lang)}</span>
           <Input placeholder="Min" value={totalMin} onChange={e => setTotalMin(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
           <span className="text-xs text-muted-foreground">–</span>
           <Input placeholder="Max" value={totalMax} onChange={e => setTotalMax(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
           {hasFilters && (
             <Button size="sm" variant="outline" className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700" onClick={clearFilters}>
               <X className="h-3.5 w-3.5" />
-              Clear filters
+              {t("clearFilters", lang)}
             </Button>
           )}
         </div>
@@ -281,7 +285,7 @@ export default function InvoicingPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <FileCheck className="h-4 w-4" />
-            Approved Records
+            {t("approvedRecords", lang)}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -289,31 +293,31 @@ export default function InvoicingPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  <ColHeader label="Order #"     col="orderNumber"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <ColHeader label="Customer"    col="customer"     sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <ColHeader label="Delivery"    col="deliveryDate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <th className="px-3 py-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Items</th>
-                  <ColHeader label="Total"       col="total"        sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <ColHeader label="Invoice Date" col="invoiceDate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <ColHeader label="Due Date"    col="dueDate"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Terms</th>
-                  <ColHeader label="Payment"     col="payment"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Paid At</th>
-                  <ColHeader label="Approved By" col="approvedBy"   sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Docs</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Action</th>
+                  <ColHeader label={t("orderNumCol", lang)}      col="orderNumber"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <ColHeader label={t("customer", lang)}         col="customer"     sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <ColHeader label={t("deliveryHeader", lang)}   col="deliveryDate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <th className="px-3 py-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">{t("itemsLabel", lang)}</th>
+                  <ColHeader label={t("total", lang)}            col="total"        sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <ColHeader label={t("invoiceDateHeader", lang)} col="invoiceDate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <ColHeader label={t("dueDateHeader", lang)}    col="dueDate"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{t("termsHeader", lang)}</th>
+                  <ColHeader label={t("payment", lang)}          col="payment"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{t("paidAtHeader", lang)}</th>
+                  <ColHeader label={t("approvedByHeader", lang)} col="approvedBy"   sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{t("docsHeader", lang)}</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{t("actionsHeader", lang)}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {isLoading && (
                   <tr>
-                    <td colSpan={13} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                    <td colSpan={13} className="px-4 py-8 text-center text-muted-foreground">{t("loading", lang)}</td>
                   </tr>
                 )}
                 {!isLoading && sorted.length === 0 && (
                   <tr>
                     <td colSpan={13} className="px-4 py-12 text-center text-muted-foreground">
-                      {hasFilters ? "No records match the current filters." : "No records ready for invoicing yet"}
+                      {hasFilters ? t("noRecordsMatchFilters", lang) : t("noRecordsReadyForInvoicing", lang)}
                     </td>
                   </tr>
                 )}
@@ -365,7 +369,7 @@ export default function InvoicingPage() {
                       {/* Terms */}
                       <td className="px-3 py-3 text-xs whitespace-nowrap text-muted-foreground">
                         {r.paymentTermsDays != null
-                          ? r.paymentTermsDays === 0 ? "Cash" : `Net ${r.paymentTermsDays}d`
+                          ? r.paymentTermsDays === 0 ? t("cashTerm", lang) : `Net ${r.paymentTermsDays}d`
                           : r.customerPaymentTerms
                             ? r.customerPaymentTerms.replace("_", " ")
                             : "—"}
@@ -413,7 +417,7 @@ export default function InvoicingPage() {
                             onClick={() => markPaid.mutate({ id: r.orderId, data: {} })}
                           >
                             <CreditCard className="h-3 w-3 mr-1" />
-                            Mark Paid
+                            {t("markPaidBtn", lang)}
                           </Button>
                         ) : (
                           <span className="text-xs text-green-700 font-medium">✓ Paid</span>

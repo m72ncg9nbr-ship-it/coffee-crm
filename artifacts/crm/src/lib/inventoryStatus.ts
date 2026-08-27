@@ -1,3 +1,5 @@
+import { t, type DictKey, type Lang } from "@/lib/i18n";
+
 /**
  * Shared inventory status calculation.
  * Single source of truth used by: inventory page, dashboard stock overview, new-order selector.
@@ -68,6 +70,42 @@ export const POOL_LABELS: Record<string, string> = {
   online_sales: "Online Sales",
   free_samples: "Free Samples",
 };
+
+const INV_STATUS_DICT_KEY: Record<InventoryStatus, DictKey> = {
+  in_stock: "statusInStock",
+  low_stock: "statusLowStock",
+  out_of_stock: "statusOutOfStock",
+  not_allocated: "notAllocated",
+};
+
+export function invStatusLabel(status: InventoryStatus, lang: Lang): string {
+  return t(INV_STATUS_DICT_KEY[status], lang);
+}
+
+const POOL_LABEL_KEY: Record<string, DictKey> = {
+  physical_sales: "poolPhysicalSales",
+  online_sales: "poolOnlineSales",
+  free_samples: "poolFreeSamples",
+};
+
+export function poolDisplayLabel(poolName: string, lang: Lang): string {
+  const key = POOL_LABEL_KEY[poolName];
+  if (!key) return poolName.replace(/_/g, " ");
+  return t(key, lang);
+}
+
+const MOVEMENT_REASON_KEY: Record<string, DictKey> = {
+  order_reserved: "reasonOrderReserved",
+  order_cancelled_released: "reasonOrderCancelled",
+  order_fulfilled: "reasonOrderFulfilled",
+  manual_set: "reasonManualSet",
+};
+
+export function movementReasonLabel(reason: string, lang: Lang): string {
+  const key = MOVEMENT_REASON_KEY[reason];
+  if (!key) return reason.replace(/_/g, " ");
+  return t(key, lang);
+}
 
 /** Tailwind text-color class for a given status */
 export function invStatusTextClass(status: InventoryStatus): string {

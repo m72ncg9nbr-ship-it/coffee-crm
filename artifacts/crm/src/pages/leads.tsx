@@ -35,15 +35,18 @@ import {
   inferSegment,
   normalisePaymentTerms,
   normaliseChannel,
+  segmentDisplayLabel,
+  channelDisplayLabel,
+  paymentTermsDisplayLabel,
 } from "@/lib/customer-options";
 import { useChannel } from "@/lib/channel-context";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
 
 const IMPORTANCE_OPTIONS = [
-  { value: "normal",       label: "Normal",        className: "bg-gray-100 text-gray-700 border-gray-200" },
-  { value: "important",    label: "Important",     className: "bg-blue-100 text-blue-700 border-blue-200" },
-  { value: "high_potential", label: "High Potential", className: "bg-purple-100 text-purple-700 border-purple-200" },
+  { value: "normal",         labelKey: "normal"        as const, className: "bg-gray-100 text-gray-700 border-gray-200" },
+  { value: "important",      labelKey: "important"     as const, className: "bg-blue-100 text-blue-700 border-blue-200" },
+  { value: "high_potential", labelKey: "highPotential" as const, className: "bg-purple-100 text-purple-700 border-purple-200" },
 ];
 
 const REGION_OPTIONS = [
@@ -53,10 +56,11 @@ const REGION_OPTIONS = [
 ];
 
 function ImportanceBadge({ importance }: { importance?: string | null }) {
+  const { lang } = useLang();
   const cfg = IMPORTANCE_OPTIONS.find(o => o.value === (importance ?? "normal")) ?? IMPORTANCE_OPTIONS[0];
   return (
     <Badge variant="outline" className={`text-[10px] font-medium ${cfg.className}`}>
-      {cfg.label}
+      {t(cfg.labelKey, lang)}
     </Badge>
   );
 }
@@ -109,23 +113,23 @@ export default function LeadsPage() {
         refetch();
         setShowForm(false);
         setForm({ companyName: "", contactPerson: "", phone: "", email: "", businessChannel: "horeca", businessType: "", estimatedMonthlyConsumption: "", preferredCoffeeType: "", requestedPaymentTerms: "net_30", extraNotes: "", region: "", importance: "normal" });
-        toast({ title: "Lead submitted successfully" });
+        toast({ title: t("leadSubmittedSuccess", lang) });
       },
-      onError: () => toast({ title: "Failed to submit lead", variant: "destructive" })
+      onError: () => toast({ title: t("failedToSubmitLead", lang), variant: "destructive" })
     }
   });
 
   const updateLead = useUpdateLead({
     mutation: {
-      onSuccess: () => { refetch(); toast({ title: "Lead updated" }); },
-      onError: () => toast({ title: "Failed to update lead", variant: "destructive" }),
+      onSuccess: () => { refetch(); toast({ title: t("leadUpdated", lang) }); },
+      onError: () => toast({ title: t("failedToUpdateLead", lang), variant: "destructive" }),
     },
   });
 
   const convertLead = useConvertLead({
     mutation: {
       onSuccess: (created: any) => {
-        toast({ title: "Lead converted to customer", description: created?.companyName });
+        toast({ title: t("leadConvertedToCustomer", lang), description: created?.companyName });
         refetch();
         queryClient.invalidateQueries({ queryKey: getListCustomersQueryKey() });
         setConvertLeadId(null);
@@ -133,7 +137,7 @@ export default function LeadsPage() {
         if (created?.id) navigate(`/customers/${created.id}`);
       },
       onError: (e: any) =>
-        toast({ title: "Conversion failed", description: e?.error ?? "", variant: "destructive" }),
+        toast({ title: t("conversionFailed", lang), description: e?.error ?? "", variant: "destructive" }),
     },
   });
 
@@ -161,7 +165,7 @@ export default function LeadsPage() {
       convertForm.phone.trim().length < 4 ||
       convertForm.email.trim().length < 3
     ) {
-      toast({ title: "Fill in company, contact person, phone and email", variant: "destructive" });
+      toast({ title: t("fillRequiredConvertFields", lang), variant: "destructive" });
       return;
     }
     const discount =
@@ -169,7 +173,7 @@ export default function LeadsPage() {
         ? null
         : Number(convertForm.discountLevel);
     if (discount !== null && Number.isNaN(discount)) {
-      toast({ title: "Discount must be a number", variant: "destructive" });
+      toast({ title: t("discountMustBeNumber", lang), variant: "destructive" });
       return;
     }
     convertLead.mutate({
@@ -250,11 +254,11 @@ export default function LeadsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t("leads", lang)}</h1>
-          <p className="text-muted-foreground text-sm">{filtered.length}{hasFilters ? ` of ${(leads ?? []).length}` : ""} lead intake records</p>
+          <p className="text-muted-foreground text-sm">{filtered.length}{hasFilters ? ` ${t("ofLabel", lang)} ${(leads ?? []).length}` : ""} {t("leadIntakeSubtitle", lang)}</p>
         </div>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
           {showForm ? <X className="h-4 w-4 mr-1.5" /> : <Plus className="h-4 w-4 mr-1.5" />}
-          {showForm ? "Cancel" : "New Lead"}
+          {showForm ? t("cancel", lang) : t("newLead", lang)}
         </Button>
       </div>
 
@@ -263,80 +267,80 @@ export default function LeadsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
-              New Lead Intake
+              {t("newLeadIntake", lang)}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Company Name *</Label>
+                <Label>{t("companyNameReq", lang)}</Label>
                 <Input required value={form.companyName} onChange={e => setForm(p => ({ ...p, companyName: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Contact Person *</Label>
+                <Label>{t("contactPersonReq", lang)}</Label>
                 <Input required value={form.contactPerson} onChange={e => setForm(p => ({ ...p, contactPerson: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Phone</Label>
+                <Label>{t("phone", lang)}</Label>
                 <Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Email</Label>
+                <Label>{t("emailLabel", lang)}</Label>
                 <Input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Business Channel</Label>
+                <Label>{t("businessChannelLabel", lang)}</Label>
                 <Select value={form.businessChannel} onValueChange={v => setForm(p => ({ ...p, businessChannel: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="horeca">HoReCa</SelectItem>
-                    <SelectItem value="office">Office</SelectItem>
-                    <SelectItem value="retail">Retail</SelectItem>
-                    <SelectItem value="cosmetics">Cosmetics</SelectItem>
+                    <SelectItem value="horeca">{channelDisplayLabel("horeca", lang)}</SelectItem>
+                    <SelectItem value="office">{channelDisplayLabel("office", lang)}</SelectItem>
+                    <SelectItem value="retail">{channelDisplayLabel("retail", lang)}</SelectItem>
+                    <SelectItem value="cosmetics">{channelDisplayLabel("cosmetics", lang)}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Business Type</Label>
+                <Label>{t("businessTypeLabel", lang)}</Label>
                 <Input placeholder="e.g. bar, hotel, coworking..." value={form.businessType} onChange={e => setForm(p => ({ ...p, businessType: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Monthly Consumption (kg)</Label>
+                <Label>{t("monthlyConsumptionLabel", lang)}</Label>
                 <Input type="number" value={form.estimatedMonthlyConsumption} onChange={e => setForm(p => ({ ...p, estimatedMonthlyConsumption: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Payment Terms</Label>
+                <Label>{t("paymentTermsLabel", lang)}</Label>
                 <Select value={form.requestedPaymentTerms} onValueChange={v => setForm(p => ({ ...p, requestedPaymentTerms: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="net_14">Net 14</SelectItem>
-                    <SelectItem value="net_30">Net 30</SelectItem>
-                    <SelectItem value="net_60">Net 60</SelectItem>
-                    <SelectItem value="cash_on_delivery">Cash on Delivery</SelectItem>
+                    <SelectItem value="net_14">{paymentTermsDisplayLabel("net_14", lang)}</SelectItem>
+                    <SelectItem value="net_30">{paymentTermsDisplayLabel("net_30", lang)}</SelectItem>
+                    <SelectItem value="net_60">{paymentTermsDisplayLabel("net_60", lang)}</SelectItem>
+                    <SelectItem value="cash_on_delivery">{paymentTermsDisplayLabel("cash_on_delivery", lang)}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Region</Label>
+                <Label>{t("region", lang)}</Label>
                 <Select value={form.region || "_none"} onValueChange={v => setForm(p => ({ ...p, region: v === "_none" ? "" : v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select region..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("selectRegionPlaceholder", lang)} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="_none">— No region —</SelectItem>
+                    <SelectItem value="_none">— {t("noRegionOption", lang)} —</SelectItem>
                     {REGION_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Importance</Label>
+                <Label>{t("importance", lang)}</Label>
                 <Select value={form.importance} onValueChange={v => setForm(p => ({ ...p, importance: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {IMPORTANCE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                    {IMPORTANCE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{t(o.labelKey, lang)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5 col-span-2">
-                <Label>Notes</Label>
+                <Label>{t("notes", lang)}</Label>
                 <textarea
                   className="w-full border rounded-md px-3 py-2 text-sm resize-none h-20 bg-background"
                   value={form.extraNotes}
@@ -346,7 +350,7 @@ export default function LeadsPage() {
               </div>
               <div className="col-span-2 flex justify-end">
                 <Button type="submit" disabled={createLead.isPending}>
-                  {createLead.isPending ? "Submitting..." : "Submit Lead"}
+                  {createLead.isPending ? t("submitting", lang) : t("submitLead", lang)}
                 </Button>
               </div>
             </form>
@@ -358,32 +362,32 @@ export default function LeadsPage() {
       <div className="bg-muted/20 border rounded-lg p-3 space-y-2">
         <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
           <SlidersHorizontal className="h-3.5 w-3.5" />
-          <span>Filters</span>
+          <span>{t("filters", lang)}</span>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <Select value={creatorFilter} onValueChange={setCreatorFilter}>
-            <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder="All creators" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder={t("allCreators", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All creators</SelectItem>
+              <SelectItem value="all">{t("allCreators", lang)}</SelectItem>
               {creatorOptions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={regionFilter} onValueChange={setRegionFilter}>
-            <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder="All regions" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder={t("allRegions", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All regions</SelectItem>
+              <SelectItem value="all">{t("allRegions", lang)}</SelectItem>
               {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={importFilter} onValueChange={setImportFilter}>
-            <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder="All importance" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder={t("allImportance", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All importance</SelectItem>
-              {IMPORTANCE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              <SelectItem value="all">{t("allImportance", lang)}</SelectItem>
+              {IMPORTANCE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{t(o.labelKey, lang)}</SelectItem>)}
             </SelectContent>
           </Select>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Created</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t("createdDate", lang)}</span>
             <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-8 text-xs w-36" />
             <span className="text-xs text-muted-foreground">–</span>
             <Input type="date" value={dateTo}   onChange={e => setDateTo(e.target.value)}   className="h-8 text-xs w-36" />
@@ -396,13 +400,13 @@ export default function LeadsPage() {
             disabled={!hasFilters}
           >
             <X className="h-3.5 w-3.5" />
-            Clear filters
+            {t("clearFilters", lang)}
           </Button>
         </div>
       </div>
 
       <div className="space-y-3">
-        {isLoading && <div className="text-muted-foreground text-sm py-8 text-center">Loading...</div>}
+        {isLoading && <div className="text-muted-foreground text-sm py-8 text-center">{t("loading", lang)}</div>}
         {!isLoading && filtered.map((lead: any) => {
           const isQualified = lead.qualificationResult === "auto_qualified";
           const followUpOverdue = lead.followUpDueAt && !lead.followUpCompletedAt && new Date(lead.followUpDueAt).getTime() <= Date.now();
@@ -417,9 +421,9 @@ export default function LeadsPage() {
                     <StatusBadge status={lead.status} />
                     <ImportanceBadge importance={lead.importance} />
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${isQualified ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
-                      {isQualified ? "Auto-qualified" : "Needs review"}
+                      {isQualified ? t("autoQualified", lang) : t("statusManualReview", lang)}
                     </span>
-                    <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full capitalize">{lead.businessChannel}</span>
+                    <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{channelDisplayLabel(lead.businessChannel ?? "", lang)}</span>
                     {lead.region && (
                       <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{lead.region}</span>
                     )}
@@ -429,19 +433,19 @@ export default function LeadsPage() {
                     {lead.phone && <span>{lead.phone}</span>}
                     {lead.email && <span>{lead.email}</span>}
                     {lead.businessType && <span className="capitalize">{lead.businessType}</span>}
-                    {lead.estimatedMonthlyConsumption && <span>{lead.estimatedMonthlyConsumption} kg/mo est.</span>}
+                    {lead.estimatedMonthlyConsumption && <span>{lead.estimatedMonthlyConsumption} {t("kgPerMonth", lang)}</span>}
                     <span className="flex items-center gap-1">
                       <User className="h-3 w-3" />
-                      {lead.createdByName ?? "Unknown"}
+                      {lead.createdByName ?? t("unknown", lang)}
                     </span>
                   </div>
                   {lead.qualificationReason && (
-                    <p className="text-xs text-muted-foreground"><span className="font-medium">Scoring:</span> {lead.qualificationReason}</p>
+                    <p className="text-xs text-muted-foreground"><span className="font-medium">{t("scoringLabel", lang)}:</span> {lead.qualificationReason}</p>
                   )}
                   {lead.extraNotes && <p className="text-xs text-muted-foreground italic">"{lead.extraNotes}"</p>}
                   {followUpOverdue && (
                     <div className="text-xs text-amber-800 bg-amber-50 rounded px-2 py-1.5 border border-amber-200 inline-flex items-center gap-1.5">
-                      ⏰ Follow-up due since {formatDateTime(lead.followUpDueAt)}
+                      ⏰ {t("followUpDueSince", lang)} {formatDateTime(lead.followUpDueAt)}
                     </div>
                   )}
                 </div>
@@ -457,7 +461,7 @@ export default function LeadsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {IMPORTANCE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                        {IMPORTANCE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{t(o.labelKey, lang)}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}
@@ -469,11 +473,11 @@ export default function LeadsPage() {
                       data-testid={`button-convert-lead-${lead.id}`}
                     >
                       <ArrowRightCircle className="h-4 w-4 mr-1.5" />
-                      Convert to Customer
+                      {t("convertToCustomer", lang)}
                     </Button>
                   )}
                   {isConverted && (
-                    <span className="text-xs text-emerald-700 font-medium">Converted</span>
+                    <span className="text-xs text-emerald-700 font-medium">{t("convertedLabel", lang)}</span>
                   )}
                 </div>
               </div>
@@ -484,7 +488,7 @@ export default function LeadsPage() {
         {!isLoading && filtered.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
             <UserPlus className="h-12 w-12 mx-auto mb-3 opacity-20" />
-            <p>{hasFilters ? "No leads match the current filters." : "No leads yet"}</p>
+            <p>{hasFilters ? t("noLeadsMatchFilters", lang) : t("noLeads", lang)}</p>
           </div>
         )}
       </div>
@@ -492,15 +496,15 @@ export default function LeadsPage() {
       <Dialog open={!!convertLeadId} onOpenChange={(open) => { if (!open) { setConvertLeadId(null); setConvertForm(null); } }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Convert Lead to Customer</DialogTitle>
+            <DialogTitle>{t("convertLeadTitle", lang)}</DialogTitle>
             <DialogDescription>
-              Review and adjust the values pulled from the lead, then assign a priority.
+              {t("convertLeadDesc", lang)}
             </DialogDescription>
           </DialogHeader>
           {convertForm && (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label>Company name *</Label>
+                <Label>{t("companyNameReq", lang)}</Label>
                 <Input
                   value={convertForm.companyName}
                   onChange={e => setConvertForm(p => p && { ...p, companyName: e.target.value })}
@@ -508,14 +512,14 @@ export default function LeadsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Contact person *</Label>
+                  <Label>{t("contactPersonReq", lang)}</Label>
                   <Input
                     value={convertForm.contactPerson}
                     onChange={e => setConvertForm(p => p && { ...p, contactPerson: e.target.value })}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Phone *</Label>
+                  <Label>{t("phoneReq", lang)}</Label>
                   <Input
                     value={convertForm.phone}
                     onChange={e => setConvertForm(p => p && { ...p, phone: e.target.value })}
@@ -523,7 +527,7 @@ export default function LeadsPage() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Email *</Label>
+                <Label>{t("emailReq", lang)}</Label>
                 <Input
                   value={convertForm.email}
                   onChange={e => setConvertForm(p => p && { ...p, email: e.target.value })}
@@ -531,23 +535,23 @@ export default function LeadsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Channel</Label>
+                  <Label>{t("channel", lang)}</Label>
                   <Select value={convertForm.channel} onValueChange={v => setConvertForm(p => p && { ...p, channel: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {CHANNEL_OPTIONS.map(o => (
-                        <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>
+                        <SelectItem key={o} value={o}>{channelDisplayLabel(o, lang)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Segment</Label>
+                  <Label>{t("segment", lang)}</Label>
                   <Select value={convertForm.segment} onValueChange={v => setConvertForm(p => p && { ...p, segment: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {SEGMENT_OPTIONS.map(o => (
-                        <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                        <SelectItem key={o} value={o}>{segmentDisplayLabel(o, lang)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -555,33 +559,33 @@ export default function LeadsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Priority class *</Label>
+                  <Label>{t("priorityClassLabel", lang)}</Label>
                   <Select
                     value={convertForm.priorityClass}
                     onValueChange={v => setConvertForm(p => p && { ...p, priorityClass: v as PriorityClass })}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="A">A — top priority</SelectItem>
-                      <SelectItem value="B">B — standard</SelectItem>
-                      <SelectItem value="C">C — low priority</SelectItem>
+                      <SelectItem value="A">{t("priorityALabel", lang)}</SelectItem>
+                      <SelectItem value="B">{t("priorityBLabel", lang)}</SelectItem>
+                      <SelectItem value="C">{t("priorityCLabel", lang)}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Payment terms</Label>
+                  <Label>{t("paymentTermsLabel", lang)}</Label>
                   <Select value={convertForm.paymentTerms} onValueChange={v => setConvertForm(p => p && { ...p, paymentTerms: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {PAYMENT_TERMS_OPTIONS.map(o => (
-                        <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                        <SelectItem key={o} value={o}>{paymentTermsDisplayLabel(o, lang)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Discount % (optional)</Label>
+                <Label>{t("discountOptional", lang)}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -592,7 +596,7 @@ export default function LeadsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Notes (optional)</Label>
+                <Label>{t("notesOptional", lang)}</Label>
                 <textarea
                   className="w-full border rounded-md px-3 py-2 text-sm resize-none h-20 bg-background"
                   value={convertForm.notes}
@@ -603,10 +607,10 @@ export default function LeadsPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => { setConvertLeadId(null); setConvertForm(null); }}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
             <Button onClick={submitConvert} disabled={convertLead.isPending}>
-              {convertLead.isPending ? "Converting..." : "Convert to Customer"}
+              {convertLead.isPending ? t("converting", lang) : t("convertToCustomer", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>

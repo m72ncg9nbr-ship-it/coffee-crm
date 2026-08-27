@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo, useEffect } from "react";
 import { Package, Search, Pencil, Check, X } from "lucide-react";
 import { useChannel } from "@/lib/channel-context";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 
 export default function ProductsPage() {
   const [search, setSearch]       = useState("");
@@ -18,6 +20,7 @@ export default function ProductsPage() {
   const [brandFilter, setBrandFilter] = useState("all");
 
   const { channel } = useChannel();
+  const { lang } = useLang();
   const { data: products, isLoading, refetch } = useListProducts({ search: search || undefined } as any);
 
   useEffect(() => { setBrandFilter("all"); }, [channel]);
@@ -55,9 +58,9 @@ export default function ProductsPage() {
       onSuccess: () => {
         setEditingId(null);
         refetch();
-        toast({ title: "Cost price updated" });
+        toast({ title: t("costPriceUpdated", lang) });
       },
-      onError: () => toast({ title: "Failed to update cost price", variant: "destructive" }),
+      onError: () => toast({ title: t("failedToUpdateCostPrice", lang), variant: "destructive" }),
     },
   });
 
@@ -75,7 +78,7 @@ export default function ProductsPage() {
     const trimmed = costInput.trim();
     const value = trimmed === "" ? null : parseFloat(trimmed);
     if (trimmed !== "" && (isNaN(value!) || value! < 0)) {
-      toast({ title: "Enter a valid non-negative number (or leave blank to clear)", variant: "destructive" });
+      toast({ title: t("enterValidCostPrice", lang), variant: "destructive" });
       return;
     }
     updateProduct.mutate({ id: productId, data: { costPrice: value } });
@@ -85,8 +88,8 @@ export default function ProductsPage() {
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Products</h1>
-          <p className="text-muted-foreground text-sm">{displayProducts.length} items in catalog</p>
+          <h1 className="text-2xl font-bold">{t("products", lang)}</h1>
+          <p className="text-muted-foreground text-sm">{displayProducts.length} {t("itemsInCatalog", lang)}</p>
         </div>
       </div>
 
@@ -94,7 +97,7 @@ export default function ProductsPage() {
         <div className="relative flex-1 min-w-48 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search products..."
+            placeholder={t("searchProducts", lang)}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9"
@@ -102,9 +105,9 @@ export default function ProductsPage() {
         </div>
         {brandOptions.length > 0 && (
           <Select value={brandFilter} onValueChange={setBrandFilter}>
-            <SelectTrigger className="w-40 h-9 text-sm"><SelectValue placeholder="All Brands" /></SelectTrigger>
+            <SelectTrigger className="w-40 h-9 text-sm"><SelectValue placeholder={t("allBrands", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Brands</SelectItem>
+              <SelectItem value="all">{t("allBrands", lang)}</SelectItem>
               {brandOptions.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -113,7 +116,7 @@ export default function ProductsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {isLoading && (
-          <div className="col-span-3 text-center py-8 text-muted-foreground text-sm">Loading...</div>
+          <div className="col-span-3 text-center py-8 text-muted-foreground text-sm">{t("loading", lang)}</div>
         )}
 
         {!isLoading && displayProducts.map((p: any) => {
@@ -157,9 +160,9 @@ export default function ProductsPage() {
                   {/* Cost price — non-editing display */}
                   {!isEditing && canSeeCost && (
                     p.costPrice != null
-                      ? <span className="text-xs text-muted-foreground">Cost: {formatCurrency(p.costPrice)}</span>
+                      ? <span className="text-xs text-muted-foreground">{t("costLabel", lang)} {formatCurrency(p.costPrice)}</span>
                       : canEditCost
-                        ? <span className="text-xs text-muted-foreground italic">Cost: not set</span>
+                        ? <span className="text-xs text-muted-foreground italic">{t("costNotSet", lang)}</span>
                         : null
                   )}
                 </div>
@@ -167,7 +170,7 @@ export default function ProductsPage() {
                 {/* Inline cost price editor (admin / GM only) */}
                 {isEditing && (
                   <div className="mt-2 flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground shrink-0">Cost:</span>
+                    <span className="text-xs text-muted-foreground shrink-0">{t("costLabel", lang)}</span>
                     <Input
                       type="number"
                       min="0"
@@ -210,7 +213,7 @@ export default function ProductsPage() {
         {!isLoading && displayProducts.length === 0 && (
           <div className="col-span-3 text-center py-12 text-muted-foreground">
             <Package className="h-12 w-12 mx-auto mb-3 opacity-20" />
-            <p>No products found</p>
+            <p>{t("noProducts", lang)}</p>
           </div>
         )}
       </div>

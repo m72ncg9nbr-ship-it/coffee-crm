@@ -22,8 +22,10 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Package, History, Search, ChevronDown, Edit2, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { calculateInventoryStatus, invStatusBadgeClass } from "@/lib/inventoryStatus";
+import { calculateInventoryStatus, invStatusBadgeClass, movementReasonLabel } from "@/lib/inventoryStatus";
 import { useChannel } from "@/lib/channel-context";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 
 function stockBadge(available: number, reserved: number) {
   const { status, label } = calculateInventoryStatus(available, reserved);
@@ -37,16 +39,6 @@ function stockBadge(available: number, reserved: number) {
       {short}
     </Badge>
   );
-}
-
-function reasonLabel(reason: string) {
-  switch (reason) {
-    case "order_reserved":           return "Reserved for order";
-    case "order_cancelled_released": return "Released (cancelled)";
-    case "order_fulfilled":          return "Fulfilled (accounting approved)";
-    case "manual_set":               return "Manual set";
-    default:                         return reason.replace(/_/g, " ");
-  }
 }
 
 export default function InventoryPage() {
@@ -63,6 +55,7 @@ export default function InventoryPage() {
   const [adjustReason, setAdjustReason] = useState("");
 
   const { channel } = useChannel();
+  const { lang } = useLang();
   const { data: pools }    = useListInventoryPools();
   const { data: stock, isLoading } = useListInventoryStock();
   const { data: movements } = useListInventoryMovements({ limit: 50 });
@@ -72,11 +65,11 @@ export default function InventoryPage() {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getListInventoryStockQueryKey() });
         qc.invalidateQueries({ queryKey: getListInventoryMovementsQueryKey() });
-        toast({ title: "Stock updated" });
+        toast({ title: t("stockUpdated", lang) });
         setEditDialogOpen(false);
       },
       onError: (e: any) =>
-        toast({ title: "Failed to update stock", description: e?.message, variant: "destructive" }),
+        toast({ title: t("failedToUpdateStock", lang), description: e?.message, variant: "destructive" }),
     },
   });
 
@@ -85,13 +78,13 @@ export default function InventoryPage() {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getListInventoryStockQueryKey() });
         qc.invalidateQueries({ queryKey: getListInventoryMovementsQueryKey() });
-        toast({ title: "Stock adjusted" });
+        toast({ title: t("stockAdjusted", lang) });
         setAdjustDialogOpen(false);
         setAdjustDelta("0");
         setAdjustReason("");
       },
       onError: (e: any) =>
-        toast({ title: "Failed to adjust stock", description: e?.message, variant: "destructive" }),
+        toast({ title: t("failedToAdjustStock", lang), description: e?.message, variant: "destructive" }),
     },
   });
 
@@ -141,7 +134,7 @@ export default function InventoryPage() {
 
   function submitAdjust() {
     if (!selectedProduct || !selectedPoolId || !adjustReason.trim()) {
-      toast({ title: "Reason is required", variant: "destructive" });
+      toast({ title: t("reasonRequired", lang), variant: "destructive" });
       return;
     }
     adjust.mutate({
@@ -163,13 +156,13 @@ export default function InventoryPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Inventory</h1>
+          <h1 className="text-2xl font-bold">{t("inventory", lang)}</h1>
           <p className="text-muted-foreground text-sm">
-            Click a product row to see per-pool stock details
+            {t("inventorySubtitle", lang)}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setMovementsOpen(true)}>
-          <History className="h-4 w-4 mr-1.5" />Movement Log
+          <History className="h-4 w-4 mr-1.5" />{t("movementLog", lang)}
         </Button>
       </div>
 
@@ -191,7 +184,7 @@ export default function InventoryPage() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search by name or SKU…"
+          placeholder={t("searchInventoryPlaceholder", lang)}
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="pl-9"
@@ -200,12 +193,12 @@ export default function InventoryPage() {
 
       {/* Loading / empty */}
       {isLoading && (
-        <p className="text-center py-8 text-muted-foreground text-sm">Loading…</p>
+        <p className="text-center py-8 text-muted-foreground text-sm">{t("loading", lang)}</p>
       )}
       {!isLoading && filtered.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
           <Package className="h-12 w-12 mx-auto mb-3 opacity-20" />
-          <p>No products found</p>
+          <p>{t("noProducts", lang)}</p>
         </div>
       )}
 
@@ -241,11 +234,11 @@ export default function InventoryPage() {
                   {!isOpen && (
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span>
-                        <span className="font-semibold text-foreground">{totalAvailable}</span> avail
+                        <span className="font-semibold text-foreground">{totalAvailable}</span> {t("available", lang).toLowerCase()}
                       </span>
                       {totalReserved > 0 && (
                         <span className="text-amber-700">
-                          <span className="font-semibold">{totalReserved}</span> reserved
+                          <span className="font-semibold">{totalReserved}</span> {t("reserved", lang).toLowerCase()}
                         </span>
                       )}
                     </div>
@@ -268,7 +261,7 @@ export default function InventoryPage() {
 
                   {product.pools.length === 0 ? (
                     <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-                      No pool data yet — run the seed script to populate initial stock.
+                      {t("noPoolDataYet", lang)}
                     </p>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -284,15 +277,15 @@ export default function InventoryPage() {
 
                           <div className="flex gap-4 text-sm">
                             <div>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Available</p>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t("available", lang)}</p>
                               <p className="font-bold text-base leading-tight">{pool.quantityAvailable}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Reserved</p>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t("reserved", lang)}</p>
                               <p className="font-medium text-base leading-tight text-amber-700">{pool.quantityReserved}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fulfilled</p>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t("fulfilled", lang)}</p>
                               <p className="font-medium text-base leading-tight text-green-700">{pool.quantityFulfilled ?? 0}</p>
                             </div>
                           </div>
@@ -304,7 +297,7 @@ export default function InventoryPage() {
                               className="h-7 text-xs flex-1"
                               onClick={e => openEdit(e, product, pool.poolId)}
                             >
-                              <Edit2 className="h-3 w-3 mr-1" />Set
+                              <Edit2 className="h-3 w-3 mr-1" />{t("setBtn", lang)}
                             </Button>
                             <Button
                               size="sm"
@@ -312,7 +305,7 @@ export default function InventoryPage() {
                               className="h-7 text-xs flex-1"
                               onClick={e => openAdjust(e, product, pool.poolId)}
                             >
-                              <TrendingUp className="h-3 w-3 mr-1" />Adj
+                              <TrendingUp className="h-3 w-3 mr-1" />{t("adjBtn", lang)}
                             </Button>
                           </div>
                         </div>
@@ -330,17 +323,17 @@ export default function InventoryPage() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-sm">Set Stock Level</DialogTitle>
+            <DialogTitle className="text-sm">{t("setStockLevel", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
               <p className="text-sm font-medium">{selectedProduct?.productName}</p>
               <p className="text-xs text-muted-foreground">
-                Pool: {selectedPoolRow?.poolLabel} · Current: {selectedPoolRow?.quantityAvailable ?? 0}
+                {t("pool", lang)}: {selectedPoolRow?.poolLabel} · {t("currentQtyLabel", lang)} {selectedPoolRow?.quantityAvailable ?? 0}
               </p>
             </div>
             <div>
-              <Label>New available quantity</Label>
+              <Label>{t("newAvailableQty", lang)}</Label>
               <Input
                 type="number"
                 min="0"
@@ -350,8 +343,8 @@ export default function InventoryPage() {
               />
             </div>
             <div className="flex gap-2 justify-end pt-1">
-              <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-              <Button size="sm" onClick={submitSet} disabled={upsert.isPending}>Save</Button>
+              <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(false)}>{t("cancel", lang)}</Button>
+              <Button size="sm" onClick={submitSet} disabled={upsert.isPending}>{t("save", lang)}</Button>
             </div>
           </div>
         </DialogContent>
@@ -361,17 +354,17 @@ export default function InventoryPage() {
       <Dialog open={adjustDialogOpen} onOpenChange={setAdjustDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-sm">Adjust Stock</DialogTitle>
+            <DialogTitle className="text-sm">{t("adjustStock", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
               <p className="text-sm font-medium">{selectedProduct?.productName}</p>
               <p className="text-xs text-muted-foreground">
-                Pool: {selectedPoolRow?.poolLabel} · Current: {selectedPoolRow?.quantityAvailable ?? 0}
+                {t("pool", lang)}: {selectedPoolRow?.poolLabel} · {t("currentQtyLabel", lang)} {selectedPoolRow?.quantityAvailable ?? 0}
               </p>
             </div>
             <div>
-              <Label>Delta (+ to add, − to remove)</Label>
+              <Label>{t("deltaLabel", lang)}</Label>
               <Input
                 type="number"
                 value={adjustDelta}
@@ -380,27 +373,27 @@ export default function InventoryPage() {
               />
               {adjustDelta !== "0" && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Result: {Math.max(0, (selectedPoolRow?.quantityAvailable ?? 0) + Number(adjustDelta))}
+                  {t("resultLabel", lang)}: {Math.max(0, (selectedPoolRow?.quantityAvailable ?? 0) + Number(adjustDelta))}
                 </p>
               )}
             </div>
             <div>
-              <Label>Reason *</Label>
+              <Label>{t("reason", lang)} *</Label>
               <Input
-                placeholder="e.g. stock count correction"
+                placeholder={t("reason", lang)}
                 value={adjustReason}
                 onChange={e => setAdjustReason(e.target.value)}
                 className="mt-1"
               />
             </div>
             <div className="flex gap-2 justify-end pt-1">
-              <Button variant="outline" size="sm" onClick={() => setAdjustDialogOpen(false)}>Cancel</Button>
+              <Button variant="outline" size="sm" onClick={() => setAdjustDialogOpen(false)}>{t("cancel", lang)}</Button>
               <Button
                 size="sm"
                 onClick={submitAdjust}
                 disabled={adjust.isPending || !adjustReason.trim()}
               >
-                Apply
+                {t("apply", lang)}
               </Button>
             </div>
           </div>
@@ -411,11 +404,11 @@ export default function InventoryPage() {
       <Dialog open={movementsOpen} onOpenChange={setMovementsOpen}>
         <DialogContent className="max-w-2xl max-h-[70vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-sm">Movement Log (last 50)</DialogTitle>
+            <DialogTitle className="text-sm">{t("movementLog", lang)} ({t("last50Label", lang)})</DialogTitle>
           </DialogHeader>
           <div className="divide-y">
             {(movements ?? []).length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-6">No movements yet</p>
+              <p className="text-sm text-muted-foreground text-center py-6">{t("noMovementsYet", lang)}</p>
             )}
             {(movements ?? []).map((m: any) => (
               <div key={m.id} className="flex items-center justify-between py-2 text-xs">
@@ -424,7 +417,7 @@ export default function InventoryPage() {
                   <span className="text-muted-foreground mx-1.5">·</span>
                   <span className="text-muted-foreground">{m.poolName}</span>
                   <span className="text-muted-foreground mx-1.5">·</span>
-                  <span>{reasonLabel(m.reason)}</span>
+                  <span>{movementReasonLabel(m.reason, lang)}</span>
                   {m.referenceId && (
                     <span className="text-muted-foreground"> #{m.referenceId}</span>
                   )}

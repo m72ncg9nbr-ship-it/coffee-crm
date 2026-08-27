@@ -21,6 +21,9 @@ import {
   PAYMENT_TERMS_OPTIONS,
   CHANNEL_OPTIONS,
   type PriorityClass,
+  segmentDisplayLabel,
+  channelDisplayLabel,
+  paymentTermsDisplayLabel,
 } from "@/lib/customer-options";
 import { useChannel } from "@/lib/channel-context";
 import { useLang } from "@/lib/lang-context";
@@ -88,13 +91,13 @@ export default function CustomersPage() {
   const createCustomer = useCreateCustomer({
     mutation: {
       onSuccess: (created: any) => {
-        toast({ title: "Customer created", description: created?.companyName });
+        toast({ title: t("customerCreated", lang), description: created?.companyName });
         queryClient.invalidateQueries({ queryKey: getListCustomersQueryKey() });
         setDupeOpen(false);
         if (created?.id) navigate(`/customers/${created.id}`);
       },
       onError: (e: any) =>
-        toast({ title: "Failed to create customer", description: e?.error ?? "", variant: "destructive" }),
+        toast({ title: t("failedToCreateCustomer", lang), description: e?.error ?? "", variant: "destructive" }),
     },
   });
 
@@ -124,7 +127,7 @@ export default function CustomersPage() {
         ? null
         : Number(createForm.discountLevel);
     if (discount !== null && Number.isNaN(discount)) {
-      toast({ title: "Discount must be a number", variant: "destructive" });
+      toast({ title: t("discountMustBeNumber", lang), variant: "destructive" });
       return;
     }
     createCustomer.mutate({
@@ -150,28 +153,28 @@ export default function CustomersPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("customers", lang)}</h1>
           <p className="text-muted-foreground text-sm">
-            {displayCustomers.length}{channel !== "all" ? ` of ${customers?.length ?? 0}` : ""} records
+            {displayCustomers.length}{channel !== "all" ? ` ${t("ofLabel", lang)} ${customers?.length ?? 0}` : ""} {t("records", lang)}
           </p>
         </div>
         <Button size="sm" onClick={openCreateDialog}>
           <Plus className="h-4 w-4 mr-1.5" />
-          New Customer
+          {t("newCustomer", lang)}
         </Button>
       </div>
 
       <Dialog open={dupeOpen} onOpenChange={setDupeOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New Customer</DialogTitle>
+            <DialogTitle>{t("newCustomer", lang)}</DialogTitle>
             <DialogDescription>
               {dupeChecked
-                ? "Fill in the remaining details and create the customer."
-                : "Enter the basics and we'll check for possible duplicates first."}
+                ? t("enterRemainingDetails", lang)
+                : t("enterCustomerBasics", lang)}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Company name *</Label>
+              <Label>{t("companyNameReq", lang)}</Label>
               <Input
                 value={dupeForm.companyName}
                 onChange={e => setDupeForm({ ...dupeForm, companyName: e.target.value })}
@@ -180,7 +183,7 @@ export default function CustomersPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Phone *</Label>
+                <Label>{t("phoneReq", lang)}</Label>
                 <Input
                   value={dupeForm.phone}
                   onChange={e => setDupeForm({ ...dupeForm, phone: e.target.value })}
@@ -188,7 +191,7 @@ export default function CustomersPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Email *</Label>
+                <Label>{t("emailReq", lang)}</Label>
                 <Input
                   value={dupeForm.email}
                   onChange={e => setDupeForm({ ...dupeForm, email: e.target.value })}
@@ -201,7 +204,7 @@ export default function CustomersPage() {
               <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2">
                 <div className="flex items-center gap-2 text-amber-800 text-sm font-medium">
                   <AlertTriangle className="h-4 w-4" />
-                  {dupeMatches.length} possible duplicate{dupeMatches.length === 1 ? "" : "s"} found
+                  {dupeMatches.length} {t("duplicatesFoundText", lang)}
                 </div>
                 <div className="space-y-1">
                   {dupeMatches.slice(0, 5).map(m => (
@@ -217,20 +220,20 @@ export default function CustomersPage() {
                   ))}
                 </div>
                 <p className="text-xs text-amber-800">
-                  Review existing records before creating a new one.
+                  {t("reviewBeforeCreating", lang)}
                 </p>
               </div>
             )}
             {dupeChecked && dupeMatches.length === 0 && (
               <div className="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
-                No similar customers found. Safe to create.
+                {t("noDuplicatesFound", lang)}
               </div>
             )}
 
             {dupeChecked && (
               <div className="border-t pt-4 space-y-3">
                 <div className="space-y-1.5">
-                  <Label>Contact person *</Label>
+                  <Label>{t("contactPersonReq", lang)}</Label>
                   <Input
                     value={createForm.contactPerson}
                     onChange={e => setCreateForm(p => ({ ...p, contactPerson: e.target.value }))}
@@ -239,23 +242,23 @@ export default function CustomersPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>Channel</Label>
+                    <Label>{t("channel", lang)}</Label>
                     <Select value={createForm.channel} onValueChange={v => setCreateForm(p => ({ ...p, channel: v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {CHANNEL_OPTIONS.map(o => (
-                          <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>
+                          <SelectItem key={o} value={o}>{channelDisplayLabel(o, lang)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Segment</Label>
+                    <Label>{t("segment", lang)}</Label>
                     <Select value={createForm.segment} onValueChange={v => setCreateForm(p => ({ ...p, segment: v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {SEGMENT_OPTIONS.map(o => (
-                          <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                          <SelectItem key={o} value={o}>{segmentDisplayLabel(o, lang)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -263,33 +266,33 @@ export default function CustomersPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>Priority class *</Label>
+                    <Label>{t("priorityClassLabel", lang)}</Label>
                     <Select
                       value={createForm.priorityClass}
                       onValueChange={v => setCreateForm(p => ({ ...p, priorityClass: v as PriorityClass }))}
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="A">A — top priority</SelectItem>
-                        <SelectItem value="B">B — standard</SelectItem>
-                        <SelectItem value="C">C — low priority</SelectItem>
+                        <SelectItem value="A">{t("priorityALabel", lang)}</SelectItem>
+                        <SelectItem value="B">{t("priorityBLabel", lang)}</SelectItem>
+                        <SelectItem value="C">{t("priorityCLabel", lang)}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Payment terms</Label>
+                    <Label>{t("paymentTermsLabel", lang)}</Label>
                     <Select value={createForm.paymentTerms} onValueChange={v => setCreateForm(p => ({ ...p, paymentTerms: v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {PAYMENT_TERMS_OPTIONS.map(o => (
-                          <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                          <SelectItem key={o} value={o}>{paymentTermsDisplayLabel(o, lang)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Discount % (optional)</Label>
+                  <Label>{t("discountOptional", lang)}</Label>
                   <Input
                     type="number"
                     min="0"
@@ -301,7 +304,7 @@ export default function CustomersPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Notes (optional)</Label>
+                  <Label>{t("notesOptional", lang)}</Label>
                   <textarea
                     className="w-full border rounded-md px-3 py-2 text-sm resize-none h-20 bg-background"
                     value={createForm.notes}
@@ -313,7 +316,7 @@ export default function CustomersPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDupeOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDupeOpen(false)}>{t("cancel", lang)}</Button>
             {!dupeChecked && (
               <Button
                 onClick={runDupeCheck}
@@ -322,7 +325,7 @@ export default function CustomersPage() {
                   (!dupeForm.companyName.trim() && !dupeForm.phone.trim() && !dupeForm.email.trim())
                 }
               >
-                {checkDupes.isPending ? "Checking..." : "Check for duplicates"}
+                {checkDupes.isPending ? t("checking", lang) : t("checkForDuplicates", lang)}
               </Button>
             )}
             {dupeChecked && (
@@ -330,7 +333,7 @@ export default function CustomersPage() {
                 onClick={submitCreate}
                 disabled={!canCreate || createCustomer.isPending}
               >
-                {createCustomer.isPending ? "Creating..." : "Create customer"}
+                {createCustomer.isPending ? t("creating", lang) : t("createCustomerBtn", lang)}
               </Button>
             )}
           </DialogFooter>
@@ -341,7 +344,7 @@ export default function CustomersPage() {
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search customers..."
+            placeholder={t("searchCustomersPlaceholder", lang)}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9"
@@ -352,20 +355,20 @@ export default function CustomersPage() {
             <SelectValue placeholder="Priority" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Priorities</SelectItem>
-            <SelectItem value="A">Priority A</SelectItem>
-            <SelectItem value="B">Priority B</SelectItem>
-            <SelectItem value="C">Priority C</SelectItem>
+            <SelectItem value="all">{t("allPriorities", lang)}</SelectItem>
+            <SelectItem value="A">{t("priorityAFilter", lang)}</SelectItem>
+            <SelectItem value="B">{t("priorityBFilter", lang)}</SelectItem>
+            <SelectItem value="C">{t("priorityCFilter", lang)}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={activeFilter} onValueChange={setActiveFilter}>
           <SelectTrigger className="w-32">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t("status", lang)} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="true">Active</SelectItem>
-            <SelectItem value="false">Inactive</SelectItem>
+            <SelectItem value="all">{t("allFilter", lang)}</SelectItem>
+            <SelectItem value="true">{t("activeStatus", lang)}</SelectItem>
+            <SelectItem value="false">{t("inactiveStatus", lang)}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -375,18 +378,18 @@ export default function CustomersPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/40">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Priority</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Company</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Channel</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Segment</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Payment</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("priority", lang)}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("companyHeader", lang)}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("contactHeader", lang)}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("channel", lang)}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("segment", lang)}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("paymentHeader", lang)}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("status", lang)}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {isLoading && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">Loading...</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">{t("loading", lang)}</td></tr>
               )}
               {!isLoading && displayCustomers.map((c: any) => (
                 <tr key={c.id} className="hover:bg-muted/20 transition-colors">
@@ -402,18 +405,18 @@ export default function CustomersPage() {
                     <div className="text-sm">{c.contactPerson}</div>
                     <div className="text-xs text-muted-foreground">{c.phone}</div>
                   </td>
-                  <td className="px-4 py-3 text-sm capitalize">{c.customerChannel}</td>
-                  <td className="px-4 py-3 text-sm capitalize">{c.segment.replace(/_/g, " ")}</td>
-                  <td className="px-4 py-3 text-sm">{c.paymentTerms}</td>
+                  <td className="px-4 py-3 text-sm">{channelDisplayLabel(c.customerChannel, lang)}</td>
+                  <td className="px-4 py-3 text-sm">{segmentDisplayLabel(c.segment, lang)}</td>
+                  <td className="px-4 py-3 text-sm">{paymentTermsDisplayLabel(c.paymentTerms, lang)}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-500"}`}>
-                      {c.active ? "Active" : "Inactive"}
+                      {c.active ? t("activeStatus", lang) : t("inactiveStatus", lang)}
                     </span>
                   </td>
                 </tr>
               ))}
               {!isLoading && displayCustomers.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">No customers found</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">{t("noCustomers", lang)}</td></tr>
               )}
             </tbody>
           </table>

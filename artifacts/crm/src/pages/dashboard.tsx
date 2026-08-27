@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import {
   calculateInventoryStatus,
   invStatusBadgeClass,
+  poolDisplayLabel,
   POOL_LABELS,
   type InventoryStatus,
 } from "@/lib/inventoryStatus";
@@ -176,8 +177,8 @@ export default function DashboardPage() {
             : "border-amber-200 bg-amber-50/40 text-amber-800"
         }`}>
           {activeTab === "cosmetics" ? <Sparkles className="h-4 w-4" /> : <Coffee className="h-4 w-4" />}
-          <span className="font-medium capitalize">{activeTab} {t("channelFilterIndicator", lang)}</span>
-          <span className="text-xs opacity-70">— {t("metricsFilteredTo", lang)} {activeTab} {t("ordersAndDeliveriesOnly", lang)}</span>
+          <span className="font-medium capitalize">{activeTab === "cosmetics" ? t("cosmetics", lang) : t("coffee", lang)} {t("channelFilterIndicator", lang)}</span>
+          <span className="text-xs opacity-70">— {t("metricsFilteredTo", lang)} {activeTab === "cosmetics" ? t("cosmetics", lang) : t("coffee", lang)} {t("ordersAndDeliveriesOnly", lang)}</span>
         </div>
       )}
 
@@ -233,7 +234,7 @@ export default function DashboardPage() {
                         <p className="text-sm font-medium leading-tight">{a.productName}</p>
                         <p className="text-xs text-muted-foreground font-mono mt-0.5">{a.sku}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {t("pool", lang)}: <span className="font-medium">{a.poolLabel}</span>
+                          {t("pool", lang)}: <span className="font-medium">{poolDisplayLabel(a.poolName, lang)}</span>
                           <span className="mx-1.5 opacity-40">·</span>
                           {t("allocated", lang)}: <span className="font-medium">{a.allocated}</span>
                           <span className="mx-1.5 opacity-40">·</span>
@@ -246,7 +247,7 @@ export default function DashboardPage() {
                         </p>
                       </div>
                       <Badge className={`${badgeCls} text-[10px] shrink-0 mt-0.5`}>
-                        {a.statusLabel}
+                        {a.status === "out_of_stock" ? t("statusOutOfStock", lang) : a.status === "low_stock" ? t("statusLowStock", lang) : a.status === "not_allocated" ? t("notAllocated", lang) : t("statusInStock", lang)}
                       </Badge>
                     </div>
                   );
@@ -274,7 +275,7 @@ export default function DashboardPage() {
             <PriorityList title={t("aCustomersAwaitingDelivery", lang)} empty={t("noACustomersWaiting", lang)} items={p.aCustomerDeliveries ?? []} moreLabel={t("moreItems", lang)} render={(it: any) => (
               <Link href="/deliveries"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md">
                 <p className="text-sm font-medium">{it.customerName}</p>
-                <p className="text-xs text-muted-foreground">{it.deliveryNumber} · {formatDate(it.scheduledDate)} · <span className="capitalize">{it.status}</span></p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">{it.deliveryNumber} · {formatDate(it.scheduledDate)} · <StatusBadge status={it.status} /></p>
               </div></Link>
             )} />
 
@@ -283,7 +284,7 @@ export default function DashboardPage() {
                 <UrgencyBadge urgency={it.urgency} />
                 <div>
                   <p className="text-sm font-medium">{it.customerName}</p>
-                  <p className="text-xs text-muted-foreground">{it.orderNumber} · <span className="capitalize">{it.status?.replace(/_/g, " ")}</span></p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">{it.orderNumber} · <StatusBadge status={it.status} /></p>
                 </div>
               </div></Link>
             )} />
@@ -291,7 +292,7 @@ export default function DashboardPage() {
             <PriorityList title={t("delayedDeliveries", lang)} empty={t("noDelays", lang)} items={p.delayedDeliveries ?? []} moreLabel={t("moreItems", lang)} render={(it: any) => (
               <Link href="/deliveries"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md">
                 <p className="text-sm font-medium">{it.customerName}</p>
-                <p className="text-xs text-red-700">⚠ {t("wasDue", lang)} {formatDate(it.scheduledDate)} · <span className="capitalize">{it.status}</span></p>
+                <p className="text-xs text-red-700 flex items-center gap-1">⚠ {t("wasDue", lang)} {formatDate(it.scheduledDate)} · <StatusBadge status={it.status} /></p>
               </div></Link>
             )} />
 
@@ -315,7 +316,7 @@ export default function DashboardPage() {
             <PriorityList title={t("openDeviationsLabel", lang)} empty={t("noOpenDeviations", lang)} items={p.unresolvedDeviations ?? []} moreLabel={t("moreItems", lang)} render={(it: any) => (
               <Link href="/deliveries"><div className="cursor-pointer hover:bg-muted/30 px-2 py-1.5 rounded-md">
                 <p className="text-sm font-medium">{it.customerName}</p>
-                <p className="text-xs text-red-700 capitalize">{it.deviationType?.replace(/_/g, " ")}</p>
+                <p className="text-xs text-red-700 capitalize">{it.deviationType ? it.deviationType.replace(/_/g, " ") : ""}</p>
                 {it.deviationNote && <p className="text-xs text-muted-foreground line-clamp-1">{it.deviationNote}</p>}
               </div></Link>
             )} />

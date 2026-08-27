@@ -36,6 +36,9 @@ import {
   inferSegment,
   normalisePaymentTerms,
   normaliseChannel,
+  segmentDisplayLabel,
+  channelDisplayLabel,
+  paymentTermsDisplayLabel,
 } from "@/lib/customer-options";
 
 type EditForm = {
@@ -220,7 +223,7 @@ export default function CustomerDetailPage() {
               {c.active ? t("activeStatus", lang) : t("inactiveStatus", lang)}
             </span>
           </div>
-          <p className="text-muted-foreground text-sm capitalize">{c.segment?.replace(/_/g, " ")} · {c.customerChannel} · {c.businessChannel}</p>
+          <p className="text-muted-foreground text-sm">{c.segment ? segmentDisplayLabel(c.segment, lang) : ""} · {channelDisplayLabel(c.customerChannel ?? "", lang)}</p>
         </div>
       </div>
 
@@ -246,7 +249,7 @@ export default function CustomerDetailPage() {
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-sm">{t("commercialTerms", lang)}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <Row label={t("paymentTermsLabel", lang)} value={c.paymentTerms} />
+            <Row label={t("paymentTermsLabel", lang)} value={paymentTermsDisplayLabel(c.paymentTerms ?? "", lang)} />
             <Row label={t("discountLevel", lang)} value={c.discountLevel != null ? `${c.discountLevel}%` : t("none", lang)} />
             <Row label={t("priorityClass", lang)} value={
               <div className="flex items-center gap-1.5">
@@ -414,7 +417,7 @@ export default function CustomerDetailPage() {
                           <span className="font-mono text-sm font-medium w-28 shrink-0">{o.orderNumber}</span>
                           <span className="text-xs text-muted-foreground w-24 shrink-0">{formatDate(o.orderDate)}</span>
                           <StatusBadge status={o.status} />
-                          <span className="text-xs text-muted-foreground capitalize px-1.5 py-0.5 rounded bg-muted">{o.businessChannel}</span>
+                          <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-muted">{channelDisplayLabel(o.businessChannel ?? "", lang)}</span>
                           <span className="flex-1" />
                           <span className="text-sm font-semibold w-28 text-right shrink-0">{formatCurrency(o.totalAmount)}</span>
                           <span className="w-28 text-right shrink-0">
@@ -509,7 +512,7 @@ export default function CustomerDetailPage() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {CHANNEL_OPTIONS.map(o => (
-                        <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>
+                        <SelectItem key={o} value={o}>{channelDisplayLabel(o, lang)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -520,7 +523,7 @@ export default function CustomerDetailPage() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {SEGMENT_OPTIONS.map(o => (
-                        <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                        <SelectItem key={o} value={o}>{segmentDisplayLabel(o, lang)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -547,7 +550,7 @@ export default function CustomerDetailPage() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {PAYMENT_TERMS_OPTIONS.map(o => (
-                        <SelectItem key={o} value={o} className="capitalize">{o.replace(/_/g, " ")}</SelectItem>
+                        <SelectItem key={o} value={o}>{paymentTermsDisplayLabel(o, lang)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

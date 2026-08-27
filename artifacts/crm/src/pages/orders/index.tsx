@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { DeleteConfirm } from "@/components/delete-confirm";
 import { useChannel } from "@/lib/channel-context";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 
 type SortKey = "orderNumber" | "customer" | "channel" | "deliveryDate" | "urgency" | "total" | "status";
 type SortDir = "asc" | "desc";
@@ -81,14 +83,15 @@ function computePayStatus(o: any): PayStatus {
 }
 
 function PaymentBadge({ status }: { status: PayStatus }) {
+  const { lang } = useLang();
   if (status === "not_invoiced") return <span className="text-xs text-muted-foreground">—</span>;
   const cls: Record<string, string> = {
     paid:    "bg-green-100 text-green-800 border-green-200",
     unpaid:  "bg-yellow-100 text-yellow-800 border-yellow-200",
     overdue: "bg-red-100 text-red-800 border-red-200",
   };
-  const labels: Record<string, string> = { paid: "Paid", unpaid: "Unpaid", overdue: "Overdue" };
-  return <Badge variant="outline" className={`text-xs ${cls[status]}`}>{labels[status]}</Badge>;
+  const labelMap = { paid: t("paid", lang), unpaid: t("unpaid", lang), overdue: t("overdue", lang) };
+  return <Badge variant="outline" className={`text-xs ${cls[status]}`}>{labelMap[status]}</Badge>;
 }
 
 export default function OrdersPage() {
@@ -109,6 +112,7 @@ export default function OrdersPage() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const { channel: globalChannel } = useChannel();
+  const { lang } = useLang();
 
   // Server-side: order number / text search + status filter
   const params: Record<string, string> = {};
@@ -189,13 +193,13 @@ export default function OrdersPage() {
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Orders</h1>
-          <p className="text-muted-foreground text-sm">{sorted.length}{hasFilters ? ` of ${orders?.length ?? 0}` : ""} records</p>
+          <h1 className="text-2xl font-bold">{t("orders", lang)}</h1>
+          <p className="text-muted-foreground text-sm">{sorted.length}{hasFilters ? ` of ${orders?.length ?? 0}` : ""} {t("records", lang)}</p>
         </div>
         <Link href="/orders/new">
           <Button size="sm">
             <Plus className="h-4 w-4 mr-1.5" />
-            New Order
+            {t("newOrder", lang)}
           </Button>
         </Link>
       </div>
@@ -204,7 +208,7 @@ export default function OrdersPage() {
       <div className="bg-muted/20 border rounded-lg p-3 space-y-2">
         <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
           <SlidersHorizontal className="h-3.5 w-3.5" />
-          <span>Filters</span>
+          <span>{t("filters", lang)}</span>
         </div>
 
         {/* Row 1: text searches + status/channel/urgency */}
@@ -228,62 +232,62 @@ export default function OrdersPage() {
             />
           </div>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-44"><SelectValue placeholder={t("allStatuses", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="new">New</SelectItem>
-              <SelectItem value="incomplete">Incomplete</SelectItem>
-              <SelectItem value="blocked">Blocked</SelectItem>
-              <SelectItem value="planned">Planned</SelectItem>
-              <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
-              <SelectItem value="awaiting_accounting_approval">Awaiting Approval</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="all">{t("allStatuses", lang)}</SelectItem>
+              <SelectItem value="new">{t("statusNew", lang)}</SelectItem>
+              <SelectItem value="incomplete">{t("incomplete", lang)}</SelectItem>
+              <SelectItem value="blocked">{t("statusBlocked", lang)}</SelectItem>
+              <SelectItem value="planned">{t("planned", lang)}</SelectItem>
+              <SelectItem value="out_for_delivery">{t("outForDelivery", lang)}</SelectItem>
+              <SelectItem value="awaiting_accounting_approval">{t("awaitingApproval", lang)}</SelectItem>
+              <SelectItem value="approved">{t("approved", lang)}</SelectItem>
+              <SelectItem value="cancelled">{t("cancelled", lang)}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={channel} onValueChange={setChannel}>
-            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="All Channels" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder={t("allChannels", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Channels</SelectItem>
+              <SelectItem value="all">{t("allChannels", lang)}</SelectItem>
               {channelOptions.map(c => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={urgency} onValueChange={setUrgency}>
-            <SelectTrigger className="h-8 text-xs w-32"><SelectValue placeholder="All Urgency" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-32"><SelectValue placeholder={t("allUrgency", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Urgency</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="normal">Normal</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="all">{t("allUrgency", lang)}</SelectItem>
+              <SelectItem value="critical">{t("critical", lang)}</SelectItem>
+              <SelectItem value="high">{t("high", lang)}</SelectItem>
+              <SelectItem value="normal">{t("normal", lang)}</SelectItem>
+              <SelectItem value="low">{t("low", lang)}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Row 2: date range + total range + payment status */}
         <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Delivery date</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">{t("deliveryDate", lang)}</span>
           <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-8 text-xs w-36" />
           <span className="text-xs text-muted-foreground">–</span>
           <Input type="date" value={dateTo}   onChange={e => setDateTo(e.target.value)}   className="h-8 text-xs w-36" />
-          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">Order Total</span>
-          <Input placeholder="From" value={totalMin} onChange={e => setTotalMin(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
+          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{t("orderTotalFilter", lang)}</span>
+          <Input placeholder={t("from", lang)} value={totalMin} onChange={e => setTotalMin(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
           <span className="text-xs text-muted-foreground">–</span>
-          <Input placeholder="To"   value={totalMax} onChange={e => setTotalMax(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
+          <Input placeholder={t("to", lang)}   value={totalMax} onChange={e => setTotalMax(e.target.value)} className="h-8 text-xs w-24" type="number" min="0" />
           <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="All Payment" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder={t("allPayments", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Payment</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="unpaid">Unpaid</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-              <SelectItem value="not_invoiced">Not Invoiced</SelectItem>
+              <SelectItem value="all">{t("allPayments", lang)}</SelectItem>
+              <SelectItem value="paid">{t("paid", lang)}</SelectItem>
+              <SelectItem value="unpaid">{t("unpaid", lang)}</SelectItem>
+              <SelectItem value="overdue">{t("overdue", lang)}</SelectItem>
+              <SelectItem value="not_invoiced">{t("notInvoiced", lang)}</SelectItem>
             </SelectContent>
           </Select>
           {hasFilters && (
             <Button size="sm" variant="outline" className="h-8 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700" onClick={clearFilters}>
               <X className="h-3.5 w-3.5" />
-              Clear filters
+              {t("clearFilters", lang)}
             </Button>
           )}
         </div>
@@ -294,20 +298,20 @@ export default function OrdersPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/40">
-                <ColHeader label="#"             col="orderNumber"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Customer"      col="customer"     sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Channel"       col="channel"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Delivery Date" col="deliveryDate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Urgency"       col="urgency"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Total"         col="total"        sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <ColHeader label="Status"        col="status"       sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Payment</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
+                <ColHeader label="#"                        col="orderNumber"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label={t("customerHeader", lang)} col="customer"     sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label={t("channel", lang)}       col="channel"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label={t("deliveryDate", lang)}  col="deliveryDate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label={t("urgency", lang)}       col="urgency"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label={t("total", lang)}         col="total"        sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColHeader label={t("status", lang)}        col="status"       sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{t("paymentHeader", lang)}</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("actionsHeader", lang)}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {isLoading && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">Loading...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">{t("loading", lang)}</td></tr>
               )}
               {!isLoading && sorted.map((o: any) => (
                 <tr
@@ -333,7 +337,7 @@ export default function OrdersPage() {
                           onClick={() => sendToPlanning.mutate({ id: o.id })}
                         >
                           <Send className="h-3.5 w-3.5 mr-1" />
-                          Send to planning
+                          {t("sendToPlanning", lang)}
                         </Button>
                       )}
                       {canDelete && o.status !== "approved" && (
@@ -351,7 +355,7 @@ export default function OrdersPage() {
                 </tr>
               ))}
               {!isLoading && sorted.length === 0 && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">{hasFilters ? "No orders match the current filters." : "No orders found"}</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">{hasFilters ? t("noOrdersMatchFilters", lang) : t("noOrders", lang)}</td></tr>
               )}
             </tbody>
           </table>

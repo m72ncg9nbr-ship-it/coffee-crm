@@ -137,9 +137,9 @@ function ActionItemCard({ item, lang }: { item: any; lang: Lang }) {
             {item.channel && item.channel !== "all" && (
               <Badge variant="outline" className="text-[11px] capitalize px-2 py-0.5">
                 {item.channel === "coffee" ? (
-                  <><Coffee className="h-3 w-3 mr-1" />{item.channel}</>
+                  <><Coffee className="h-3 w-3 mr-1" />{t("coffee", lang)}</>
                 ) : (
-                  <><Sparkles className="h-3 w-3 mr-1" />{item.channel}</>
+                  <><Sparkles className="h-3 w-3 mr-1" />{t("cosmetics", lang)}</>
                 )}
               </Badge>
             )}
@@ -327,7 +327,7 @@ export default function ActionCenterPage() {
             <SelectValue>{channelLabel(channelOverride)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="global">{t("allChannels", lang)} (global)</SelectItem>
+            <SelectItem value="global">{t("allChannels", lang)} ({t("globalChannel", lang)})</SelectItem>
             <SelectItem value="all">{t("allChannels", lang)}</SelectItem>
             <SelectItem value="coffee">
               <span className="flex items-center gap-1.5">

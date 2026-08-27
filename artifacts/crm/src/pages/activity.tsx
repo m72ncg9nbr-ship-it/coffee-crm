@@ -2,6 +2,8 @@ import { useListActivityLogs } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/utils";
 import { Activity } from "lucide-react";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 
 const ACTION_COLORS: Record<string, string> = {
   order_created: "bg-blue-100 text-blue-700",
@@ -19,16 +21,17 @@ const ACTION_COLORS: Record<string, string> = {
 
 export default function ActivityPage() {
   const { data: logs, isLoading } = useListActivityLogs({ limit: 100 });
+  const { lang } = useLang();
 
   return (
     <div className="p-6 space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">Activity Log</h1>
-        <p className="text-muted-foreground text-sm">{logs?.length ?? 0} recent events</p>
+        <h1 className="text-2xl font-bold">{t("activityLog", lang)}</h1>
+        <p className="text-muted-foreground text-sm">{logs?.length ?? 0} {t("recentEvents", lang)}</p>
       </div>
 
       <div className="space-y-2">
-        {isLoading && <div className="text-center py-8 text-muted-foreground text-sm">Loading...</div>}
+        {isLoading && <div className="text-center py-8 text-muted-foreground text-sm">{t("loading", lang)}</div>}
         {!isLoading && (logs ?? []).map((log: any) => (
           <Card key={log.id}>
             <CardContent className="p-3.5 flex items-start gap-3">
@@ -47,7 +50,7 @@ export default function ActivityPage() {
         {!isLoading && (logs ?? []).length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
             <Activity className="h-12 w-12 mx-auto mb-3 opacity-20" />
-            <p>No activity yet</p>
+            <p>{t("noActivityYet", lang)}</p>
           </div>
         )}
       </div>

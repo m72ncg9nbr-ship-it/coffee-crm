@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 
 interface Props {
   title: string;
@@ -35,6 +37,7 @@ export function DeleteConfirm({
   testId,
   label,
 }: Props) {
+  const { lang } = useLang();
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -55,7 +58,7 @@ export function DeleteConfirm({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("cancel", lang)}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             className="bg-red-600 hover:bg-red-700 text-white"

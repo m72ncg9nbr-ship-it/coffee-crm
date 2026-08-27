@@ -23,9 +23,9 @@ export const dict = {
 
   // ── Navigation ──────────────────────────────────────────────────────────────
   dashboard:            { en: "Dashboard",          tr: "Gösterge Paneli" },
-  generalDashboard:     { en: "General Dashboard",  tr: "Genel Dashboard" },
-  coffeeDashboard:      { en: "Coffee Dashboard",   tr: "Kahve Dashboard" },
-  cosmeticsDashboard:   { en: "Cosmetics Dashboard",tr: "Kozmetik Dashboard" },
+  generalDashboard:     { en: "General Dashboard",  tr: "Genel Gösterge Paneli" },
+  coffeeDashboard:      { en: "Coffee Dashboard",   tr: "Kahve Gösterge Paneli" },
+  cosmeticsDashboard:   { en: "Cosmetics Dashboard",tr: "Kozmetik Gösterge Paneli" },
   customers:            { en: "Customers",          tr: "Müşteriler" },
   leads:                { en: "Leads",              tr: "Potansiyel Müşteriler" },
   products:             { en: "Products",           tr: "Ürünler" },
@@ -745,13 +745,58 @@ export const dict = {
   channels:              { en: "Channels",                             tr: "Kanallar" },
   landingBadge:          { en: "Multi-Channel · Coffee · Cosmetics",   tr: "Çok Kanallı · Kahve · Kozmetik" },
   landingHeadline:       { en: "Run Coffee & Cosmetics Operations From One Control Center", tr: "Kahve ve Dermokozmetik Operasyonlarını Tek Merkezden Yönetin" },
-  landingSubtitle:       { en: "Track customers, orders, deliveries, payments, profitability, and daily actions across Coffee and Cosmetics channels.", tr: "Coffee ve Cosmetics kanallarında müşteri, sipariş, teslimat, ödeme, kârlılık ve günlük aksiyonları tek platformdan takip edin." },
+  landingSubtitle:       { en: "Track customers, orders, deliveries, payments, profitability, and daily actions across Coffee and Cosmetics channels.", tr: "Kahve ve Kozmetik kanallarında müşteri, sipariş, teslimat, ödeme, kârlılık ve günlük aksiyonları tek platformdan takip edin." },
   landingRevGrowth:      { en: "Revenue Growth",                       tr: "Gelir Büyümesi" },
   landingPendingApprovals:{ en: "Pending Approvals",                   tr: "Bekleyen Onaylar" },
   landingOverduePayments:{ en: "Overdue Payments",                     tr: "Vadesi Geçmiş Ödemeler" },
   landingActionItems:    { en: "Action Items",                         tr: "Aksiyon Öğeleri" },
   landingPaymentRisk:    { en: "Payment Risk",                         tr: "Ödeme Riski" },
   landingTrending:       { en: "vs. last month",                       tr: "geçen aya kıyasla" },
+
+  // ── Channel display labels ───────────────────────────────────────────────────
+  channelHoreca:          { en: "HoReCa",            tr: "HoReCa" },
+  channelOffice:          { en: "Office",             tr: "Ofis" },
+  channelRetail:          { en: "Retail",             tr: "Perakende" },
+
+  // ── Segment display labels ───────────────────────────────────────────────────
+  segmentCafe:            { en: "Cafe",               tr: "Kafe" },
+  segmentCafeChain:       { en: "Cafe Chain",         tr: "Kafe Zinciri" },
+  segmentBar:             { en: "Bar",                tr: "Bar" },
+  segmentRestaurant:      { en: "Restaurant",         tr: "Restoran" },
+  segmentHotel:           { en: "Hotel",              tr: "Otel" },
+  segmentBakery:          { en: "Bakery",             tr: "Fırın" },
+  segmentCatering:        { en: "Catering",           tr: "Catering" },
+  segmentKiosk:           { en: "Kiosk",              tr: "Büfe" },
+  segmentCoworking:       { en: "Coworking",          tr: "Coworking" },
+  segmentCorporate:       { en: "Corporate",          tr: "Kurumsal" },
+  segmentEducation:       { en: "Education",          tr: "Eğitim" },
+
+  // ── Payment terms display labels ─────────────────────────────────────────────
+  termsNet14:             { en: "Net 14",             tr: "14 Gün Net" },
+  termsNet21:             { en: "Net 21",             tr: "21 Gün Net" },
+  termsNet30:             { en: "Net 30",             tr: "30 Gün Net" },
+  termsNet45:             { en: "Net 45",             tr: "45 Gün Net" },
+  termsNet60:             { en: "Net 60",             tr: "60 Gün Net" },
+  termsCashOnDelivery:    { en: "Cash on Delivery",   tr: "Kapıda Ödeme" },
+
+  // ── Inventory pool labels ────────────────────────────────────────────────────
+  poolPhysicalSales:      { en: "Physical Sales",     tr: "Fiziksel Satış" },
+  poolOnlineSales:        { en: "Online Sales",       tr: "Online Satış" },
+  poolFreeSamples:        { en: "Free Samples",       tr: "Ücretsiz Numune" },
+
+  // ── Inventory movement reason labels ────────────────────────────────────────
+  reasonOrderReserved:    { en: "Reserved for order",               tr: "Sipariş için rezerve edildi" },
+  reasonOrderCancelled:   { en: "Released (cancelled)",             tr: "Serbest bırakıldı (iptal)" },
+  reasonOrderFulfilled:   { en: "Fulfilled (accounting approved)",  tr: "Teslim edildi (muhasebe onayladı)" },
+  reasonManualSet:        { en: "Manual set",                       tr: "Manuel ayarlandı" },
+
+  // ── Misc display helpers ─────────────────────────────────────────────────────
+  ofLabel:                    { en: "of",                   tr: "/" },
+  searchCustomersPlaceholder: { en: "Search customers...",  tr: "Müşteri ara..." },
+  searchInventoryPlaceholder: { en: "Search by name or SKU…", tr: "Ad veya SKU ile ara…" },
+  noPoolDataYet:              { en: "No pool data yet",     tr: "Henüz havuz verisi yok" },
+  last50Label:                { en: "last 50",              tr: "son 50" },
+  globalChannel:              { en: "global",               tr: "genel" },
 } as const;
 
 export type DictKey = keyof typeof dict;

@@ -11,12 +11,15 @@ import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { useChannel } from "@/lib/channel-context";
+import { useLang } from "@/lib/lang-context";
+import { t } from "@/lib/i18n";
 
 export default function AccountingPage() {
   const { data: approvals, isLoading, refetch } = useListAccountingApprovals();
   const { toast } = useToast();
   const { user } = useAuth();
   const { channel } = useChannel();
+  const { lang } = useLang();
   const [notes, setNotes] = useState<Record<number, string>>({});
 
   // ── Filter state ────────────────────────────────────────────────────────────
@@ -27,22 +30,22 @@ export default function AccountingPage() {
 
   const approveDelivery = useApproveDelivery({
     mutation: {
-      onSuccess: () => { refetch(); toast({ title: "Delivery approved" }); },
-      onError: () => toast({ title: "Failed to approve", variant: "destructive" })
+      onSuccess: () => { refetch(); toast({ title: t("deliveryApproved", lang) }); },
+      onError: () => toast({ title: t("failedToApprove", lang), variant: "destructive" })
     }
   });
 
   const rejectDelivery = useRejectDelivery({
     mutation: {
-      onSuccess: () => { refetch(); toast({ title: "Delivery rejected" }); },
-      onError: () => toast({ title: "Failed to reject", variant: "destructive" })
+      onSuccess: () => { refetch(); toast({ title: t("deliveryRejected", lang) }); },
+      onError: () => toast({ title: t("failedToReject", lang), variant: "destructive" })
     }
   });
 
   const markPaid = useMarkOrderPaid({
     mutation: {
-      onSuccess: () => { refetch(); toast({ title: "Order marked as paid" }); },
-      onError: () => toast({ title: "Failed to mark as paid", variant: "destructive" })
+      onSuccess: () => { refetch(); toast({ title: t("orderMarkedAsPaid", lang) }); },
+      onError: () => toast({ title: t("failedToMarkAsPaid", lang), variant: "destructive" })
     }
   });
 
@@ -94,33 +97,33 @@ export default function AccountingPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Accounting Approvals</h1>
-        <p className="text-muted-foreground text-sm">{pending.length} pending approval{pending.length !== 1 ? "s" : ""}</p>
+        <h1 className="text-2xl font-bold">{t("accountingApprovals", lang)}</h1>
+        <p className="text-muted-foreground text-sm">{pending.length} {t("pendingApprovalsSubtitle", lang)}</p>
       </div>
 
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}
       <div className="bg-muted/20 border rounded-lg p-3 space-y-2">
         <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
           <SlidersHorizontal className="h-3.5 w-3.5" />
-          <span>Filters</span>
+          <span>{t("filters", lang)}</span>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder="All statuses" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder={t("allStatuses", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="all">{t("allStatuses", lang)}</SelectItem>
+              <SelectItem value="pending">{t("pending", lang)}</SelectItem>
+              <SelectItem value="approved">{t("approved", lang)}</SelectItem>
+              <SelectItem value="rejected">{t("rejected", lang)}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-            <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder="Payment status" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder={t("allPayments", lang)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All payments</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="unpaid">Unpaid</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
+              <SelectItem value="all">{t("allPayments", lang)}</SelectItem>
+              <SelectItem value="paid">{t("paid", lang)}</SelectItem>
+              <SelectItem value="unpaid">{t("unpaid", lang)}</SelectItem>
+              <SelectItem value="overdue">{t("overdue", lang)}</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex items-center gap-1.5">
@@ -137,7 +140,7 @@ export default function AccountingPage() {
             disabled={!hasFilters}
           >
             <X className="h-3.5 w-3.5" />
-            Clear filters
+            {t("clearFilters", lang)}
           </Button>
         </div>
         {hasFilters && (
@@ -145,13 +148,13 @@ export default function AccountingPage() {
         )}
       </div>
 
-      {isLoading && <div className="text-muted-foreground text-sm py-8 text-center">Loading...</div>}
+      {isLoading && <div className="text-muted-foreground text-sm py-8 text-center">{t("loading", lang)}</div>}
 
       {!isLoading && (
         <div className="space-y-6">
           {pending.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-amber-700 uppercase tracking-wider">Pending Review</h2>
+              <h2 className="text-sm font-semibold text-amber-700 uppercase tracking-wider">{t("pendingReviewSection", lang)}</h2>
               {pending.map((a: any) => (
                 <ApprovalCard
                   key={a.id}
@@ -168,7 +171,7 @@ export default function AccountingPage() {
 
           {reviewed.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Reviewed</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t("reviewedSection", lang)}</h2>
               {reviewed.map((a: any) => (
                 <ApprovalCard
                   key={a.id}
@@ -185,7 +188,7 @@ export default function AccountingPage() {
           {filteredApprovals.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <CheckCircle className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p>{hasFilters ? "No approvals match the current filters." : "No approval requests"}</p>
+              <p>{hasFilters ? t("noApprovalsMatchFilters", lang) : t("noApprovalRequests", lang)}</p>
             </div>
           )}
         </div>
@@ -195,16 +198,17 @@ export default function AccountingPage() {
 }
 
 function PaymentStatusBadge({ status }: { status?: string }) {
+  const { lang } = useLang();
   if (!status) return null;
-  const map: Record<string, { label: string; className: string }> = {
-    paid:    { label: "Paid", className: "bg-green-100 text-green-800 border-green-200" },
-    unpaid:  { label: "Unpaid", className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-    overdue: { label: "Overdue", className: "bg-red-100 text-red-800 border-red-200" },
+  const map: Record<string, { labelKey: "paid" | "unpaid" | "overdue"; className: string }> = {
+    paid:    { labelKey: "paid",    className: "bg-green-100 text-green-800 border-green-200" },
+    unpaid:  { labelKey: "unpaid",  className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+    overdue: { labelKey: "overdue", className: "bg-red-100 text-red-800 border-red-200" },
   };
-  const cfg = map[status] ?? { label: status, className: "bg-muted text-muted-foreground" };
+  const cfg = map[status];
   return (
-    <Badge variant="outline" className={`text-xs ${cfg.className}`}>
-      {cfg.label}
+    <Badge variant="outline" className={`text-xs ${cfg?.className ?? "bg-muted text-muted-foreground"}`}>
+      {cfg ? t(cfg.labelKey, lang) : status}
     </Badge>
   );
 }
@@ -220,6 +224,7 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
   readonly?: boolean;
   canMarkPaid?: boolean | null;
 }) {
+  const { lang } = useLang();
   const showMarkPaid =
     readonly &&
     canMarkPaid &&
@@ -248,10 +253,10 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
               )}
             </div>
             <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
-              <span>Scheduled: {formatDate(a.scheduledDate)}</span>
-              <span>Driver: {a.driverName ?? "—"}</span>
+              <span>{t("scheduledLabel", lang)} {formatDate(a.scheduledDate)}</span>
+              <span>{t("driverLabel", lang)} {a.driverName ?? "—"}</span>
               {a.status === "approved" && a.invoiceDate && (
-                <span>Invoice: {a.invoiceDate}</span>
+                <span>{t("invoiceLabel", lang)} {a.invoiceDate}</span>
               )}
               {a.status === "approved" && a.dueDate && (
                 <span className={
@@ -259,7 +264,7 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
                     ? "text-red-600 font-medium"
                     : ""
                 }>
-                  Due: {a.dueDate}
+                  {t("dueLabel", lang)} {a.dueDate}
                 </span>
               )}
               {a.hasDocument && a.documentUrl && (
@@ -271,16 +276,16 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
               {a.hasDocument && !a.documentUrl && (
                 <span className="flex items-center gap-1 text-green-700">
                   <FileText className="h-3 w-3" />
-                  Document uploaded
+                  {t("documentUploaded", lang)}
                 </span>
               )}
               {!a.hasDocument && (
-                <span className="text-amber-700">No document</span>
+                <span className="text-amber-700">{t("noDocument", lang)}</span>
               )}
             </div>
             {Array.isArray(a.orderItems) && a.orderItems.length > 0 && (
               <div className="text-xs bg-muted/30 rounded px-2 py-1.5 border">
-                <span className="font-medium text-muted-foreground">Items: </span>
+                <span className="font-medium text-muted-foreground">{t("itemsLabel", lang)} </span>
                 {a.orderItems.map((it: any, idx: number) => (
                   <span key={idx}>
                     {idx > 0 && <span className="text-muted-foreground"> · </span>}
@@ -309,7 +314,7 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
             <div className="flex flex-col gap-2 min-w-52">
               <textarea
                 className="w-full text-xs border rounded p-2 resize-none h-16 bg-background"
-                placeholder="Review notes (optional)..."
+                placeholder={t("reviewNotesTip", lang)}
                 value={note ?? ""}
                 onChange={e => onNoteChange?.(e.target.value)}
               />
@@ -321,7 +326,7 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
                   disabled={isPending}
                 >
                   <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                  Approve
+                  {t("approve", lang)}
                 </Button>
                 <Button
                   size="sm"
@@ -331,7 +336,7 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
                   disabled={isPending}
                 >
                   <XCircle className="h-3.5 w-3.5 mr-1" />
-                  Reject
+                  {t("reject", lang)}
                 </Button>
               </div>
             </div>
@@ -345,7 +350,7 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
               disabled={isPending}
             >
               <CreditCard className="h-3.5 w-3.5 mr-1" />
-              Mark as Paid
+              {t("markPaidBtn", lang)}
             </Button>
           )}
         </div>

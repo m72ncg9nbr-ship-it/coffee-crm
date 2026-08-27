@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import { useLang } from "@/lib/lang-context";
+import { t, type DictKey } from "@/lib/i18n";
 
 interface PriorityBadgeProps {
   priority: "A" | "B" | "C" | string;
@@ -25,6 +27,14 @@ interface UrgencyBadgeProps {
 }
 
 export function UrgencyBadge({ urgency, className }: UrgencyBadgeProps) {
+  const { lang } = useLang();
+  const URGENCY_LABEL_MAP: Record<string, DictKey> = {
+    critical: "critical",
+    high: "high",
+    normal: "normal",
+    low: "low",
+  };
+  const label = URGENCY_LABEL_MAP[urgency] ? t(URGENCY_LABEL_MAP[urgency], lang) : urgency;
   return (
     <span className={cn(
       "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ring-1 ring-inset",
@@ -34,7 +44,7 @@ export function UrgencyBadge({ urgency, className }: UrgencyBadgeProps) {
       urgency === "low" && "bg-gray-50 text-gray-600 ring-gray-200",
       className
     )}>
-      {urgency}
+      {label}
     </span>
   );
 }
@@ -45,6 +55,30 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const { lang } = useLang();
+  const STATUS_LABEL_MAP: Record<string, DictKey> = {
+    new: "statusNew",
+    planned: "planned",
+    out_for_delivery: "outForDelivery",
+    awaiting_accounting_approval: "awaitingApproval",
+    approved: "approved",
+    cancelled: "cancelled",
+    incomplete: "incomplete",
+    blocked: "statusBlocked",
+    unassigned: "statusUnassigned",
+    assigned: "statusAssigned",
+    arrived: "statusArrived",
+    issue_reported: "statusIssueReported",
+    pending: "pending",
+    rejected: "rejected",
+    qualified: "statusQualified",
+    manual_review: "statusManualReview",
+    converted_to_customer: "statusConverted",
+    auto_qualified: "autoQualified",
+    in_stock: "statusInStock",
+    low_stock: "statusLowStock",
+    out_of_stock: "statusOutOfStock",
+  };
   const statusConfig: Record<string, string> = {
     // Order statuses
     new: "bg-gray-50 text-gray-700 ring-gray-200",
@@ -73,10 +107,10 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     out_of_stock: "bg-red-50 text-red-700 ring-red-200",
   };
 
-  const label = status.replace(/_/g, " ");
+  const label = STATUS_LABEL_MAP[status] ? t(STATUS_LABEL_MAP[status], lang) : status.replace(/_/g, " ");
   return (
     <span className={cn(
-      "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium capitalize ring-1 ring-inset",
+      "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ring-1 ring-inset",
       statusConfig[status] ?? "bg-gray-50 text-gray-600 ring-gray-200",
       className
     )}>

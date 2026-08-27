@@ -36,6 +36,8 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { useLang } from "@/lib/lang-context";
+import { t, type DictKey } from "@/lib/i18n";
 
 const PRE_APPROVAL_STATUSES = ["new", "incomplete", "blocked", "planned", "out_for_delivery"];
 const SEND_TO_PLANNING_STATUSES = ["new", "incomplete", "blocked"];
@@ -56,6 +58,7 @@ export default function OrderDetailPage() {
   const orderId = Number(id);
   const [, navigate] = useLocation();
   const qc = useQueryClient();
+  const { lang } = useLang();
 
   const { data: order, isLoading, refetch } = useGetOrder(orderId, {
     query: { enabled: !!orderId } as any,
@@ -98,8 +101,8 @@ export default function OrderDetailPage() {
     qc.invalidateQueries({ queryKey: getListOrdersQueryKey() });
   };
 
-  if (isLoading) return <div className="p-6 text-muted-foreground">Loading...</div>;
-  if (!o) return <div className="p-6 text-muted-foreground">Order not found</div>;
+  if (isLoading) return <div className="p-6 text-muted-foreground">{t("loading", lang)}</div>;
+  if (!o) return <div className="p-6 text-muted-foreground">{t("orderNotFound", lang)}</div>;
 
   const items        = (o.items ?? []) as any[];
   const customer     = o.customer as any | null;
@@ -132,20 +135,20 @@ export default function OrderDetailPage() {
       });
       setProductId("");
       setQuantity("1");
-      toast({ title: "Item added" });
+      toast({ title: t("itemAdded", lang) });
       await refresh();
     } catch (e: any) {
-      toast({ title: "Could not add item", description: e?.message ?? "Error", variant: "destructive" });
+      toast({ title: t("couldNotAddItem", lang), description: e?.message ?? "Error", variant: "destructive" });
     }
   };
 
   const onDeleteItem = async (itemId: number) => {
     try {
       await deleteItem.mutateAsync({ id: orderId, itemId });
-      toast({ title: "Item removed" });
+      toast({ title: t("itemRemoved", lang) });
       await refresh();
     } catch (e: any) {
-      toast({ title: "Could not remove item", description: e?.message ?? "Error", variant: "destructive" });
+      toast({ title: t("couldNotRemoveItem", lang), description: e?.message ?? "Error", variant: "destructive" });
     }
   };
 
@@ -160,33 +163,33 @@ export default function OrderDetailPage() {
     if (newPT !== oldPT) diff.paymentTermsDays = newPT;
 
     if (Object.keys(diff).length === 0) {
-      toast({ title: "No changes to save" });
+      toast({ title: t("noChangesToSave", lang) });
       return;
     }
     try {
       await updateOrder.mutateAsync({ id: orderId, data: diff as any });
-      toast({ title: "Order updated" });
+      toast({ title: t("orderUpdated", lang) });
       await refresh();
     } catch (e: any) {
-      toast({ title: "Could not save changes", description: e?.error ?? e?.message ?? "Error", variant: "destructive" });
+      toast({ title: t("couldNotSaveChanges", lang), description: e?.error ?? e?.message ?? "Error", variant: "destructive" });
     }
   };
 
   const onSendToPlanning = async () => {
     try {
       await sendToPlanning.mutateAsync({ id: orderId });
-      toast({ title: "Sent to planning", description: "Delivery has been created" });
+      toast({ title: t("sentToPlanning", lang), description: t("deliveryCreated", lang) });
       await refresh();
     } catch (e: any) {
-      toast({ title: "Could not send", description: e?.message ?? "Order is still incomplete", variant: "destructive" });
+      toast({ title: t("couldNotSend", lang), description: e?.message ?? "Order is still incomplete", variant: "destructive" });
     }
   };
 
   const payStatusBadge = () => {
-    if (o.paymentStatus === "paid") return <Badge className="bg-green-100 text-green-800 border-green-200 text-xs" variant="outline">Paid</Badge>;
-    if (o.paymentStatus === "overdue") return <Badge className="bg-red-100 text-red-800 border-red-200 text-xs" variant="outline">Overdue</Badge>;
-    if (o.paymentStatus === "unpaid") return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs" variant="outline">Unpaid</Badge>;
-    if (o.invoiceDate) return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs" variant="outline">Unpaid</Badge>;
+    if (o.paymentStatus === "paid") return <Badge className="bg-green-100 text-green-800 border-green-200 text-xs" variant="outline">{t("paid", lang)}</Badge>;
+    if (o.paymentStatus === "overdue") return <Badge className="bg-red-100 text-red-800 border-red-200 text-xs" variant="outline">{t("overdue", lang)}</Badge>;
+    if (o.paymentStatus === "unpaid") return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs" variant="outline">{t("unpaid", lang)}</Badge>;
+    if (o.invoiceDate) return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs" variant="outline">{t("unpaid", lang)}</Badge>;
     return null;
   };
 
@@ -195,7 +198,7 @@ export default function OrderDetailPage() {
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate("/orders")} data-testid="link-back-orders">
           <ArrowLeft className="h-4 w-4 mr-1.5" />
-          Orders
+          {t("orders", lang)}
         </Button>
       </div>
 
@@ -204,7 +207,7 @@ export default function OrderDetailPage() {
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold" data-testid="text-order-number">{o.orderNumber ?? `Order #${o.id}`}</h1>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${STATUS_COLORS[o.status] ?? STATUS_COLORS.new}`}>
-              {o.status.replace(/_/g, " ")}
+              {t(({ new: "statusNew", planned: "planned", out_for_delivery: "outForDelivery", awaiting_accounting_approval: "awaitingApproval", approved: "approved", cancelled: "cancelled", incomplete: "incomplete", blocked: "statusBlocked" } as Record<string, DictKey>)[o.status] ?? "statusNew", lang)}
             </span>
             {payStatusBadge()}
           </div>
@@ -213,7 +216,7 @@ export default function OrderDetailPage() {
               <Link href={`/customers/${customer.id}`} className="text-primary hover:underline" data-testid="link-customer">
                 {customer.companyName}
               </Link>
-            ) : "Unknown customer"}
+            ) : t("unknownCustomer", lang)}
             {" · "}
             {o.businessChannel ?? "—"} · {o.orderSource} · urgency {o.urgency}
           </p>
@@ -225,7 +228,7 @@ export default function OrderDetailPage() {
             data-testid="button-send-to-planning"
           >
             <Send className="h-4 w-4 mr-1.5" />
-            {sendToPlanning.isPending ? "Sending..." : "Send to planning"}
+            {sendToPlanning.isPending ? t("sending", lang) : t("sendToPlanning", lang)}
           </Button>
         )}
       </div>
@@ -237,10 +240,8 @@ export default function OrderDetailPage() {
             <div className="flex items-start gap-3">
               <Lock className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-orange-900">Order locked for editing</p>
-                <p className="text-sm text-orange-800 mt-1">
-                  This order has entered the Accounting Approval workflow and can no longer be modified. Only cancellation is allowed.
-                </p>
+                <p className="font-medium text-orange-900">{t("orderLockedTitle", lang)}</p>
+                <p className="text-sm text-orange-800 mt-1">{t("orderLockedDesc", lang)}</p>
               </div>
             </div>
           </CardContent>
@@ -254,26 +255,26 @@ export default function OrderDetailPage() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="space-y-2 flex-1">
-                <p className="font-medium text-amber-900">This order is incomplete</p>
-                <p className="text-sm text-amber-800">Resolve the items below before sending to planning:</p>
+                <p className="font-medium text-amber-900">{t("orderIncompleteTitle", lang)}</p>
+                <p className="text-sm text-amber-800">{t("resolveBeforePlanning", lang)}</p>
                 <ul className="text-sm text-amber-800 space-y-1 mt-1">
                   <li className="flex items-center gap-2">
                     {missingItems ? <AlertTriangle className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />}
-                    At least one order item
+                    {t("atLeastOneItem", lang)}
                   </li>
                   <li className="flex items-center gap-2">
                     {missingDate ? <AlertTriangle className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />}
-                    Requested delivery date
+                    {t("requestedDeliveryDateLabel", lang)}
                   </li>
                   <li className="flex items-center gap-2">
                     {missingAddress ? <AlertTriangle className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />}
-                    Customer must have a delivery address
+                    {t("customerMustHaveAddress", lang)}
                   </li>
                 </ul>
                 {missingAddress && customer && (
                   <p className="text-sm text-amber-800 pt-1">
                     <Link href={`/customers/${customer.id}`} className="underline font-medium" data-testid="link-fix-address">
-                      Open customer to add a delivery address →
+                      {t("openCustomerToAddAddress", lang)}
                     </Link>
                   </p>
                 )}
@@ -287,14 +288,14 @@ export default function OrderDetailPage() {
         {/* Items card */}
         <Card className="md:col-span-2">
           <CardHeader className="pb-3 flex-row items-center justify-between">
-            <CardTitle className="text-sm">Items</CardTitle>
+            <CardTitle className="text-sm">{t("orderItems", lang)}</CardTitle>
             <span className="text-sm font-medium" data-testid="text-total">
-              Total: {formatCurrency(o.totalAmount)}
+              {t("total", lang)}: {formatCurrency(o.totalAmount)}
             </span>
           </CardHeader>
           <CardContent>
             {items.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">No items yet. Add the first one below.</p>
+              <p className="text-sm text-muted-foreground py-4">{t("noItemsYetDetail", lang)}</p>
             ) : (
               <div className="space-y-2">
                 {items.map((item: any) => (
@@ -329,11 +330,11 @@ export default function OrderDetailPage() {
 
             {isEditable && (
               <div className="mt-4 pt-4 border-t space-y-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Add Item</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase">{t("add", lang)} {t("items", lang)}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px_auto] gap-2">
                   <Select value={productId} onValueChange={setProductId}>
                     <SelectTrigger data-testid="select-product">
-                      <SelectValue placeholder="Choose product" />
+                      <SelectValue placeholder={t("chooseProduct", lang)} />
                     </SelectTrigger>
                     <SelectContent>
                       {productList.map((p: any) => (
@@ -357,7 +358,7 @@ export default function OrderDetailPage() {
                     data-testid="button-add-item"
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    Add
+                    {t("add", lang)}
                   </Button>
                 </div>
               </div>
@@ -371,10 +372,10 @@ export default function OrderDetailPage() {
           {/* Edit Order form — only shown when pre-approval */}
           {isEditable && (
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm">Edit Order</CardTitle></CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm">{t("editOrder", lang)}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Requested Delivery Date</Label>
+                  <Label className="text-xs text-muted-foreground">{t("requestedDeliveryDateLabel", lang)}</Label>
                   <Input
                     type="date"
                     value={formDeliveryDate}
@@ -383,21 +384,21 @@ export default function OrderDetailPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Urgency</Label>
+                  <Label className="text-xs text-muted-foreground">{t("urgency", lang)}</Label>
                   <Select value={formUrgency} onValueChange={setFormUrgency}>
                     <SelectTrigger className="h-8 text-xs" data-testid="select-urgency">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="critical">Critical</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="critical">{t("critical", lang)}</SelectItem>
+                      <SelectItem value="high">{t("high", lang)}</SelectItem>
+                      <SelectItem value="normal">{t("normal", lang)}</SelectItem>
+                      <SelectItem value="low">{t("low", lang)}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Channel / Source</Label>
+                  <Label className="text-xs text-muted-foreground">{t("channelSource", lang)}</Label>
                   <Select value={formChannel} onValueChange={setFormChannel}>
                     <SelectTrigger className="h-8 text-xs" data-testid="select-channel">
                       <SelectValue placeholder="Select channel" />
@@ -413,20 +414,20 @@ export default function OrderDetailPage() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Payment Terms Override (days)</Label>
+                  <Label className="text-xs text-muted-foreground">{t("paymentTermsOverride", lang)}</Label>
                   <Input
                     type="number"
                     min="0"
-                    placeholder="e.g. 30 (leave blank to use customer default)"
+                    placeholder={`e.g. 30 (${t("customerDefaultLabel", lang)})`}
                     value={formPaymentTerms}
                     onChange={e => setFormPaymentTerms(e.target.value)}
                     data-testid="input-payment-terms"
                     className="h-8 text-xs"
                   />
-                  <p className="text-xs text-muted-foreground">Customer default: {o.customer?.paymentTerms ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">{t("customerDefaultLabel", lang)}: {o.customer?.paymentTerms ?? "—"}</p>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Notes</Label>
+                  <Label className="text-xs text-muted-foreground">{t("notes", lang)}</Label>
                   <Textarea
                     value={formNotes}
                     onChange={e => setFormNotes(e.target.value)}
@@ -443,7 +444,7 @@ export default function OrderDetailPage() {
                   disabled={updateOrder.isPending}
                   data-testid="button-save-order"
                 >
-                  {updateOrder.isPending ? "Saving..." : "Save Changes"}
+                  {updateOrder.isPending ? t("saving", lang) : t("saveChanges", lang)}
                 </Button>
               </CardContent>
             </Card>
@@ -452,25 +453,25 @@ export default function OrderDetailPage() {
           {/* Order details (read-only when locked) */}
           {!isEditable && (
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm">Order Details</CardTitle></CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm">{t("orderDetailsSection", lang)}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <Label className="text-xs text-muted-foreground">Requested Delivery Date</Label>
+                  <Label className="text-xs text-muted-foreground">{t("requestedDeliveryDateLabel", lang)}</Label>
                   <p className="text-sm font-medium" data-testid="text-delivery-date">
-                    {o.requestedDeliveryDate ? formatDate(o.requestedDeliveryDate) : "Not set"}
+                    {o.requestedDeliveryDate ? formatDate(o.requestedDeliveryDate) : t("notSet", lang)}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Urgency</Label>
+                  <Label className="text-xs text-muted-foreground">{t("urgency", lang)}</Label>
                   <p className="text-sm font-medium capitalize">{o.urgency}</p>
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Channel</Label>
+                  <Label className="text-xs text-muted-foreground">{t("channel", lang)}</Label>
                   <p className="text-sm font-medium capitalize">{o.businessChannel ?? "—"}</p>
                 </div>
                 {o.notes && (
                   <div>
-                    <Label className="text-xs text-muted-foreground">Notes</Label>
+                    <Label className="text-xs text-muted-foreground">{t("notes", lang)}</Label>
                     <p className="text-sm whitespace-pre-wrap" data-testid="text-notes">{o.notes}</p>
                   </div>
                 )}
@@ -480,7 +481,7 @@ export default function OrderDetailPage() {
 
           {/* Delivery address */}
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm">Delivery Address</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">{t("deliveryAddressSection", lang)}</CardTitle></CardHeader>
             <CardContent>
               {hasDeliveryAddress ? (
                 <p className="text-sm" data-testid="text-delivery-address">
@@ -488,10 +489,10 @@ export default function OrderDetailPage() {
                 </p>
               ) : (
                 <p className="text-sm text-amber-700">
-                  No delivery address.{" "}
+                  {t("noDeliveryAddressDetail", lang)}{" "}
                   {customer && (
                     <Link href={`/customers/${customer.id}`} className="underline">
-                      Add one →
+                      →
                     </Link>
                   )}
                 </p>
@@ -505,39 +506,39 @@ export default function OrderDetailPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  Payment
+                  {t("payment", lang)}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Invoice date</span>
+                  <span className="text-muted-foreground">{t("invoiceDateLabel", lang)}</span>
                   <span className="font-medium">{formatDate(o.invoiceDate)}</span>
                 </div>
                 {o.dueDate && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Due date</span>
+                    <span className="text-muted-foreground">{t("dueDateDetailLabel", lang)}</span>
                     <span className="font-medium">{formatDate(o.dueDate)}</span>
                   </div>
                 )}
                 {o.paymentTermsDays != null && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Payment terms</span>
+                    <span className="text-muted-foreground">{t("paymentTermsLabel", lang)}</span>
                     <span className="font-medium">{o.paymentTermsDays} days</span>
                   </div>
                 )}
                 <div className="flex justify-between pt-1 border-t">
-                  <span className="text-muted-foreground">Status</span>
+                  <span className="text-muted-foreground">{t("status", lang)}</span>
                   {payStatusBadge()}
                 </div>
                 {o.paidAt && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Paid at</span>
+                    <span className="text-muted-foreground">{t("paidAt", lang)}</span>
                     <span className="font-medium">{formatDate(o.paidAt)}</span>
                   </div>
                 )}
                 {o.collectedAmount != null && Number(o.collectedAmount) > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Collected</span>
+                    <span className="text-muted-foreground">{t("collected", lang)}</span>
                     <span className="font-medium">{formatCurrency(o.collectedAmount)}</span>
                   </div>
                 )}
