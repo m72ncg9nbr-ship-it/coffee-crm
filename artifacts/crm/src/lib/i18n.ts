@@ -333,8 +333,6 @@ export const dict = {
   orderWillBePlanned:      { en: "Will be created and immediately set to planned with an auto-created delivery.", tr: "Oluşturulacak ve otomatik teslimatla birlikte hemen planlandı olarak ayarlanacak." },
   orderWillBeIncomplete:   { en: "Will be saved as incomplete until items, a delivery address, and a delivery date are all set.", tr: "Ürünler, teslimat adresi ve teslimat tarihi girilene kadar tamamlanmamış olarak kaydedilecek." },
   back:                    { en: "Back",                                        tr: "Geri" },
-  newOrder:                { en: "New Order",                                   tr: "Yeni Sipariş" },
-  add:                     { en: "Add",                                         tr: "Ekle" },
   orderSavedAnyway:        { en: "The order will still be saved.",              tr: "Sipariş yine de kaydedilecek." },
   sampleReasonLabel:       { en: "Sample / Free Issue Reason",                  tr: "Numune / Ücretsiz Ürün Nedeni" },
   sampleReasonPlaceholder: { en: "e.g. New customer intro, product trial...",   tr: "ör. Yeni müşteri tanıtımı, ürün denemesi..." },

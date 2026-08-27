@@ -4,10 +4,13 @@ import {
   useGetReportsSales,
   useGetReportsProfitability,
   useGetReportsCollection,
-  useGetReportsSamples,
-  useGetReportsRegional,
 } from "@workspace/api-client-react";
-import type { ReportFiltersParams } from "@workspace/api-client-react";
+
+type ReportFiltersParams = {
+  dateFrom?: string;
+  dateTo?: string;
+  channel?: string;
+};
 
 type SalesByDimensionItem = {
   key: string;
@@ -262,8 +265,28 @@ export default function ReportsPage() {
   const { data: sales, isLoading: salesLoading, isError: salesError } = useGetReportsSales(activeFilters);
   const { data: profit, isLoading: profitLoading, isError: profitError } = useGetReportsProfitability(activeFilters);
   const { data: coll, isLoading: collLoading, isError: collError } = useGetReportsCollection(activeFilters);
-  const { data: samples, isLoading: samplesLoading, isError: samplesError } = useGetReportsSamples(activeFilters);
-  const { data: regional, isLoading: regionalLoading, isError: regionalError } = useGetReportsRegional(activeFilters);
+  const { data: samples, isLoading: samplesLoading, isError: samplesError } = useQuery<any>({
+    queryKey: ["reports-samples", activeFilters],
+    queryFn: () => {
+      const q = new URLSearchParams();
+      if (activeFilters.dateFrom) q.set("dateFrom", activeFilters.dateFrom);
+      if (activeFilters.dateTo) q.set("dateTo", activeFilters.dateTo);
+      if (activeFilters.channel) q.set("channel", activeFilters.channel);
+      const qs = q.toString();
+      return fetch(`/api/reports/samples${qs ? `?${qs}` : ""}`, { credentials: "include" }).then(r => r.json());
+    },
+  });
+  const { data: regional, isLoading: regionalLoading, isError: regionalError } = useQuery<any>({
+    queryKey: ["reports-regional", activeFilters],
+    queryFn: () => {
+      const q = new URLSearchParams();
+      if (activeFilters.dateFrom) q.set("dateFrom", activeFilters.dateFrom);
+      if (activeFilters.dateTo) q.set("dateTo", activeFilters.dateTo);
+      if (activeFilters.channel) q.set("channel", activeFilters.channel);
+      const qs = q.toString();
+      return fetch(`/api/reports/regional${qs ? `?${qs}` : ""}`, { credentials: "include" }).then(r => r.json());
+    },
+  });
 
   const { data: growthData, isLoading: growthLoading } = useQuery<any>({
     queryKey: ["reports-growth", reportChannel, growthYear],
@@ -456,7 +479,7 @@ export default function ReportsPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {rows.map((r, i) => <ProfitRow key={i} row={r} />)}
+                            {rows.map((r: ProfitabilityItem, i: number) => <ProfitRow key={i} row={r} />)}
                           </tbody>
                         </table>
                       </div>
