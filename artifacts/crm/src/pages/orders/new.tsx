@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-client-react";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
+import { channelDisplayLabel } from "@/lib/customer-options";
 import { useChannel } from "@/lib/channel-context";
 import {
   calculateInventoryStatus,
@@ -469,9 +470,9 @@ export default function OrderNewPage() {
                 <Select value={businessChannel} onValueChange={setBusinessChannel}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="horeca">HoReCa</SelectItem>
-                    <SelectItem value="office">Office</SelectItem>
-                    <SelectItem value="retail">Retail</SelectItem>
+                    <SelectItem value="horeca">{channelDisplayLabel("horeca", lang)}</SelectItem>
+                    <SelectItem value="office">{channelDisplayLabel("office", lang)}</SelectItem>
+                    <SelectItem value="retail">{channelDisplayLabel("retail", lang)}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

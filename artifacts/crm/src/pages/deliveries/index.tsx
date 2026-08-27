@@ -18,6 +18,7 @@ import { DeleteConfirm } from "@/components/delete-confirm";
 import { useChannel } from "@/lib/channel-context";
 import { useLang } from "@/lib/lang-context";
 import { t, type DictKey } from "@/lib/i18n";
+import { deviationTypeDisplayLabel } from "@/lib/customer-options";
 
 // ── Board column definitions ──────────────────────────────────────────────────
 const BOARD_COLUMNS: { status: string; labelKey: DictKey; color: string }[] = [
@@ -418,7 +419,7 @@ export default function DeliveriesPage() {
           {BOARD_COLUMNS.map(col => (
             <div
               key={col.status}
-              className={cn("shrink-0 w-64 rounded-lg border-2 p-3 space-y-2", col.color)}
+              className={cn("shrink-0 w-56 rounded-lg border-2 p-3 space-y-2", col.color)}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -509,7 +510,7 @@ export default function DeliveriesPage() {
                           <div className="flex items-center gap-1 text-orange-700">
                             <AlertCircle className="h-3.5 w-3.5" />
                             <span className="text-xs capitalize">
-                              {d.deviationType.replace(/_/g, " ")}
+                              {deviationTypeDisplayLabel(d.deviationType, lang)}
                             </span>
                           </div>
                         ) : (
@@ -585,7 +586,7 @@ function DeliveryCard({ delivery: d, deleteSlot }: { delivery: any; deleteSlot?:
         <div className="flex items-start gap-1 text-orange-700 text-xs">
           <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
           <div>
-            <span className="truncate capitalize">{d.deviationType.replace(/_/g, " ")}</span>
+            <span className="truncate capitalize">{deviationTypeDisplayLabel(d.deviationType, lang)}</span>
             {d.deviationNote && (
               <p className="text-orange-600/80 mt-0.5 line-clamp-2">{d.deviationNote}</p>
             )}

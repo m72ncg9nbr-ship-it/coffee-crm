@@ -808,6 +808,11 @@ export const dict = {
   segmentCoworking:       { en: "Coworking",          tr: "Coworking" },
   segmentCorporate:       { en: "Corporate",          tr: "Kurumsal" },
   segmentEducation:       { en: "Education",          tr: "Eğitim" },
+  segmentRetail:          { en: "Retail",             tr: "Perakende" },
+  segmentSalon:           { en: "Salon",              tr: "Salon" },
+  segmentSpa:             { en: "Spa",                tr: "Spa" },
+  segmentHoreca:          { en: "HoReCa",             tr: "HoReCa" },
+  segmentOther:           { en: "Other",              tr: "Diğer" },
 
   // ── Payment terms display labels ─────────────────────────────────────────────
   termsNet14:             { en: "Net 14",             tr: "14 Gün Net" },

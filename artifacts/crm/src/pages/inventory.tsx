@@ -22,7 +22,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Package, History, Search, ChevronDown, Edit2, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { calculateInventoryStatus, invStatusBadgeClass, movementReasonLabel } from "@/lib/inventoryStatus";
+import { calculateInventoryStatus, invStatusBadgeClass, movementReasonLabel, poolDisplayLabel } from "@/lib/inventoryStatus";
 import { useChannel } from "@/lib/channel-context";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
@@ -172,9 +172,7 @@ export default function InventoryPage() {
           {(pools ?? []).map((pool: any) => (
             <span key={pool.id} className="inline-flex items-center gap-1.5 text-xs bg-muted/40 border rounded px-2.5 py-1 text-muted-foreground">
               <span className="h-2 w-2 rounded-full bg-primary/50 shrink-0" />
-              <span className="font-medium">{pool.label}</span>
-              <span className="opacity-50">·</span>
-              <span className="font-mono opacity-60">{pool.name}</span>
+              <span className="font-medium">{poolDisplayLabel(pool.name, lang)}</span>
             </span>
           ))}
         </div>

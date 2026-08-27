@@ -57,6 +57,11 @@ const SEGMENT_DICT_KEY: Record<string, DictKey> = {
   coworking: "segmentCoworking",
   corporate: "segmentCorporate",
   education: "segmentEducation",
+  retail: "segmentRetail",
+  salon: "segmentSalon",
+  spa: "segmentSpa",
+  horeca: "segmentHoreca",
+  other: "segmentOther",
 };
 
 export function segmentDisplayLabel(seg: string, lang: Lang): string {

@@ -421,7 +421,7 @@ export default function InvoicingPage() {
                             {t("markPaidBtn", lang)}
                           </Button>
                         ) : (
-                          <span className="text-xs text-green-700 font-medium">✓ Paid</span>
+                          <span className="text-xs text-green-700 font-medium">✓ {t("paid", lang)}</span>
                         )}
                       </td>
                     </tr>
