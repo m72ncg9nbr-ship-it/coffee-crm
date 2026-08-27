@@ -16,6 +16,7 @@ import { DeleteConfirm } from "@/components/delete-confirm";
 import { useChannel } from "@/lib/channel-context";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
+import { channelDisplayLabel } from "@/lib/customer-options";
 
 type SortKey = "orderNumber" | "customer" | "channel" | "deliveryDate" | "urgency" | "total" | "status";
 type SortDir = "asc" | "desc";
@@ -216,7 +217,7 @@ export default function OrdersPage() {
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Order #..."
+              placeholder={t("searchOrder", lang)}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="h-8 text-xs pl-7 w-32"
@@ -225,7 +226,7 @@ export default function OrdersPage() {
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Customer name..."
+              placeholder={t("searchCustomerName", lang)}
               value={customerSearch}
               onChange={e => setCustomerSearch(e.target.value)}
               className="h-8 text-xs pl-7 w-44"
@@ -249,7 +250,7 @@ export default function OrdersPage() {
             <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder={t("allChannels", lang)} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("allChannels", lang)}</SelectItem>
-              {channelOptions.map(c => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
+              {channelOptions.map(c => <SelectItem key={c} value={c}>{channelDisplayLabel(c, lang)}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={urgency} onValueChange={setUrgency}>
@@ -321,7 +322,7 @@ export default function OrdersPage() {
                 >
                   <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{o.orderNumber ?? `#${o.id}`}</td>
                   <td className="px-4 py-3 text-sm font-medium">{o.customerName}</td>
-                  <td className="px-4 py-3 text-sm capitalize">{o.businessChannel}</td>
+                  <td className="px-4 py-3 text-sm">{channelDisplayLabel(o.businessChannel, lang)}</td>
                   <td className="px-4 py-3 text-sm">{formatDate(o.requestedDeliveryDate)}</td>
                   <td className="px-4 py-3"><UrgencyBadge urgency={o.urgency} /></td>
                   <td className="px-4 py-3 text-sm font-medium">{formatCurrency(o.totalAmount)}</td>

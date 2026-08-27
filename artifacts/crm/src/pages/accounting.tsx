@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useChannel } from "@/lib/channel-context";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
+import { deviationTypeDisplayLabel } from "@/lib/customer-options";
 
 export default function AccountingPage() {
   const { data: approvals, isLoading, refetch } = useListAccountingApprovals();
@@ -127,7 +128,7 @@ export default function AccountingPage() {
             </SelectContent>
           </Select>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Date</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t("date", lang)}</span>
             <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-8 text-xs w-36" title="Scheduled date from" />
             <span className="text-xs text-muted-foreground">–</span>
             <Input type="date" value={dateTo}   onChange={e => setDateTo(e.target.value)}   className="h-8 text-xs w-36" title="Scheduled date to" />
@@ -144,7 +145,7 @@ export default function AccountingPage() {
           </Button>
         </div>
         {hasFilters && (
-          <p className="text-xs text-muted-foreground">{filteredApprovals.length} of {(approvals ?? []).length} records</p>
+          <p className="text-xs text-muted-foreground">{filteredApprovals.length} {t("ofLabel", lang)} {(approvals ?? []).length} {t("records", lang)}</p>
         )}
       </div>
 
@@ -270,7 +271,7 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
               {a.hasDocument && a.documentUrl && (
                 <a href={a.documentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-green-700 hover:underline">
                   <FileText className="h-3 w-3" />
-                  View document
+                  {t("viewDocument", lang)}
                 </a>
               )}
               {a.hasDocument && !a.documentUrl && (
@@ -296,7 +297,7 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
             )}
             {a.deviationNote && (
               <div className="text-xs text-orange-700 bg-orange-50 rounded px-2 py-1.5">
-                <span className="font-medium capitalize">{a.deviationType?.replace(/_/g, " ")}: </span>
+                <span className="font-medium capitalize">{deviationTypeDisplayLabel(a.deviationType ?? "", lang)}: </span>
                 {a.deviationNote}
               </div>
             )}
@@ -304,10 +305,10 @@ function ApprovalCard({ approval: a, note, onNoteChange, onApprove, onReject, on
               <p className="text-xs text-muted-foreground italic">"{a.reviewNotes}"</p>
             )}
             {readonly && a.reviewedAt && (
-              <p className="text-xs text-muted-foreground">Reviewed: {formatDateTime(a.reviewedAt)} {a.reviewedByName ? `by ${a.reviewedByName}` : ""}</p>
+              <p className="text-xs text-muted-foreground">{t("reviewedLabel", lang)} {formatDateTime(a.reviewedAt)}{a.reviewedByName ? ` ${t("reviewedBy", lang)} ${a.reviewedByName}` : ""}</p>
             )}
             {readonly && a.status === "approved" && a.paidAt && (
-              <p className="text-xs text-green-700">Paid: {formatDateTime(a.paidAt)}</p>
+              <p className="text-xs text-green-700">{t("paidLabel", lang)} {formatDateTime(a.paidAt)}</p>
             )}
           </div>
           {!readonly && (

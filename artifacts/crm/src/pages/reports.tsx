@@ -60,6 +60,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { channelDisplayLabel } from "@/lib/customer-options";
 import {
   BarChart,
   Bar,
@@ -102,11 +103,12 @@ function KpiCard({ label, value, sub, icon: Icon }: { label: string; value: stri
   );
 }
 
-function MiniBarChart({ data, xKey, yKey, color = "#f97316" }: {
+function MiniBarChart({ data, xKey, yKey, color = "#f97316", barName }: {
   data: any[];
   xKey: string;
   yKey: string;
   color?: string;
+  barName?: string;
 }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -115,13 +117,13 @@ function MiniBarChart({ data, xKey, yKey, color = "#f97316" }: {
         <XAxis dataKey={xKey} tick={{ fontSize: 11 }} angle={-35} textAnchor="end" interval={0} />
         <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
         <Tooltip formatter={(v: number) => fmt(v)} />
-        <Bar dataKey={yKey} fill={color} radius={[3, 3, 0, 0]} />
+        <Bar dataKey={yKey} name={barName} fill={color} radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
-function MultiColorBar({ data, xKey, yKey }: { data: any[]; xKey: string; yKey: string }) {
+function MultiColorBar({ data, xKey, yKey, barName }: { data: any[]; xKey: string; yKey: string; barName?: string }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 40 }}>
@@ -129,7 +131,7 @@ function MultiColorBar({ data, xKey, yKey }: { data: any[]; xKey: string; yKey: 
         <XAxis dataKey={xKey} tick={{ fontSize: 11 }} angle={-35} textAnchor="end" interval={0} />
         <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
         <Tooltip formatter={(v: number) => fmt(v)} />
-        <Bar dataKey={yKey} radius={[3, 3, 0, 0]}>
+        <Bar dataKey={yKey} name={barName} radius={[3, 3, 0, 0]}>
           {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
         </Bar>
       </BarChart>
@@ -404,25 +406,25 @@ export default function ReportsPage() {
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-sm">{t("revenueByMonth", lang)}</CardTitle></CardHeader>
                   <CardContent>
-                    <MiniBarChart data={sales.byMonth} xKey="label" yKey="revenue" color="#f97316" />
+                    <MiniBarChart data={sales.byMonth} xKey="label" yKey="revenue" color="#f97316" barName={t("revenue", lang)} />
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-sm">{t("revenueByChannel", lang)}</CardTitle></CardHeader>
                   <CardContent>
-                    <MultiColorBar data={sales.byChannel} xKey="label" yKey="revenue" />
+                    <MultiColorBar data={sales.byChannel.map((d: any) => ({ ...d, label: channelDisplayLabel(d.label, lang) }))} xKey="label" yKey="revenue" barName={t("revenue", lang)} />
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-sm">{t("topProductsByRevenue", lang)}</CardTitle></CardHeader>
                   <CardContent>
-                    <MultiColorBar data={sales.byProduct.slice(0, 10)} xKey="label" yKey="revenue" />
+                    <MultiColorBar data={sales.byProduct.slice(0, 10)} xKey="label" yKey="revenue" barName={t("revenue", lang)} />
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-sm">{t("revenueBySource", lang)}</CardTitle></CardHeader>
                   <CardContent>
-                    <MultiColorBar data={sales.byOrderSource} xKey="label" yKey="revenue" />
+                    <MultiColorBar data={sales.byOrderSource} xKey="label" yKey="revenue" barName={t("revenue", lang)} />
                   </CardContent>
                 </Card>
               </div>
@@ -534,7 +536,7 @@ export default function ReportsPage() {
                           <tr key={o.orderId} className="border-b border-muted/40 last:border-0">
                             <td className="py-1.5 pr-3 font-mono">{o.orderNumber ?? `#${o.orderId}`}</td>
                             <td className="py-1.5 pr-3 max-w-[140px] truncate">{o.customerName}</td>
-                            <td className="py-1.5 pr-3 capitalize">{o.channel}</td>
+                            <td className="py-1.5 pr-3">{channelDisplayLabel(o.channel, lang)}</td>
                             <td className="py-1.5 pr-3 text-right font-medium">{fmt(o.totalAmount)}</td>
                             <td className="py-1.5 pr-3">{o.invoiceDate ?? "—"}</td>
                             <td className="py-1.5 pr-3">
@@ -577,7 +579,7 @@ export default function ReportsPage() {
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-sm">{t("topSampledProducts", lang)}</CardTitle></CardHeader>
                   <CardContent>
-                    <MultiColorBar data={samples.byProduct.slice(0, 10)} xKey="label" yKey="units" />
+                    <MultiColorBar data={samples.byProduct.slice(0, 10)} xKey="label" yKey="units" barName={t("units", lang)} />
                   </CardContent>
                 </Card>
               )}
@@ -636,13 +638,13 @@ export default function ReportsPage() {
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-sm">{t("revenueByRegion", lang)}</CardTitle></CardHeader>
                   <CardContent>
-                    <MultiColorBar data={regional.byRegion} xKey="region" yKey="revenue" />
+                    <MultiColorBar data={regional.byRegion} xKey="region" yKey="revenue" barName={t("revenue", lang)} />
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-sm">{t("topCitiesByRevenue", lang)}</CardTitle></CardHeader>
                   <CardContent>
-                    <MultiColorBar data={regional.byCity.slice(0, 10)} xKey="city" yKey="revenue" />
+                    <MultiColorBar data={regional.byCity.slice(0, 10)} xKey="city" yKey="revenue" barName={t("revenue", lang)} />
                   </CardContent>
                 </Card>
               </div>
@@ -725,7 +727,7 @@ export default function ReportsPage() {
               </SelectContent>
             </Select>
           </div>
-          {growthLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {growthLoading && <div className="text-sm text-muted-foreground py-4">{t("loading", lang)}</div>}
           {growthData && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -757,7 +759,7 @@ export default function ReportsPage() {
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-sm">{t("revenueGrowth", lang)} — {t("byMonth", lang)}</CardTitle></CardHeader>
                 <CardContent>
-                  <MiniBarChart data={growthData.byMonth} xKey="month" yKey="revenue" color="#10b981" />
+                  <MiniBarChart data={growthData.byMonth} xKey="month" yKey="revenue" color="#10b981" barName={t("revenue", lang)} />
                 </CardContent>
               </Card>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -817,7 +819,7 @@ export default function ReportsPage() {
           {!selectedCustomerId && (
             <p className="text-sm text-muted-foreground italic py-4">{t("selectCustomer", lang)}</p>
           )}
-          {ctLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {ctLoading && <div className="text-sm text-muted-foreground py-4">{t("loading", lang)}</div>}
           {customerTrend && !customerTrend.error && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -862,7 +864,7 @@ export default function ReportsPage() {
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-sm">{t("revenueGrowth", lang)} — {t("byMonth", lang)}</CardTitle></CardHeader>
                   <CardContent>
-                    <MiniBarChart data={customerTrend.byMonth ?? []} xKey="month" yKey="revenue" color="#3b82f6" />
+                    <MiniBarChart data={customerTrend.byMonth ?? []} xKey="month" yKey="revenue" color="#3b82f6" barName={t("revenue", lang)} />
                   </CardContent>
                 </Card>
               </div>
@@ -872,7 +874,7 @@ export default function ReportsPage() {
 
         {/* ── Product Performance ───────────────────────────────────── */}
         <TabsContent value="product-performance" className="space-y-5">
-          {ppLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {ppLoading && <div className="text-sm text-muted-foreground py-4">{t("loading", lang)}</div>}
           {productPerf && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -942,7 +944,7 @@ export default function ReportsPage() {
 
         {/* ── Lead Conversion ───────────────────────────────────────── */}
         <TabsContent value="lead-conversion" className="space-y-5">
-          {lcLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {lcLoading && <div className="text-sm text-muted-foreground py-4">{t("loading", lang)}</div>}
           {leadConv && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1028,7 +1030,7 @@ export default function ReportsPage() {
 
         {/* ── Invoice Aging ─────────────────────────────────────────── */}
         <TabsContent value="invoice-aging" className="space-y-5">
-          {agingLoading && <div className="text-sm text-muted-foreground py-4">Loading...</div>}
+          {agingLoading && <div className="text-sm text-muted-foreground py-4">{t("loading", lang)}</div>}
           {aging && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

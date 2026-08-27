@@ -4,6 +4,7 @@ import { formatDateTime } from "@/lib/utils";
 import { Activity } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
+import { activityTypeDisplayLabel, activityMessageDisplayLabel } from "@/lib/customer-options";
 
 const ACTION_COLORS: Record<string, string> = {
   order_created: "bg-blue-100 text-blue-700",
@@ -36,10 +37,10 @@ export default function ActivityPage() {
           <Card key={log.id}>
             <CardContent className="p-3.5 flex items-start gap-3">
               <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-0.5 ${ACTION_COLORS[log.actionType] ?? "bg-gray-100 text-gray-600"}`}>
-                {log.actionLabel ?? log.actionType.replace(/_/g, " ")}
+                {activityTypeDisplayLabel(log.actionType, lang)}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm">{log.description}</p>
+                <p className="text-sm">{activityMessageDisplayLabel(log.description, lang)}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {log.performedByName} · {formatDateTime(log.createdAt)}
                 </p>

@@ -753,6 +753,44 @@ export const dict = {
   landingPaymentRisk:    { en: "Payment Risk",                         tr: "Ödeme Riski" },
   landingTrending:       { en: "vs. last month",                       tr: "geçen aya kıyasla" },
 
+  // ── Product category labels ─────────────────────────────────────────────────
+  catAmpoule:            { en: "Ampoule",           tr: "Ampul" },
+  catBodyCare:           { en: "Body Care",          tr: "Vücut Bakımı" },
+  catCleanser:           { en: "Cleanser",           tr: "Temizleyici" },
+  catColorCosmetics:     { en: "Color Cosmetics",    tr: "Renkli Kozmetik" },
+  catSkinCare:           { en: "Skin Care",          tr: "Cilt Bakımı" },
+  catHairCare:           { en: "Hair Care",          tr: "Saç Bakımı" },
+  catFootCare:           { en: "Foot Care",          tr: "Ayak Bakımı" },
+  catSerum:              { en: "Serum",              tr: "Serum" },
+  catTonic:              { en: "Tonic",              tr: "Tonik" },
+  catCream:              { en: "Cream",              tr: "Krem" },
+  catMask:               { en: "Mask",               tr: "Maske" },
+
+  // ── Activity type labels ─────────────────────────────────────────────────────
+  actOrderCreated:         { en: "Order Created",          tr: "Sipariş Oluşturuldu" },
+  actOrderUpdated:         { en: "Order Updated",           tr: "Sipariş Güncellendi" },
+  actDeliveryCreated:      { en: "Delivery Created",        tr: "Teslimat Oluşturuldu" },
+  actDeliveryAssigned:     { en: "Delivery Assigned",       tr: "Teslimat Atandı" },
+  actDriverArrived:        { en: "Driver Arrived",          tr: "Sürücü Ulaştı" },
+  actDocumentationUploaded:{ en: "Documentation Uploaded",  tr: "Belge Yüklendi" },
+  actAccountingApproved:   { en: "Accounting Approved",     tr: "Muhasebe Onayladı" },
+  actAccountingRejected:   { en: "Accounting Rejected",     tr: "Muhasebe Reddetti" },
+  actInvoiceTriggered:     { en: "Invoice Triggered",       tr: "Fatura Tetiklendi" },
+  actCustomerCreated:      { en: "Customer Created",        tr: "Müşteri Oluşturuldu" },
+  actLeadCreated:          { en: "Lead Created",            tr: "Potansiyel Oluşturuldu" },
+
+  // ── Accounting reviewed/paid inline labels ───────────────────────────────────
+  reviewedLabel:           { en: "Reviewed:",               tr: "İncelendi:" },
+  reviewedBy:              { en: "by",                      tr: "tarafından" },
+  paidLabel:               { en: "Paid:",                   tr: "Ödendi:" },
+
+  // ── Document count labels ────────────────────────────────────────────────────
+  fileSingular:            { en: "file",                    tr: "dosya" },
+  filePlural:              { en: "files",                   tr: "dosya" },
+
+  // ── Search placeholder labels ────────────────────────────────────────────────
+  searchCustomerName:      { en: "Customer name...",        tr: "Müşteri adı..." },
+
   // ── Channel display labels ───────────────────────────────────────────────────
   channelHoreca:          { en: "HoReCa",            tr: "HoReCa" },
   channelOffice:          { en: "Office",             tr: "Ofis" },

@@ -12,6 +12,7 @@ import { Package, Search, Pencil, Check, X } from "lucide-react";
 import { useChannel } from "@/lib/channel-context";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
+import { productCategoryDisplayLabel, channelDisplayLabel } from "@/lib/customer-options";
 
 export default function ProductsPage() {
   const [search, setSearch]       = useState("");
@@ -149,7 +150,7 @@ export default function ProductsPage() {
 
                 <p className="text-xs text-muted-foreground mt-0.5 font-mono">{p.sku}</p>
                 <p className="text-xs text-muted-foreground capitalize mt-0.5">
-                  {p.category?.replace(/_/g, " ")} · {p.businessChannel}
+                  {productCategoryDisplayLabel(p.category ?? "", lang)} · {channelDisplayLabel(p.businessChannel, lang)}
                   {p.brand && <span> · {p.brand}</span>}
                 </p>
 

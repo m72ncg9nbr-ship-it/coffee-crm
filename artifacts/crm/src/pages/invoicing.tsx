@@ -12,6 +12,7 @@ import { FileCheck, Receipt, CreditCard, AlertCircle, X, SlidersHorizontal, Arro
 import { useToast } from "@/hooks/use-toast";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
+import { paymentTermsDisplayLabel } from "@/lib/customer-options";
 
 // ── Payment status badge ───────────────────────────────────────────────────────
 function PaymentStatusBadge({ status }: { status?: string | null }) {
@@ -228,9 +229,9 @@ export default function InvoicingPage() {
           <span>{t("filters", lang)}</span>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <Input placeholder="Order #..." value={orderSearch}    onChange={e => setOrderSearch(e.target.value)}    className="h-8 text-xs w-28" />
-          <Input placeholder="Customer..." value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} className="h-8 text-xs w-40" />
-          <Input placeholder="Delivery #..." value={deliverySearch} onChange={e => setDeliverySearch(e.target.value)} className="h-8 text-xs w-32" />
+          <Input placeholder={t("searchOrder", lang)}    value={orderSearch}    onChange={e => setOrderSearch(e.target.value)}    className="h-8 text-xs w-28" />
+          <Input placeholder={t("searchCustomer", lang)} value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} className="h-8 text-xs w-40" />
+          <Input placeholder={t("searchDelivery", lang)} value={deliverySearch} onChange={e => setDeliverySearch(e.target.value)} className="h-8 text-xs w-32" />
           <Select value={paymentFilter} onValueChange={setPaymentFilter}>
             <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder={t("allPayments", lang)} /></SelectTrigger>
             <SelectContent>
@@ -276,7 +277,7 @@ export default function InvoicingPage() {
           )}
         </div>
         {hasFilters && (
-          <p className="text-xs text-muted-foreground">{sorted.length} of {list.length} records</p>
+          <p className="text-xs text-muted-foreground">{sorted.length} {t("ofLabel", lang)} {list.length} {t("records", lang)}</p>
         )}
       </div>
 
@@ -371,7 +372,7 @@ export default function InvoicingPage() {
                         {r.paymentTermsDays != null
                           ? r.paymentTermsDays === 0 ? t("cashTerm", lang) : `Net ${r.paymentTermsDays}d`
                           : r.customerPaymentTerms
-                            ? r.customerPaymentTerms.replace("_", " ")
+                            ? paymentTermsDisplayLabel(r.customerPaymentTerms, lang)
                             : "—"}
                       </td>
 
@@ -399,10 +400,10 @@ export default function InvoicingPage() {
                       <td className="px-3 py-3 whitespace-nowrap">
                         {(r.documents ?? []).length > 0 ? (
                           <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                            {r.documents.length} file{r.documents.length === 1 ? "" : "s"}
+                            {r.documents.length} {r.documents.length === 1 ? t("fileSingular", lang) : t("filePlural", lang)}
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground">none</span>
+                          <span className="text-xs text-muted-foreground">{t("none", lang)}</span>
                         )}
                       </td>
 
