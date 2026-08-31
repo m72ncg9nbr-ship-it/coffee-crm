@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  useGetReportsSales,
-  useGetReportsProfitability,
-  useGetReportsCollection,
-} from "@workspace/api-client-react";
+
 
 type ReportFiltersParams = {
   dateFrom?: string;
@@ -264,9 +260,39 @@ export default function ReportsPage() {
 
   const channelQs = reportChannel !== "all" ? `&channel=${reportChannel}` : "";
 
-  const { data: sales, isLoading: salesLoading, isError: salesError } = useGetReportsSales(activeFilters);
-  const { data: profit, isLoading: profitLoading, isError: profitError } = useGetReportsProfitability(activeFilters);
-  const { data: coll, isLoading: collLoading, isError: collError } = useGetReportsCollection(activeFilters);
+  const { data: sales, isLoading: salesLoading, isError: salesError } = useQuery<any>({
+    queryKey: ["reports-sales", activeFilters],
+    queryFn: () => {
+      const q = new URLSearchParams();
+      if (activeFilters.dateFrom) q.set("dateFrom", activeFilters.dateFrom);
+      if (activeFilters.dateTo) q.set("dateTo", activeFilters.dateTo);
+      if (activeFilters.channel) q.set("channel", activeFilters.channel);
+      const qs = q.toString();
+      return fetch(`/api/reports/sales${qs ? `?${qs}` : ""}`, { credentials: "include" }).then(r => r.json());
+    },
+  });
+  const { data: profit, isLoading: profitLoading, isError: profitError } = useQuery<any>({
+    queryKey: ["reports-profitability", activeFilters],
+    queryFn: () => {
+      const q = new URLSearchParams();
+      if (activeFilters.dateFrom) q.set("dateFrom", activeFilters.dateFrom);
+      if (activeFilters.dateTo) q.set("dateTo", activeFilters.dateTo);
+      if (activeFilters.channel) q.set("channel", activeFilters.channel);
+      const qs = q.toString();
+      return fetch(`/api/reports/profitability${qs ? `?${qs}` : ""}`, { credentials: "include" }).then(r => r.json());
+    },
+  });
+  const { data: coll, isLoading: collLoading, isError: collError } = useQuery<any>({
+    queryKey: ["reports-collection", activeFilters],
+    queryFn: () => {
+      const q = new URLSearchParams();
+      if (activeFilters.dateFrom) q.set("dateFrom", activeFilters.dateFrom);
+      if (activeFilters.dateTo) q.set("dateTo", activeFilters.dateTo);
+      if (activeFilters.channel) q.set("channel", activeFilters.channel);
+      const qs = q.toString();
+      return fetch(`/api/reports/collection${qs ? `?${qs}` : ""}`, { credentials: "include" }).then(r => r.json());
+    },
+  });
   const { data: samples, isLoading: samplesLoading, isError: samplesError } = useQuery<any>({
     queryKey: ["reports-samples", activeFilters],
     queryFn: () => {

@@ -455,7 +455,7 @@ export default function LeadsPage() {
                   {canEditImportance && !isConverted && (
                     <Select
                       value={lead.importance ?? "normal"}
-                      onValueChange={v => updateLead.mutate({ id: lead.id, data: { importance: v } })}
+                      onValueChange={v => updateLead.mutate({ id: lead.id, data: { importance: v } as any })}
                     >
                       <SelectTrigger className="h-7 text-xs w-36">
                         <SelectValue />

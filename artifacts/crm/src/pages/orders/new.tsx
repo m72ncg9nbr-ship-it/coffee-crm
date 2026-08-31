@@ -7,7 +7,6 @@ import {
   useListCustomerAddresses,
   useListProducts,
   useCreateOrder,
-  useListInventoryStock,
 } from "@workspace/api-client-react";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
@@ -49,7 +48,10 @@ export default function OrderNewPage() {
   const { channel: globalChannel } = useChannel();
   const { data: customers } = useListCustomers();
   const { data: products } = useListProducts();
-  const { data: stockData } = useListInventoryStock();
+  const { data: stockData } = useQuery<any[]>({
+    queryKey: ["/api/inventory/stock"],
+    queryFn: () => fetch("/api/inventory/stock", { credentials: "include" }).then(r => r.json()),
+  });
 
   const filteredCustomers = useMemo(() => {
     const list = (customers ?? []) as any[];

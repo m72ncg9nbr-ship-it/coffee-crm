@@ -82,7 +82,7 @@ export default function ProductsPage() {
       toast({ title: t("enterValidCostPrice", lang), variant: "destructive" });
       return;
     }
-    updateProduct.mutate({ id: productId, data: { costPrice: value } });
+    updateProduct.mutate({ id: productId, data: { costPrice: value } as any });
   }
 
   return (
