@@ -1,14 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  useListInventoryPools,
-  useListInventoryStock,
-  useListInventoryMovements,
-  useUpsertInventoryStock,
-  useAdjustInventory,
-  getListInventoryStockQueryKey,
-  getListInventoryMovementsQueryKey,
-} from "@workspace/api-client-react";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,36 +47,55 @@ export default function InventoryPage() {
 
   const { channel } = useChannel();
   const { lang } = useLang();
-  const { data: pools }    = useListInventoryPools();
-  const { data: stock, isLoading } = useListInventoryStock();
-  const { data: movements } = useListInventoryMovements({ limit: 50 });
-
-  const upsert = useUpsertInventoryStock({
-    mutation: {
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getListInventoryStockQueryKey() });
-        qc.invalidateQueries({ queryKey: getListInventoryMovementsQueryKey() });
-        toast({ title: t("stockUpdated", lang) });
-        setEditDialogOpen(false);
-      },
-      onError: (e: any) =>
-        toast({ title: t("failedToUpdateStock", lang), description: e?.message, variant: "destructive" }),
-    },
+  const { data: pools } = useQuery<any[]>({
+    queryKey: ["/api/inventory/pools"],
+    queryFn: () => fetch("/api/inventory/pools", { credentials: "include" }).then(r => r.json()),
+  });
+  const { data: stock, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/inventory/stock"],
+    queryFn: () => fetch("/api/inventory/stock", { credentials: "include" }).then(r => r.json()),
+  });
+  const { data: movements } = useQuery<any[]>({
+    queryKey: ["/api/inventory/movements", { limit: 50 }],
+    queryFn: () => fetch("/api/inventory/movements?limit=50", { credentials: "include" }).then(r => r.json()),
   });
 
-  const adjust = useAdjustInventory({
-    mutation: {
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getListInventoryStockQueryKey() });
-        qc.invalidateQueries({ queryKey: getListInventoryMovementsQueryKey() });
-        toast({ title: t("stockAdjusted", lang) });
-        setAdjustDialogOpen(false);
-        setAdjustDelta("0");
-        setAdjustReason("");
-      },
-      onError: (e: any) =>
-        toast({ title: t("failedToAdjustStock", lang), description: e?.message, variant: "destructive" }),
+  const upsert = useMutation({
+    mutationFn: (vars: { data: any }) =>
+      fetch("/api/inventory/stock", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(vars.data),
+      }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/inventory/stock"] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/movements"] });
+      toast({ title: t("stockUpdated", lang) });
+      setEditDialogOpen(false);
     },
+    onError: (e: any) =>
+      toast({ title: t("failedToUpdateStock", lang), description: e?.message, variant: "destructive" }),
+  });
+
+  const adjust = useMutation({
+    mutationFn: (vars: { data: any }) =>
+      fetch("/api/inventory/adjust", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(vars.data),
+      }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/inventory/stock"] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/movements"] });
+      toast({ title: t("stockAdjusted", lang) });
+      setAdjustDialogOpen(false);
+      setAdjustDelta("0");
+      setAdjustReason("");
+    },
+    onError: (e: any) =>
+      toast({ title: t("failedToAdjustStock", lang), description: e?.message, variant: "destructive" }),
   });
 
   const filtered = useMemo(() => {

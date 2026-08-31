@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { useGetReadyForInvoicing, useMarkOrderPaid } from "@workspace/api-client-react";
+import { useGetReadyForInvoicing } from "@workspace/api-client-react";
+import { useMutation } from "@tanstack/react-query";
 import { useChannel } from "@/lib/channel-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,14 +122,19 @@ export default function InvoicingPage() {
     else { setSortKey(k); setSortDir("asc"); }
   }
 
-  const markPaid = useMarkOrderPaid({
-    mutation: {
-      onSuccess: () => {
-        refetch();
-        toast({ title: t("orderMarkedAsPaid", lang) });
-      },
-      onError: () => toast({ title: t("failedToMarkAsPaid", lang), variant: "destructive" }),
+  const markPaid = useMutation({
+    mutationFn: (vars: { id: number; data: Record<string, unknown> }) =>
+      fetch(`/api/orders/${vars.id}/mark-paid`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(vars.data),
+      }).then(r => r.json()),
+    onSuccess: () => {
+      refetch();
+      toast({ title: t("orderMarkedAsPaid", lang) });
     },
+    onError: () => toast({ title: t("failedToMarkAsPaid", lang), variant: "destructive" }),
   });
 
   // ── Filter pipeline ─────────────────────────────────────────────────────────

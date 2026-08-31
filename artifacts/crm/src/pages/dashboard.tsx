@@ -5,7 +5,6 @@ import {
   useGetRecentDeliveries,
   useGetDeliveryDeviations,
   useListActivityLogs,
-  useListInventoryStock,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +53,10 @@ export default function DashboardPage() {
     queryFn: () => fetch(`/api/dashboard/today-priorities${channelQS}`, { credentials: "include" }).then(r => r.json()),
   });
   const { data: activityLogs } = useListActivityLogs({ limit: 15 });
-  const { data: stockData } = useListInventoryStock();
+  const { data: stockData } = useQuery<any[]>({
+    queryKey: ["/api/inventory/stock"],
+    queryFn: () => fetch("/api/inventory/stock", { credentials: "include" }).then(r => r.json()),
+  });
 
   const showStockOverview = !!user && ["owner_admin", "general_manager", "channel_manager"].includes(user.role);
 
