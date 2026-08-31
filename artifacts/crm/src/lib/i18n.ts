@@ -69,6 +69,7 @@ export const dict = {
   uploadDocument:       { en: "Upload Document",      tr: "Belge Yükle" },
   viewDocument:         { en: "View Document",        tr: "Belgeyi Görüntüle" },
   sendToPlanning:       { en: "Send to planning",     tr: "Planlamaya Gönder" },
+  save:                 { en: "Save",                 tr: "Kaydet" },
   saveChanges:          { en: "Save Changes",         tr: "Değişiklikleri Kaydet" },
   cancel:               { en: "Cancel",               tr: "İptal" },
   delete:               { en: "Delete",               tr: "Sil" },
@@ -576,6 +577,7 @@ export const dict = {
   reviewNotesTip:        { en: "Add a review note...",      tr: "İnceleme notu ekleyin..." },
 
   // ── Invoicing page ───────────────────────────────────────────────────────────
+  invoicing:             { en: "Invoicing",                    tr: "Faturalama" },
   invoicingSubtitle:     { en: "Approved deliveries ready for invoice generation", tr: "Fatura oluşturmaya hazır onaylanmış teslimatlar" },
   totalRecords:          { en: "Total records",             tr: "Toplam kayıt" },
   withDocsFilter:        { en: "With docs",                 tr: "Belge var" },
