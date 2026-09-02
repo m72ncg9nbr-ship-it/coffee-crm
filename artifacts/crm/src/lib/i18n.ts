@@ -577,7 +577,7 @@ export const dict = {
   reviewNotesTip:        { en: "Add a review note...",      tr: "İnceleme notu ekleyin..." },
 
   // ── Invoicing page ───────────────────────────────────────────────────────────
-  invoicing:             { en: "Invoicing",                    tr: "Faturalama" },
+  invoicing:             { en: "Invoicing",                    tr: "Faturalamaya Hazır" },
   invoicingSubtitle:     { en: "Approved deliveries ready for invoice generation", tr: "Fatura oluşturmaya hazır onaylanmış teslimatlar" },
   totalRecords:          { en: "Total records",             tr: "Toplam kayıt" },
   withDocsFilter:        { en: "With docs",                 tr: "Belge var" },
@@ -774,16 +774,18 @@ export const dict = {
   actDeliveryCreated:      { en: "Delivery Created",        tr: "Teslimat Oluşturuldu" },
   actDeliveryAssigned:     { en: "Delivery Assigned",       tr: "Teslimat Atandı" },
   actDriverArrived:        { en: "Driver Arrived",          tr: "Sürücü Ulaştı" },
-  actDocumentationUploaded:{ en: "Documentation Uploaded",  tr: "Belge Yüklendi" },
+  actDocumentationUploaded:{ en: "Documentation Uploaded",  tr: "Belgeler Yüklendi" },
   actAccountingApproved:   { en: "Accounting Approved",     tr: "Muhasebe Onayladı" },
   actAccountingRejected:   { en: "Accounting Rejected",     tr: "Muhasebe Reddetti" },
   actInvoiceTriggered:     { en: "Invoice Triggered",       tr: "Fatura Tetiklendi" },
   actCustomerCreated:      { en: "Customer Created",        tr: "Müşteri Oluşturuldu" },
   actLeadCreated:          { en: "Lead Created",            tr: "Potansiyel Oluşturuldu" },
+  actIssueReported:        { en: "Issue Reported",          tr: "Sorun Bildirildi" },
+  actIssueResolved:        { en: "Issue Resolved",          tr: "Sorun Çözüldü" },
 
   // ── Accounting reviewed/paid inline labels ───────────────────────────────────
   reviewedLabel:           { en: "Reviewed:",               tr: "İncelendi:" },
-  reviewedBy:              { en: "by",                      tr: "tarafından" },
+  reviewedBy:              { en: "by",                      tr: "İnceleyen" },
   paidLabel:               { en: "Paid:",                   tr: "Ödendi:" },
 
   // ── Document count labels ────────────────────────────────────────────────────

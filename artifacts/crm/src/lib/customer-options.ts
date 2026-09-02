@@ -131,6 +131,8 @@ const ACTIVITY_TYPE_DICT_KEY: Record<string, DictKey> = {
   invoice_triggered:       "actInvoiceTriggered",
   customer_created:        "actCustomerCreated",
   lead_created:            "actLeadCreated",
+  issue_reported:          "actIssueReported",
+  issue_resolved:          "actIssueResolved",
 };
 
 export function activityTypeDisplayLabel(actionType: string, lang: Lang): string {
@@ -153,6 +155,8 @@ export function activityMessageDisplayLabel(description: string, lang: Lang): st
     [/^Order (\S+) updated$/, (n) => `${n} numaralı sipariş güncellendi`],
     [/^Customer (.+) created$/, (name) => `${name} müşterisi oluşturuldu`],
     [/^Lead (.+) created$/, (name) => `${name} potansiyeli oluşturuldu`],
+    [/^Issue reported for delivery (\S+)$/, (n) => `${n} numaralı teslimat için sorun bildirildi`],
+    [/^Issue resolved for delivery (\S+)$/, (n) => `${n} numaralı teslimat için sorun çözüldü`],
   ];
   for (const [pattern, render] of patterns) {
     const m = description.match(pattern);
