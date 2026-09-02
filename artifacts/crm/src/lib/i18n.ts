@@ -783,6 +783,8 @@ export const dict = {
   actLeadCreated:          { en: "Lead Created",            tr: "Potansiyel Oluşturuldu" },
   actIssueReported:        { en: "Issue Reported",          tr: "Sorun Bildirildi" },
   actIssueResolved:        { en: "Issue Resolved",          tr: "Sorun Çözüldü" },
+  actOrderPaid:            { en: "Order Paid",              tr: "Ödendi" },
+  actOrderSentToPlanning:  { en: "Order Sent to Planning",  tr: "Planlamaya Gönderildi" },
 
   // ── Accounting reviewed/paid inline labels ───────────────────────────────────
   reviewedLabel:           { en: "Reviewed:",               tr: "İncelendi:" },
@@ -847,7 +849,7 @@ export const dict = {
   orderSourceTasting:     { en: "Tasting",           tr: "Tadım" },
 
   // ── Action center reason labels ───────────────────────────────────────────────
-  paymentDueReason:       { en: "Payment due",       tr: "Ödeme vadesi geldi" },
+  paymentDueReason:       { en: "Payment due",       tr: "Vadesi Gelen Ödeme" },
 
   // ── Misc display helpers ─────────────────────────────────────────────────────
   ofLabel:                    { en: "of",                   tr: "/" },

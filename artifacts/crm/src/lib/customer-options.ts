@@ -133,6 +133,8 @@ const ACTIVITY_TYPE_DICT_KEY: Record<string, DictKey> = {
   lead_created:            "actLeadCreated",
   issue_reported:          "actIssueReported",
   issue_resolved:          "actIssueResolved",
+  order_paid:              "actOrderPaid",
+  order_sent_to_planning:  "actOrderSentToPlanning",
 };
 
 export function activityTypeDisplayLabel(actionType: string, lang: Lang): string {
@@ -144,6 +146,8 @@ export function activityTypeDisplayLabel(actionType: string, lang: Lang): string
 export function activityMessageDisplayLabel(description: string, lang: Lang): string {
   if (lang === "en" || !description) return description ?? "";
   const patterns: Array<[RegExp, (...g: string[]) => string]> = [
+    [/^Order (\S+) marked as paid \(([^)]+)\)$/, (n, amt) => `${n} siparişi ödendi (${amt})`],
+    [/^Order (\S+) sent to delivery planning$/, (n) => `${n} siparişi teslimat planlamasına gönderildi`],
     [/^Delivery proof uploaded for delivery (\S+)$/, (n) => `${n} teslimatı için teslimat belgesi yüklendi`],
     [/^Issue reported for delivery (\S+): (.+)$/, (n, rest) => `${n} teslimatı için sorun bildirildi: ${rest}`],
     [/^Issue resolved for delivery (\S+): (.+)$/, (n, rest) => `${n} teslimatı için sorun çözüldü: ${rest}`],
@@ -205,11 +209,28 @@ export function orderSourceDisplayLabel(source: string, lang: Lang): string {
 }
 
 const ACTION_REASON_MAP: Record<string, DictKey> = {
-  "Payment due": "paymentDueReason",
+  "payment due": "paymentDueReason",
 };
 
 export function actionReasonDisplayLabel(reason: string, lang: Lang): string {
-  const key = ACTION_REASON_MAP[reason];
+  if (!reason || lang === "en") return reason ?? "";
+  const key = ACTION_REASON_MAP[reason.toLowerCase()];
+  if (key) return t(key, lang);
+  return reason;
+}
+
+const SAMPLE_REASON_DICT_KEY: Record<string, DictKey> = {
+  "fair":           "orderSourceFair",
+  "machine setup":  "orderSourceMachineSetup",
+  "promotional":    "orderSourcePromotional",
+  "customer visit": "orderSourceCustomerVisit",
+  "tasting":        "orderSourceTasting",
+};
+
+export function sampleReasonDisplayLabel(reason: string, lang: Lang): string {
+  if (!reason) return "—";
+  const normalized = reason.toLowerCase().replace(/_/g, " ");
+  const key = SAMPLE_REASON_DICT_KEY[normalized];
   if (!key) return reason;
   return t(key, lang);
 }
