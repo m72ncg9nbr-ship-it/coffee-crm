@@ -38,6 +38,7 @@ import {
   segmentDisplayLabel,
   channelDisplayLabel,
   paymentTermsDisplayLabel,
+  regionDisplayLabel,
 } from "@/lib/customer-options";
 import { useChannel } from "@/lib/channel-context";
 import { useLang } from "@/lib/lang-context";
@@ -326,7 +327,7 @@ export default function LeadsPage() {
                   <SelectTrigger><SelectValue placeholder={t("selectRegionPlaceholder", lang)} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_none">— {t("noRegionOption", lang)} —</SelectItem>
-                    {REGION_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {REGION_OPTIONS.map(r => <SelectItem key={r} value={r}>{regionDisplayLabel(r, lang)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -376,7 +377,7 @@ export default function LeadsPage() {
             <SelectTrigger className="h-8 text-xs w-40"><SelectValue placeholder={t("allRegions", lang)} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("allRegions", lang)}</SelectItem>
-              {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              {regionOptions.map(r => <SelectItem key={r} value={r}>{regionDisplayLabel(r, lang)}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={importFilter} onValueChange={setImportFilter}>
@@ -425,7 +426,7 @@ export default function LeadsPage() {
                     </span>
                     <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{channelDisplayLabel(lead.businessChannel ?? "", lang)}</span>
                     {lead.region && (
-                      <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{lead.region}</span>
+                      <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{regionDisplayLabel(lead.region, lang)}</span>
                     )}
                   </div>
                   <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">

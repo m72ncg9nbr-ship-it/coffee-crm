@@ -214,9 +214,20 @@ const ACTION_REASON_MAP: Record<string, DictKey> = {
 
 export function actionReasonDisplayLabel(reason: string, lang: Lang): string {
   if (!reason || lang === "en") return reason ?? "";
-  const key = ACTION_REASON_MAP[reason.toLowerCase()];
+  const lower = reason.toLowerCase();
+  // "Payment due YYYY-MM-DD" — prefix match, preserve the date suffix
+  if (lower.startsWith("payment due")) {
+    return t("paymentDueReason", lang) + reason.slice("payment due".length);
+  }
+  const key = ACTION_REASON_MAP[lower];
   if (key) return t(key, lang);
   return reason;
+}
+
+export function regionDisplayLabel(region: string, lang: Lang): string {
+  if (!region || lang === "en") return region ?? "";
+  if (region.toLowerCase() === "other") return t("segmentOther", lang);
+  return region;
 }
 
 const SAMPLE_REASON_DICT_KEY: Record<string, DictKey> = {
