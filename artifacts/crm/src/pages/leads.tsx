@@ -432,7 +432,7 @@ export default function LeadsPage() {
                     <span>{lead.contactPerson}</span>
                     {lead.phone && <span>{lead.phone}</span>}
                     {lead.email && <span>{lead.email}</span>}
-                    {lead.businessType && <span className="capitalize">{lead.businessType}</span>}
+                    {lead.businessType && <span>{segmentDisplayLabel(lead.businessType, lang)}</span>}
                     {lead.estimatedMonthlyConsumption && <span>{lead.estimatedMonthlyConsumption} {t("kgPerMonth", lang)}</span>}
                     <span className="flex items-center gap-1">
                       <User className="h-3 w-3" />

@@ -5,6 +5,7 @@ import { useLang } from "@/lib/lang-context";
 import { useChannel } from "@/lib/channel-context";
 import { useAuth } from "@/lib/auth-context";
 import { t, type Lang } from "@/lib/i18n";
+import { actionReasonDisplayLabel } from "@/lib/customer-options";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -156,7 +157,7 @@ function ActionItemCard({ item, lang }: { item: any; lang: Lang }) {
           </div>
 
           {/* Reason */}
-          <p className="text-xs text-muted-foreground mt-0.5 capitalize-first">{item.reason}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 capitalize-first">{actionReasonDisplayLabel(item.reason ?? "", lang)}</p>
 
           {/* Meta row */}
           <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground flex-wrap">

@@ -144,6 +144,12 @@ export function activityTypeDisplayLabel(actionType: string, lang: Lang): string
 export function activityMessageDisplayLabel(description: string, lang: Lang): string {
   if (lang === "en" || !description) return description ?? "";
   const patterns: Array<[RegExp, (...g: string[]) => string]> = [
+    [/^Delivery proof uploaded for delivery (\S+)$/, (n) => `${n} teslimatı için teslimat belgesi yüklendi`],
+    [/^Issue reported for delivery (\S+): (.+)$/, (n, rest) => `${n} teslimatı için sorun bildirildi: ${rest}`],
+    [/^Issue resolved for delivery (\S+): (.+)$/, (n, rest) => `${n} teslimatı için sorun çözüldü: ${rest}`],
+    [/^Order (\S+) created for "(.+)"$/, (n, name) => `"${name}" için ${n} siparişi oluşturuldu`],
+    [/^Delivery (\S+) auto-created for order (\S+)$/, (del, ord) => `${ord} siparişi için ${del} teslimatı otomatik oluşturuldu`],
+    [/^Invoice triggered for delivery (\S+)$/, (n) => `${n} teslimatı için fatura oluşturuldu`],
     [/^Delivery (\S+) approved by accounting$/, (n) => `${n} numaralı teslimat muhasebe tarafından onaylandı`],
     [/^Delivery (\S+) rejected by accounting$/, (n) => `${n} numaralı teslimat muhasebe tarafından reddedildi`],
     [/^Delivery (\S+) assigned to (.+)$/, (n, d) => `${n} numaralı teslimat ${d} adlı sürücüye atandı`],
@@ -179,5 +185,31 @@ const DEVIATION_TYPE_DICT_KEY: Record<string, DictKey> = {
 export function deviationTypeDisplayLabel(devType: string, lang: Lang): string {
   const key = DEVIATION_TYPE_DICT_KEY[(devType ?? "").toLowerCase()];
   if (!key) return (devType ?? "").replace(/_/g, " ");
+  return t(key, lang);
+}
+
+const ORDER_SOURCE_DICT_KEY: Record<string, DictKey> = {
+  "free sample":    "orderSourceFreeSample",
+  "fair":           "orderSourceFair",
+  "machine setup":  "orderSourceMachineSetup",
+  "promotional":    "orderSourcePromotional",
+  "customer visit": "orderSourceCustomerVisit",
+  "tasting":        "orderSourceTasting",
+};
+
+export function orderSourceDisplayLabel(source: string, lang: Lang): string {
+  const normalized = (source ?? "").toLowerCase().replace(/_/g, " ");
+  const key = ORDER_SOURCE_DICT_KEY[normalized];
+  if (!key) return (source ?? "").replace(/_/g, " ");
+  return t(key, lang);
+}
+
+const ACTION_REASON_MAP: Record<string, DictKey> = {
+  "Payment due": "paymentDueReason",
+};
+
+export function actionReasonDisplayLabel(reason: string, lang: Lang): string {
+  const key = ACTION_REASON_MAP[reason];
+  if (!key) return reason;
   return t(key, lang);
 }

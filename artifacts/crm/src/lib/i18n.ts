@@ -396,6 +396,7 @@ export const dict = {
   statusManualReview:    { en: "Needs Review",              tr: "İnceleme Gerektirir" },
   statusConverted:       { en: "Converted to Customer",     tr: "Müşteriye Dönüştürüldü" },
   autoQualified:         { en: "Auto-qualified",            tr: "Otomatik Nitelendirilen" },
+  statusContacted:       { en: "Contacted",                 tr: "İletişime Geçildi" },
   statusInStock:         { en: "In Stock",                  tr: "Stokta Var" },
   statusLowStock:        { en: "Low Stock",                 tr: "Düşük Stok" },
   statusOutOfStock:      { en: "Out of Stock",              tr: "Stok Tükendi" },
@@ -836,6 +837,17 @@ export const dict = {
   reasonOrderCancelled:   { en: "Released (cancelled)",             tr: "Serbest bırakıldı (iptal)" },
   reasonOrderFulfilled:   { en: "Fulfilled (accounting approved)",  tr: "Teslim edildi (muhasebe onayladı)" },
   reasonManualSet:        { en: "Manual set",                       tr: "Manuel ayarlandı" },
+
+  // ── Order source display labels ──────────────────────────────────────────────
+  orderSourceFreeSample:  { en: "Free Sample",      tr: "Ücretsiz Numune" },
+  orderSourceFair:        { en: "Fair",              tr: "Fuar" },
+  orderSourceMachineSetup:{ en: "Machine Setup",     tr: "Makine kurulumu" },
+  orderSourcePromotional: { en: "Promotional",       tr: "Promosyon" },
+  orderSourceCustomerVisit:{ en: "Customer Visit",   tr: "Müşteri ziyareti" },
+  orderSourceTasting:     { en: "Tasting",           tr: "Tadım" },
+
+  // ── Action center reason labels ───────────────────────────────────────────────
+  paymentDueReason:       { en: "Payment due",       tr: "Ödeme vadesi geldi" },
 
   // ── Misc display helpers ─────────────────────────────────────────────────────
   ofLabel:                    { en: "of",                   tr: "/" },

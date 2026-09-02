@@ -56,7 +56,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { channelDisplayLabel } from "@/lib/customer-options";
+import { channelDisplayLabel, orderSourceDisplayLabel } from "@/lib/customer-options";
 import {
   BarChart,
   Bar,
@@ -633,7 +633,7 @@ export default function ReportsPage() {
                             <td className="py-1.5 pr-3">{formatDate(o.createdAt)}</td>
                             <td className="py-1.5 pr-3 font-mono">{o.orderNumber ?? `#${o.orderId}`}</td>
                             <td className="py-1.5 pr-3 max-w-[120px] truncate">{o.customerName}</td>
-                            <td className="py-1.5 pr-3 capitalize">{o.orderSource?.replace("_", " ")}</td>
+                            <td className="py-1.5 pr-3">{orderSourceDisplayLabel(o.orderSource ?? "", lang)}</td>
                             <td className="py-1.5 pr-3">{o.city ?? "—"}</td>
                             <td className="py-1.5 pr-3 max-w-[120px] truncate">{o.sampleReason ?? "—"}</td>
                             <td className="py-1.5 pr-3 text-right">{o.totalUnits}</td>

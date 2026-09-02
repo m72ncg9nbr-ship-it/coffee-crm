@@ -75,6 +75,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     manual_review: "statusManualReview",
     converted_to_customer: "statusConverted",
     auto_qualified: "autoQualified",
+    contacted: "statusContacted",
     in_stock: "statusInStock",
     low_stock: "statusLowStock",
     out_of_stock: "statusOutOfStock",
@@ -101,6 +102,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     manual_review: "bg-orange-50 text-orange-700 ring-orange-200",
     converted_to_customer: "bg-emerald-50 text-emerald-700 ring-emerald-200",
     auto_qualified: "bg-teal-50 text-teal-700 ring-teal-200",
+    contacted: "bg-sky-50 text-sky-700 ring-sky-200",
     // Product stock
     in_stock: "bg-green-50 text-green-700 ring-green-200",
     low_stock: "bg-amber-50 text-amber-700 ring-amber-200",
