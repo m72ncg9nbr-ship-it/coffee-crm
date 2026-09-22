@@ -313,7 +313,8 @@ router.get("/reports/profitability", requireAuth as any, async (req, res): Promi
     if (che.grossProfit != null && p.grossProfit != null) che.grossProfit += p.grossProfit; else che.grossProfit = null;
     if (che.collectionAdjustedProfit != null && p.collectionAdjustedProfit != null) che.collectionAdjustedProfit += p.collectionAdjustedProfit; else che.collectionAdjustedProfit = null;
 
-    // by product (per item)
+    // by product (per item) — allocate order-level valorCost proportionally by net revenue share
+    const orderNetRevenue = p.netRevenue;
     for (const item of orderItems) {
       const pid = item.productId;
       if (!byProduct.has(pid)) byProduct.set(pid, { label: productNameMap.get(pid) ?? `#${pid}`, grossRevenue: 0, discountAmount: 0, netRevenue: 0, productCost: 0 as number | null, grossProfit: 0 as number | null, valorCost: 0, collectionAdjustedProfit: 0 as number | null });
@@ -323,11 +324,14 @@ router.get("/reports/profitability", requireAuth as any, async (req, res): Promi
       const itemNet  = itemRev - itemDisc;
       const itemCost = item.costPriceSnapshot != null ? parseFloat(item.costPriceSnapshot) * item.quantity : null;
       const itemGP   = itemCost != null ? itemNet - itemCost : null;
+      const itemShare = orderNetRevenue > 0 ? itemNet / orderNetRevenue : 0;
+      const itemValorCost = p.valorCost * itemShare;
+      const itemAdjProfit = itemGP != null ? itemGP - itemValorCost : null;
       pe.grossRevenue += itemRev; pe.discountAmount += itemDisc; pe.netRevenue += itemNet;
-      pe.valorCost += 0; // valor is order-level, not allocated per item
+      pe.valorCost += itemValorCost;
       if (pe.productCost != null && itemCost != null) pe.productCost += itemCost; else pe.productCost = null;
       if (pe.grossProfit != null && itemGP != null) pe.grossProfit += itemGP; else pe.grossProfit = null;
-      pe.collectionAdjustedProfit = pe.grossProfit; // simplified for product dimension
+      if (pe.collectionAdjustedProfit != null && itemAdjProfit != null) pe.collectionAdjustedProfit += itemAdjProfit; else pe.collectionAdjustedProfit = null;
     }
   }
 
