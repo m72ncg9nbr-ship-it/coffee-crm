@@ -11,12 +11,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Package, History, Search, ChevronDown, Edit2, TrendingUp } from "lucide-react";
+import { Package, History, Search, ChevronDown, Edit2, TrendingUp, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculateInventoryStatus, invStatusBadgeClass, movementReasonLabel, poolDisplayLabel } from "@/lib/inventoryStatus";
 import { useChannel } from "@/lib/channel-context";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
+import { CreateProductDialog } from "@/components/create-product-dialog";
 
 function stockBadge(available: number, reserved: number) {
   const { status, label } = calculateInventoryStatus(available, reserved);
@@ -45,8 +47,11 @@ export default function InventoryPage() {
   const [adjustDelta, setAdjustDelta] = useState("0");
   const [adjustReason, setAdjustReason] = useState("");
 
+  const { user } = useAuth();
   const { channel } = useChannel();
   const { lang } = useLang();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const canCreate = user?.role === "owner_admin" || user?.role === "general_manager";
   const { data: pools } = useQuery<any[]>({
     queryKey: ["/api/inventory/pools"],
     queryFn: () => fetch("/api/inventory/pools", { credentials: "include" }).then(r => r.json()),
@@ -171,9 +176,16 @@ export default function InventoryPage() {
             {t("inventorySubtitle", lang)}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setMovementsOpen(true)}>
-          <History className="h-4 w-4 mr-1.5" />{t("movementLog", lang)}
-        </Button>
+        <div className="flex items-center gap-2">
+          {canCreate && (
+            <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-1.5" />{t("newProduct", lang)}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setMovementsOpen(true)}>
+            <History className="h-4 w-4 mr-1.5" />{t("movementLog", lang)}
+          </Button>
+        </div>
       </div>
 
       {/* Pool legend */}
@@ -443,6 +455,16 @@ export default function InventoryPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CreateProductDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onCreated={() => {
+          qc.invalidateQueries({ queryKey: ["/api/inventory/stock"] });
+          qc.invalidateQueries({ queryKey: ["/api/inventory/movements"] });
+        }}
+        defaultChannel={channel !== "all" ? channel : undefined}
+      />
     </div>
   );
 }

@@ -8,16 +8,18 @@ import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo, useEffect } from "react";
-import { Package, Search, Pencil, Check, X } from "lucide-react";
+import { Package, Search, Pencil, Check, X, Plus } from "lucide-react";
 import { useChannel } from "@/lib/channel-context";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
 import { productCategoryDisplayLabel, channelDisplayLabel } from "@/lib/customer-options";
+import { CreateProductDialog } from "@/components/create-product-dialog";
 
 export default function ProductsPage() {
   const [search, setSearch]       = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [costInput, setCostInput] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [brandFilter, setBrandFilter] = useState("all");
 
   const { channel } = useChannel();
@@ -92,6 +94,11 @@ export default function ProductsPage() {
           <h1 className="text-2xl font-bold">{t("products", lang)}</h1>
           <p className="text-muted-foreground text-sm">{displayProducts.length} {t("itemsInCatalog", lang)}</p>
         </div>
+        {canEditCost && (
+          <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />{t("newProduct", lang)}
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-3 flex-wrap items-center">
@@ -218,6 +225,13 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
+
+      <CreateProductDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onCreated={refetch}
+        defaultChannel={channel !== "all" ? channel : undefined}
+      />
     </div>
   );
 }
