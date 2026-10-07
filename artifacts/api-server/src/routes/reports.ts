@@ -774,7 +774,7 @@ router.get("/reports/product-performance", requireAuth as any, async (req, res):
 
   const round2 = (n: number) => Math.round(n * 100) / 100;
   function growthPct(curr: number, prev: number): number | null {
-    if (prev === 0) return curr > 0 ? 100 : null;
+    if (prev === 0) return null;
     return Math.round(((curr - prev) / prev) * 1000) / 10;
   }
 
@@ -782,15 +782,16 @@ router.get("/reports/product-performance", requireAuth as any, async (req, res):
     const g6 = growthPct(v.revRecent, v.revPrev);
     const margin = v.cost != null && v.rev12 > 0 ? Math.round(((v.rev12 - v.cost) / v.rev12) * 1000) / 10 : null;
     let status = "stable";
-    if (v.rev12 < 50 || (g6 != null && g6 < -25))        status = "watchlist";
-    else if (g6 != null && g6 < -5)                       status = "declining";
-    else if (g6 != null && g6 > 10)                       status = "rising";
-    return { productId: id, productName: v.name, sku: v.sku, channel: v.channel, revenue12m: round2(v.rev12), units12m: v.units12, orders12m: v.orders12, revenueRecent6m: round2(v.revRecent), revenuePrev6m: round2(v.revPrev), unitsRecent6m: v.unitsRecent, unitsPrev6m: v.unitsPrev, growth6m: g6, margin, status };
+    if (g6 === null)       status = "new";
+    else if (g6 > 10)      status = "rising";
+    else if (g6 < -10)     status = "declining";
+    const onWatchlist = v.rev12 < 50 || (g6 != null && g6 < -25);
+    return { productId: id, productName: v.name, sku: v.sku, channel: v.channel, revenue12m: round2(v.rev12), units12m: v.units12, orders12m: v.orders12, revenueRecent6m: round2(v.revRecent), revenuePrev6m: round2(v.revPrev), unitsRecent6m: v.unitsRecent, unitsPrev6m: v.unitsPrev, growth6m: g6, margin, status, onWatchlist };
   }).sort((a, b) => b.revenue12m - a.revenue12m);
 
   res.json({
     products:  result,
-    watchlist: result.filter(p => p.status === "watchlist"),
+    watchlist: result.filter(p => p.onWatchlist),
     rising:    result.filter(p => p.status === "rising"),
     declining: result.filter(p => p.status === "declining"),
   });

@@ -905,7 +905,7 @@ export default function ReportsPage() {
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <KpiCard label={t("rising", lang)} value={String(productPerf.rising?.length ?? 0)} icon={TrendingUp} />
-                <KpiCard label={t("stable", lang)} value={String((productPerf.products?.length ?? 0) - (productPerf.rising?.length ?? 0) - (productPerf.declining?.length ?? 0) - (productPerf.watchlist?.length ?? 0))} />
+                <KpiCard label={t("stable", lang)} value={String((productPerf.products ?? []).filter((p: any) => p.status === "stable").length)} />
                 <KpiCard label={t("declining", lang)} value={String(productPerf.declining?.length ?? 0)} icon={TrendingDown} />
                 <KpiCard label={t("watchlist", lang)} value={String(productPerf.watchlist?.length ?? 0)} icon={Package} />
               </div>
@@ -942,7 +942,13 @@ export default function ReportsPage() {
                             rising:    "bg-green-100 text-green-800 border-green-200",
                             stable:    "bg-blue-100 text-blue-800 border-blue-200",
                             declining: "bg-orange-100 text-orange-800 border-orange-200",
-                            watchlist: "bg-amber-100 text-amber-800 border-amber-200",
+                            new:       "bg-gray-100 text-gray-600 border-gray-200",
+                          };
+                          const statusLabel: Record<string, string> = {
+                            rising:    t("rising", lang),
+                            stable:    t("stable", lang),
+                            declining: t("declining", lang),
+                            new:       t("perfNew", lang),
                           };
                           return (
                             <tr key={i} className="border-b border-muted/40 last:border-0">
@@ -954,7 +960,10 @@ export default function ReportsPage() {
                               </td>
                               <td className="py-1.5 pr-3 text-right">{p.margin != null ? `${p.margin}%` : "—"}</td>
                               <td className="py-1.5">
-                                <Badge variant="outline" className={`text-[11px] ${statusStyle[p.status] ?? ""}`}>{p.status}</Badge>
+                                <div className="flex flex-wrap gap-1">
+                                  <Badge variant="outline" className={`text-[11px] ${statusStyle[p.status] ?? ""}`}>{statusLabel[p.status] ?? p.status}</Badge>
+                                  {p.onWatchlist && <Badge variant="outline" className="text-[11px] bg-amber-100 text-amber-800 border-amber-200">{t("onWatchlist", lang)}</Badge>}
+                                </div>
                               </td>
                             </tr>
                           );
