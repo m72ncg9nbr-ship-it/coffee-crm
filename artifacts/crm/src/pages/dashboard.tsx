@@ -9,10 +9,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge, PriorityBadge, UrgencyBadge } from "@/components/priority-badge";
-import { formatDateTime, formatDate } from "@/lib/utils";
+import { formatDateTime, formatDate, formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { useLang } from "@/lib/lang-context";
-import { t } from "@/lib/i18n";
+import { t, type DictKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
   calculateInventoryStatus,
@@ -109,18 +109,28 @@ export default function DashboardPage() {
   const s: any = summary ?? {};
   const p: any = priorities ?? {};
 
-  const stats = [
-    { labelKey: "totalCustomers"  as const, value: s.totalCustomers ?? 0,               icon: Users,         color: "text-blue-600",    accent: "border-l-blue-300" },
-    { labelKey: "aCustomers"      as const, value: s.aCustomers ?? 0,                   icon: Star,          color: "text-amber-600",   accent: "border-l-amber-300" },
-    { labelKey: "openOrders"      as const, value: s.openOrders ?? 0,                   icon: ShoppingCart,  color: "text-amber-600",   accent: "border-l-amber-300" },
-    { labelKey: "incomplete"      as const, value: s.incompleteOrders ?? 0,             icon: FileWarning,   color: "text-orange-600",  accent: "border-l-orange-300" },
-    { labelKey: "planned"         as const, value: s.plannedDeliveries ?? 0,            icon: Truck,         color: "text-purple-600",  accent: "border-l-purple-300" },
-    { labelKey: "outForDelivery"  as const, value: s.outForDelivery ?? 0,               icon: Truck,         color: "text-yellow-600",  accent: "border-l-yellow-300" },
-    { labelKey: "delayed"         as const, value: s.delayedDeliveries ?? 0,            icon: AlertTriangle, color: "text-red-600",     accent: "border-l-red-400" },
-    { labelKey: "awaitingApproval" as const, value: s.awaitingAccountingApproval ?? 0, icon: ClipboardCheck, color: "text-orange-600", accent: "border-l-orange-300" },
-    { labelKey: "approvedToday"   as const, value: s.approvedToday ?? 0,               icon: CheckCircle,   color: "text-green-600",   accent: "border-l-green-300" },
-    { labelKey: "readyInvoicing"  as const, value: s.readyForInvoicing ?? 0,           icon: Receipt,       color: "text-emerald-600", accent: "border-l-emerald-300" },
-    { labelKey: "openDeviations"  as const, value: s.unresolvedDeviations ?? 0,        icon: AlertCircle,   color: "text-red-700",     accent: "border-l-red-500" },
+  type StatEntry = {
+    labelKey: DictKey;
+    value: number;
+    subLabel?: string;
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+    accent: string;
+  };
+  const overdueTotal: number = s.overduePaymentsTotal ?? 0;
+  const stats: StatEntry[] = [
+    { labelKey: "totalCustomers",   value: s.totalCustomers ?? 0,               icon: Users,         color: "text-blue-600",    accent: "border-l-blue-300" },
+    { labelKey: "aCustomers",       value: s.aCustomers ?? 0,                   icon: Star,          color: "text-amber-600",   accent: "border-l-amber-300" },
+    { labelKey: "openOrders",       value: s.openOrders ?? 0,                   icon: ShoppingCart,  color: "text-amber-600",   accent: "border-l-amber-300" },
+    { labelKey: "incomplete",       value: s.incompleteOrders ?? 0,             icon: FileWarning,   color: "text-orange-600",  accent: "border-l-orange-300" },
+    { labelKey: "planned",          value: s.plannedDeliveries ?? 0,            icon: Truck,         color: "text-purple-600",  accent: "border-l-purple-300" },
+    { labelKey: "outForDelivery",   value: s.outForDelivery ?? 0,               icon: Truck,         color: "text-yellow-600",  accent: "border-l-yellow-300" },
+    { labelKey: "delayed",          value: s.delayedDeliveries ?? 0,            icon: AlertTriangle, color: "text-red-600",     accent: "border-l-red-400" },
+    { labelKey: "awaitingApproval", value: s.awaitingAccountingApproval ?? 0,   icon: ClipboardCheck, color: "text-orange-600", accent: "border-l-orange-300" },
+    { labelKey: "approvedToday",    value: s.approvedToday ?? 0,                icon: CheckCircle,   color: "text-green-600",   accent: "border-l-green-300" },
+    { labelKey: "readyInvoicing",   value: s.readyForInvoicing ?? 0,            icon: Receipt,       color: "text-emerald-600", accent: "border-l-emerald-300" },
+    { labelKey: "openDeviations",   value: s.unresolvedDeviations ?? 0,         icon: AlertCircle,   color: "text-red-700",     accent: "border-l-red-500" },
+    { labelKey: "overduePayments",  value: s.overduePaymentsCount ?? 0,         subLabel: overdueTotal > 0 ? formatCurrency(overdueTotal) : undefined, icon: AlertCircle, color: "text-red-700", accent: "border-l-red-600" },
   ];
 
   const sectionCount = (p.aCustomerDeliveries?.length ?? 0)
@@ -148,7 +158,7 @@ export default function DashboardPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{t("dashboard", lang)}</h1>
+        <h1 className="text-3xl font-bold text-foreground">{t("dashboard", lang)}</h1>
         <p className="text-muted-foreground text-sm mt-0.5">{t("operationalOverview", lang)}</p>
       </div>
 
@@ -192,10 +202,11 @@ export default function DashboardPage() {
             <Card key={stat.labelKey} className={`shadow-sm border-l-4 ${stat.accent}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-2">
-                  <p className="text-xs text-muted-foreground leading-tight">{t(stat.labelKey, lang)}</p>
+                  <p className="text-sm text-muted-foreground leading-tight">{t(stat.labelKey, lang)}</p>
                   <Icon className={`h-4 w-4 shrink-0 ${stat.color}`} />
                 </div>
                 <p className="text-2xl font-bold">{stat.value}</p>
+                {stat.subLabel && <p className="text-xs text-muted-foreground mt-0.5">{stat.subLabel}</p>}
               </CardContent>
             </Card>
           );

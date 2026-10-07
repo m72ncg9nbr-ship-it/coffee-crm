@@ -57,6 +57,17 @@ router.get("/dashboard/summary", requireAuth as any, async (req, res): Promise<v
     d.deviationType !== null && d.status !== "approved"
   );
 
+  const overdueOrders = orders.filter(o =>
+    o.dueDate && o.dueDate < today &&
+    (o.paymentStatus === "unpaid" || o.paymentStatus === "partial")
+  );
+  const overduePaymentsCount = overdueOrders.length;
+  const overduePaymentsTotal = overdueOrders.reduce((sum, o) => {
+    const total = parseFloat(String(o.totalAmount ?? 0));
+    const collected = parseFloat(String(o.collectedAmount ?? 0));
+    return sum + Math.max(0, total - collected);
+  }, 0);
+
   res.json({
     totalCustomers: customers.length,
     aCustomers: priorityDistribution.A,
@@ -69,6 +80,8 @@ router.get("/dashboard/summary", requireAuth as any, async (req, res): Promise<v
     approvedToday: approvedToday.length,
     readyForInvoicing: readyForInvoicing.length,
     unresolvedDeviations: unresolvedDeviations.length,
+    overduePaymentsCount,
+    overduePaymentsTotal,
     priorityDistribution,
   });
 });

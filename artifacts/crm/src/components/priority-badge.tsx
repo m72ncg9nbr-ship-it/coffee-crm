@@ -58,7 +58,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   const { lang } = useLang();
   const STATUS_LABEL_MAP: Record<string, DictKey> = {
     new: "statusNew",
-    planned: "planned",
+    planned: "statusPlanned",
     out_for_delivery: "outForDelivery",
     awaiting_accounting_approval: "awaitingApproval",
     approved: "approved",

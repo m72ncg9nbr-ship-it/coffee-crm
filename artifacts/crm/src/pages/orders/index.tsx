@@ -239,7 +239,7 @@ export default function OrdersPage() {
               <SelectItem value="new">{t("statusNew", lang)}</SelectItem>
               <SelectItem value="incomplete">{t("incomplete", lang)}</SelectItem>
               <SelectItem value="blocked">{t("statusBlocked", lang)}</SelectItem>
-              <SelectItem value="planned">{t("planned", lang)}</SelectItem>
+              <SelectItem value="planned">{t("statusPlanned", lang)}</SelectItem>
               <SelectItem value="out_for_delivery">{t("outForDelivery", lang)}</SelectItem>
               <SelectItem value="awaiting_accounting_approval">{t("awaitingApproval", lang)}</SelectItem>
               <SelectItem value="approved">{t("approved", lang)}</SelectItem>

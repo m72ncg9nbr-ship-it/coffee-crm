@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Package, History, Search, ChevronDown, Edit2, TrendingUp, Plus } from "lucide-react";
+import { Package, History, Search, ChevronDown, Edit2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculateInventoryStatus, invStatusBadgeClass, movementReasonLabel, poolDisplayLabel } from "@/lib/inventoryStatus";
 import { useChannel } from "@/lib/channel-context";
@@ -38,8 +38,8 @@ export default function InventoryPage() {
   const qc = useQueryClient();
   const [search, setSearch]           = useState("");
   const [expandedId, setExpandedId]   = useState<number | null>(null);
-  const [editDialogOpen, setEditDialogOpen]     = useState(false);
-  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  const [stockDialogOpen, setStockDialogOpen]   = useState(false);
+  const [stockDialogMode, setStockDialogMode]   = useState<"set" | "delta">("set");
   const [movementsOpen, setMovementsOpen]       = useState(false);
   const [selectedProduct, setSelectedProduct]   = useState<any>(null);
   const [selectedPoolId, setSelectedPoolId]     = useState<string>("");
@@ -77,7 +77,7 @@ export default function InventoryPage() {
       qc.invalidateQueries({ queryKey: ["/api/inventory/stock"] });
       qc.invalidateQueries({ queryKey: ["/api/inventory/movements"] });
       toast({ title: t("stockUpdated", lang) });
-      setEditDialogOpen(false);
+      setStockDialogOpen(false);
     },
     onError: (e: any) =>
       toast({ title: t("failedToUpdateStock", lang), description: e?.message, variant: "destructive" }),
@@ -95,7 +95,7 @@ export default function InventoryPage() {
       qc.invalidateQueries({ queryKey: ["/api/inventory/stock"] });
       qc.invalidateQueries({ queryKey: ["/api/inventory/movements"] });
       toast({ title: t("stockAdjusted", lang) });
-      setAdjustDialogOpen(false);
+      setStockDialogOpen(false);
       setAdjustDelta("0");
       setAdjustReason("");
     },
@@ -118,22 +118,16 @@ export default function InventoryPage() {
     setExpandedId(prev => (prev === productId ? null : productId));
   }
 
-  function openEdit(e: React.MouseEvent, product: any, poolId: number) {
+  function openStockDialog(e: React.MouseEvent, product: any, poolId: number) {
     e.stopPropagation();
     const poolRow = product.pools.find((p: any) => p.poolId === poolId);
     setSelectedProduct(product);
     setSelectedPoolId(String(poolId));
     setEditQty(String(poolRow?.quantityAvailable ?? 0));
-    setEditDialogOpen(true);
-  }
-
-  function openAdjust(e: React.MouseEvent, product: any, poolId: number) {
-    e.stopPropagation();
-    setSelectedProduct(product);
-    setSelectedPoolId(String(poolId));
     setAdjustDelta("0");
     setAdjustReason("");
-    setAdjustDialogOpen(true);
+    setStockDialogMode("set");
+    setStockDialogOpen(true);
   }
 
   function submitSet() {
@@ -310,22 +304,14 @@ export default function InventoryPage() {
                             </div>
                           </div>
 
-                          <div className="flex gap-1.5 pt-1 border-t">
+                          <div className="flex pt-1 border-t">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-xs flex-1"
-                              onClick={e => openEdit(e, product, pool.poolId)}
+                              className="h-7 text-xs w-full"
+                              onClick={e => openStockDialog(e, product, pool.poolId)}
                             >
-                              <Edit2 className="h-3 w-3 mr-1" />{t("setBtn", lang)}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs flex-1"
-                              onClick={e => openAdjust(e, product, pool.poolId)}
-                            >
-                              <TrendingUp className="h-3 w-3 mr-1" />{t("adjBtn", lang)}
+                              <Edit2 className="h-3 w-3 mr-1" />{t("updateStock", lang)}
                             </Button>
                           </div>
                         </div>
@@ -339,81 +325,99 @@ export default function InventoryPage() {
         })}
       </div>
 
-      {/* Set stock dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      {/* Unified stock update dialog */}
+      <Dialog open={stockDialogOpen} onOpenChange={v => { setStockDialogOpen(v); if (!v) { setAdjustDelta("0"); setAdjustReason(""); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-sm">{t("setStockLevel", lang)}</DialogTitle>
+            <DialogTitle className="text-sm">{t("updateStock", lang)}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
               <p className="text-sm font-medium">{selectedProduct?.productName}</p>
               <p className="text-xs text-muted-foreground">
                 {t("pool", lang)}: {selectedPoolRow?.poolLabel} · {t("currentQtyLabel", lang)} {selectedPoolRow?.quantityAvailable ?? 0}
               </p>
             </div>
-            <div>
-              <Label>{t("newAvailableQty", lang)}</Label>
-              <Input
-                type="number"
-                min="0"
-                value={editQty}
-                onChange={e => setEditQty(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div className="flex gap-2 justify-end pt-1">
-              <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(false)}>{t("cancel", lang)}</Button>
-              <Button size="sm" onClick={submitSet} disabled={upsert.isPending}>{t("save", lang)}</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Adjust stock dialog */}
-      <Dialog open={adjustDialogOpen} onOpenChange={setAdjustDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-sm">{t("adjustStock", lang)}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm font-medium">{selectedProduct?.productName}</p>
-              <p className="text-xs text-muted-foreground">
-                {t("pool", lang)}: {selectedPoolRow?.poolLabel} · {t("currentQtyLabel", lang)} {selectedPoolRow?.quantityAvailable ?? 0}
-              </p>
+            {/* Mode selector */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setStockDialogMode("set")}
+                className={cn(
+                  "px-3 py-2 text-xs font-medium rounded-md border transition-colors text-left",
+                  stockDialogMode === "set"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background hover:bg-muted/50"
+                )}
+              >
+                {t("setExactMode", lang)}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStockDialogMode("delta")}
+                className={cn(
+                  "px-3 py-2 text-xs font-medium rounded-md border transition-colors text-left",
+                  stockDialogMode === "delta"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background hover:bg-muted/50"
+                )}
+              >
+                {t("deltaMode", lang)}
+              </button>
             </div>
-            <div>
-              <Label>{t("deltaLabel", lang)}</Label>
-              <Input
-                type="number"
-                value={adjustDelta}
-                onChange={e => setAdjustDelta(e.target.value)}
-                className="mt-1"
-              />
-              {adjustDelta !== "0" && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t("resultLabel", lang)}: {Math.max(0, (selectedPoolRow?.quantityAvailable ?? 0) + Number(adjustDelta))}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label>{t("reason", lang)} *</Label>
-              <Input
-                placeholder={t("reason", lang)}
-                value={adjustReason}
-                onChange={e => setAdjustReason(e.target.value)}
-                className="mt-1"
-              />
-            </div>
+
+            <p className="text-xs text-muted-foreground">{t("stockUpdateHelper", lang)}</p>
+
+            {stockDialogMode === "set" ? (
+              <div>
+                <Label>{t("newAvailableQty", lang)}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={editQty}
+                  onChange={e => setEditQty(e.target.value)}
+                  className="mt-1"
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <Label>{t("deltaLabel", lang)}</Label>
+                  <Input
+                    type="number"
+                    value={adjustDelta}
+                    onChange={e => setAdjustDelta(e.target.value)}
+                    className="mt-1"
+                    autoFocus
+                  />
+                  {adjustDelta !== "0" && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t("resultLabel", lang)}: {Math.max(0, (selectedPoolRow?.quantityAvailable ?? 0) + Number(adjustDelta))}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label>{t("reason", lang)} *</Label>
+                  <Input
+                    placeholder={t("reason", lang)}
+                    value={adjustReason}
+                    onChange={e => setAdjustReason(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2 justify-end pt-1">
-              <Button variant="outline" size="sm" onClick={() => setAdjustDialogOpen(false)}>{t("cancel", lang)}</Button>
+              <Button variant="outline" size="sm" onClick={() => setStockDialogOpen(false)}>{t("cancel", lang)}</Button>
               <Button
                 size="sm"
-                onClick={submitAdjust}
-                disabled={adjust.isPending || !adjustReason.trim()}
+                onClick={stockDialogMode === "set" ? submitSet : submitAdjust}
+                disabled={upsert.isPending || adjust.isPending || (stockDialogMode === "delta" && !adjustReason.trim())}
               >
-                {t("apply", lang)}
+                {t("save", lang)}
               </Button>
             </div>
           </div>

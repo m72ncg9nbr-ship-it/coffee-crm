@@ -95,7 +95,7 @@
   --secondary-foreground: 25 25% 25%;
 
   --muted: 30 15% 94%;
-  --muted-foreground: 25 15% 48%;
+  --muted-foreground: 25 15% 36%;
 
   --accent: 35 80% 88%;
   --accent-foreground: 25 50% 25%;
@@ -177,7 +177,7 @@
 
   /* Muted */
   --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
+  --muted-foreground: 0 0% 32%;
 
   /* Accent — pale red tint for hover / highlight */
   --accent: 0 68% 96%;

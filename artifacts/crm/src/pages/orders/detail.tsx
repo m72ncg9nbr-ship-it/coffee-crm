@@ -207,7 +207,7 @@ export default function OrderDetailPage() {
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold" data-testid="text-order-number">{o.orderNumber ?? `Order #${o.id}`}</h1>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${STATUS_COLORS[o.status] ?? STATUS_COLORS.new}`}>
-              {t(({ new: "statusNew", planned: "planned", out_for_delivery: "outForDelivery", awaiting_accounting_approval: "awaitingApproval", approved: "approved", cancelled: "cancelled", incomplete: "incomplete", blocked: "statusBlocked" } as Record<string, DictKey>)[o.status] ?? "statusNew", lang)}
+              {t(({ new: "statusNew", planned: "statusPlanned", out_for_delivery: "outForDelivery", awaiting_accounting_approval: "awaitingApproval", approved: "approved", cancelled: "cancelled", incomplete: "incomplete", blocked: "statusBlocked" } as Record<string, DictKey>)[o.status] ?? "statusNew", lang)}
             </span>
             {payStatusBadge()}
           </div>
