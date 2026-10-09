@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useCreateProduct, useUpdateProduct } from "@workspace/api-client-react";
+import { useCreateProduct } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useLang } from "@/lib/lang-context";
@@ -38,6 +38,7 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
   const [businessChannel, setBusinessChannel] = useState(defaultChannel ?? "");
   const [unitPrice, setUnitPrice] = useState("");
   const [stockStatus, setStockStatus] = useState<"in_stock" | "low_stock" | "out_of_stock">("in_stock");
+  const [brand, setBrand] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [initialStock, setInitialStock] = useState("");
   const [selectedPoolId, setSelectedPoolId] = useState("");
@@ -61,8 +62,6 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
     },
   });
 
-  const updateMutation = useUpdateProduct();
-
   function reset() {
     setProductName("");
     setSku("");
@@ -70,6 +69,7 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
     setBusinessChannel(defaultChannel ?? "");
     setUnitPrice("");
     setStockStatus("in_stock");
+    setBrand("");
     setCostPrice("");
     setInitialStock("");
     setSelectedPoolId("");
@@ -87,6 +87,8 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
       return;
     }
 
+    const cPrice = canEditCost && costPrice.trim() !== "" ? parseFloat(costPrice) : null;
+
     let createdProduct: any;
     try {
       createdProduct = await createMutation.mutateAsync({
@@ -96,8 +98,10 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
           category: category.trim(),
           businessChannel,
           unitPrice: uPrice,
+          costPrice: cPrice,
           stockStatus,
           active: true,
+          brand: brand.trim() || null,
         },
       });
     } catch {
@@ -105,15 +109,6 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
     }
 
     const productId: number = createdProduct.id;
-
-    const cPrice = costPrice.trim() !== "" ? parseFloat(costPrice) : null;
-    if (cPrice != null && !isNaN(cPrice) && cPrice >= 0 && canEditCost) {
-      try {
-        await updateMutation.mutateAsync({ id: productId, data: { costPrice: cPrice } });
-      } catch {
-        // non-critical
-      }
-    }
 
     const iStock = initialStock.trim() !== "" ? parseInt(initialStock, 10) : null;
     if (iStock != null && !isNaN(iStock) && iStock > 0 && selectedPoolId) {
@@ -143,7 +138,7 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
 
   if (!canCreate) return null;
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = createMutation.isPending;
   const showStockPool = (parseInt(initialStock, 10) || 0) > 0;
 
   return (
@@ -222,6 +217,15 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="cp-brand">{t("brandOptional", lang)}</Label>
+            <Input
+              id="cp-brand"
+              value={brand}
+              onChange={e => setBrand(e.target.value)}
+            />
           </div>
 
           {canEditCost && (

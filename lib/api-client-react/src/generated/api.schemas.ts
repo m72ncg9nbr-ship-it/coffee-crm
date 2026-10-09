@@ -298,6 +298,7 @@ export interface Product {
   stockStatus: ProductStockStatus;
   active: boolean;
   businessChannel: string;
+  brand?: string | null;
   createdAt: string;
 }
 
@@ -315,9 +316,11 @@ export interface CreateProductBody {
   sku: string;
   category: string;
   unitPrice: number;
+  costPrice?: number | null;
   stockStatus: CreateProductBodyStockStatus;
   active?: boolean;
   businessChannel: string;
+  brand?: string | null;
 }
 
 export type UpdateProductBodyStockStatus =
@@ -334,9 +337,11 @@ export interface UpdateProductBody {
   sku?: string;
   category?: string;
   unitPrice?: number;
+  costPrice?: number | null;
   stockStatus?: UpdateProductBodyStockStatus;
   active?: boolean;
   businessChannel?: string;
+  brand?: string | null;
 }
 
 export type OrderOrderSource =
