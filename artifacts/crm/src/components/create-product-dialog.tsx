@@ -139,7 +139,6 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
   if (!canCreate) return null;
 
   const isSubmitting = createMutation.isPending;
-  const showStockPool = (parseInt(initialStock, 10) || 0) > 0;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
@@ -242,19 +241,19 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="cp-stock">{t("initialStockOptional", lang)}</Label>
-              <Input
-                id="cp-stock"
-                type="number"
-                min="0"
-                step="1"
-                value={initialStock}
-                onChange={e => setInitialStock(e.target.value)}
-              />
-            </div>
-            {showStockPool && (
+          {businessChannel && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="cp-stock">{t("initialStockOptional", lang)}</Label>
+                <Input
+                  id="cp-stock"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={initialStock}
+                  onChange={e => setInitialStock(e.target.value)}
+                />
+              </div>
               <div className="space-y-1.5">
                 <Label>{t("stockPoolLabel", lang)}</Label>
                 <Select value={selectedPoolId} onValueChange={setSelectedPoolId}>
@@ -270,8 +269,8 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
                   </SelectContent>
                 </Select>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button
