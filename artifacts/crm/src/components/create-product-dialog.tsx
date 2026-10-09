@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
 import { poolDisplayLabel } from "@/lib/inventoryStatus";
-import { SUPPORTED_CURRENCIES, convertToTRY, formatWithCurrency } from "@/lib/fx";
+import { SUPPORTED_CURRENCIES, convertToTRY } from "@/lib/fx";
 import { formatCurrencyWithCode } from "@/lib/utils";
 
 interface Props {
@@ -42,7 +42,8 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
   const [stockStatus, setStockStatus] = useState<"in_stock" | "low_stock" | "out_of_stock">("in_stock");
   const [brand, setBrand] = useState("");
   const [costPrice, setCostPrice] = useState("");
-  const [priceCurrency, setPriceCurrency] = useState("TRY");
+  const [unitPriceCurrency, setUnitPriceCurrency] = useState("TRY");
+  const [costPriceCurrency, setCostPriceCurrency] = useState("TRY");
   const [initialStock, setInitialStock] = useState("");
   const [selectedPoolId, setSelectedPoolId] = useState("");
 
@@ -76,7 +77,8 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
     setStockStatus("in_stock");
     setBrand("");
     setCostPrice("");
-    setPriceCurrency("TRY");
+    setUnitPriceCurrency("TRY");
+    setCostPriceCurrency("TRY");
     setInitialStock("");
     setSelectedPoolId("");
   }
@@ -108,7 +110,8 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
           stockStatus,
           active: true,
           brand: brand.trim() || null,
-          priceCurrency,
+          unitPriceCurrency,
+          costPriceCurrency,
         },
       });
     } catch {
@@ -213,15 +216,15 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
                   required
                   className="flex-1"
                 />
-                <Select value={priceCurrency} onValueChange={setPriceCurrency}>
+                <Select value={unitPriceCurrency} onValueChange={setUnitPriceCurrency}>
                   <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {SUPPORTED_CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              {priceCurrency !== "TRY" && unitPrice && !isNaN(parseFloat(unitPrice)) && (() => {
-                const approx = convertToTRY(parseFloat(unitPrice), priceCurrency, fxRates);
+              {unitPriceCurrency !== "TRY" && unitPrice && !isNaN(parseFloat(unitPrice)) && (() => {
+                const approx = convertToTRY(parseFloat(unitPrice), unitPriceCurrency, fxRates);
                 return approx != null ? (
                   <p className="text-[11px] text-muted-foreground">{t("fxApproxTRY", lang)} {formatCurrencyWithCode(approx, "TRY")}</p>
                 ) : null;
@@ -252,16 +255,25 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
           {canEditCost && (
             <div className="space-y-1.5">
               <Label htmlFor="cp-cost">{t("costPriceOptional", lang)}</Label>
-              <Input
-                id="cp-cost"
-                type="number"
-                min="0"
-                step="0.01"
-                value={costPrice}
-                onChange={e => setCostPrice(e.target.value)}
-              />
-              {priceCurrency !== "TRY" && costPrice && !isNaN(parseFloat(costPrice)) && (() => {
-                const approx = convertToTRY(parseFloat(costPrice), priceCurrency, fxRates);
+              <div className="flex gap-1.5">
+                <Input
+                  id="cp-cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={costPrice}
+                  onChange={e => setCostPrice(e.target.value)}
+                  className="flex-1"
+                />
+                <Select value={costPriceCurrency} onValueChange={setCostPriceCurrency}>
+                  <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {costPriceCurrency !== "TRY" && costPrice && !isNaN(parseFloat(costPrice)) && (() => {
+                const approx = convertToTRY(parseFloat(costPrice), costPriceCurrency, fxRates);
                 return approx != null ? (
                   <p className="text-[11px] text-muted-foreground">{t("fxApproxTRY", lang)} {formatCurrencyWithCode(approx, "TRY")}</p>
                 ) : null;

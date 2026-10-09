@@ -299,7 +299,8 @@ export interface Product {
   active: boolean;
   businessChannel: string;
   brand?: string | null;
-  priceCurrency?: string;
+  unitPriceCurrency?: string;
+  costPriceCurrency?: string;
   createdAt: string;
 }
 
@@ -322,7 +323,8 @@ export interface CreateProductBody {
   active?: boolean;
   businessChannel: string;
   brand?: string | null;
-  priceCurrency?: string;
+  unitPriceCurrency?: string;
+  costPriceCurrency?: string;
 }
 
 export type UpdateProductBodyStockStatus =
@@ -344,7 +346,8 @@ export interface UpdateProductBody {
   active?: boolean;
   businessChannel?: string;
   brand?: string | null;
-  priceCurrency?: string;
+  unitPriceCurrency?: string;
+  costPriceCurrency?: string;
 }
 
 // FX rate types — Phase 3A

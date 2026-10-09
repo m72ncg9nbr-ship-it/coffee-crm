@@ -38,7 +38,8 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Prop
   const [stockStatus, setStockStatus] = useState<"in_stock" | "low_stock" | "out_of_stock">("in_stock");
   const [brand, setBrand] = useState("");
   const [costPrice, setCostPrice] = useState("");
-  const [priceCurrency, setPriceCurrency] = useState("TRY");
+  const [unitPriceCurrency, setUnitPriceCurrency] = useState("TRY");
+  const [costPriceCurrency, setCostPriceCurrency] = useState("TRY");
   const [active, setActive] = useState(true);
 
   const { data: fxRates } = useGetFxRates();
@@ -53,7 +54,8 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Prop
       setStockStatus(product.stockStatus ?? "in_stock");
       setBrand(product.brand ?? "");
       setCostPrice(product.costPrice != null ? String(product.costPrice) : "");
-      setPriceCurrency(product.priceCurrency ?? "TRY");
+      setUnitPriceCurrency(product.unitPriceCurrency ?? "TRY");
+      setCostPriceCurrency(product.costPriceCurrency ?? "TRY");
       setActive(product.active ?? true);
     }
   }, [product]);
@@ -92,7 +94,8 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Prop
       unitPrice: uPrice,
       stockStatus,
       brand: brand.trim() || null,
-      priceCurrency,
+      unitPriceCurrency,
+      costPriceCurrency,
     };
 
     if (canEditCost) {
@@ -169,15 +172,15 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Prop
                   required
                   className="flex-1"
                 />
-                <Select value={priceCurrency} onValueChange={setPriceCurrency}>
+                <Select value={unitPriceCurrency} onValueChange={setUnitPriceCurrency}>
                   <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {SUPPORTED_CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              {priceCurrency !== "TRY" && unitPrice && !isNaN(parseFloat(unitPrice)) && (() => {
-                const approx = convertToTRY(parseFloat(unitPrice), priceCurrency, fxRates);
+              {unitPriceCurrency !== "TRY" && unitPrice && !isNaN(parseFloat(unitPrice)) && (() => {
+                const approx = convertToTRY(parseFloat(unitPrice), unitPriceCurrency, fxRates);
                 return approx != null ? (
                   <p className="text-[11px] text-muted-foreground">{t("fxApproxTRY", lang)} {formatCurrencyWithCode(approx, "TRY")}</p>
                 ) : null;
@@ -209,16 +212,25 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Prop
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="ep-cost">{t("costPriceOptional", lang)}</Label>
-                <Input
-                  id="ep-cost"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={costPrice}
-                  onChange={e => setCostPrice(e.target.value)}
-                />
-                {priceCurrency !== "TRY" && costPrice && !isNaN(parseFloat(costPrice)) && (() => {
-                  const approx = convertToTRY(parseFloat(costPrice), priceCurrency, fxRates);
+                <div className="flex gap-1.5">
+                  <Input
+                    id="ep-cost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={costPrice}
+                    onChange={e => setCostPrice(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Select value={costPriceCurrency} onValueChange={setCostPriceCurrency}>
+                    <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SUPPORTED_CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {costPriceCurrency !== "TRY" && costPrice && !isNaN(parseFloat(costPrice)) && (() => {
+                  const approx = convertToTRY(parseFloat(costPrice), costPriceCurrency, fxRates);
                   return approx != null ? (
                     <p className="text-[11px] text-muted-foreground">{t("fxApproxTRY", lang)} {formatCurrencyWithCode(approx, "TRY")}</p>
                   ) : null;

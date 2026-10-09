@@ -457,7 +457,8 @@ export const ListProductsResponseItem = zod.object({
   active: zod.boolean(),
   businessChannel: zod.string(),
   brand: zod.string().nullish(),
-  priceCurrency: zod.string().optional().default("TRY"),
+  unitPriceCurrency: zod.string().optional().default("TRY"),
+  costPriceCurrency: zod.string().optional().default("TRY"),
   createdAt: zod.string(),
 });
 export const ListProductsResponse = zod.array(ListProductsResponseItem);
@@ -475,7 +476,8 @@ export const CreateProductBody = zod.object({
   active: zod.boolean().optional(),
   businessChannel: zod.string(),
   brand: zod.string().nullish(),
-  priceCurrency: zod.string().optional(),
+  unitPriceCurrency: zod.string().optional(),
+  costPriceCurrency: zod.string().optional(),
 });
 
 /**
@@ -496,7 +498,8 @@ export const GetProductResponse = zod.object({
   active: zod.boolean(),
   businessChannel: zod.string(),
   brand: zod.string().nullish(),
-  priceCurrency: zod.string().optional().default("TRY"),
+  unitPriceCurrency: zod.string().optional().default("TRY"),
+  costPriceCurrency: zod.string().optional().default("TRY"),
   createdAt: zod.string(),
 });
 
@@ -517,7 +520,8 @@ export const UpdateProductBody = zod.object({
   active: zod.boolean().optional(),
   businessChannel: zod.string().optional(),
   brand: zod.string().nullish(),
-  priceCurrency: zod.string().optional(),
+  unitPriceCurrency: zod.string().optional(),
+  costPriceCurrency: zod.string().optional(),
 });
 
 export const UpdateProductResponse = zod.object({
@@ -531,7 +535,8 @@ export const UpdateProductResponse = zod.object({
   active: zod.boolean(),
   businessChannel: zod.string(),
   brand: zod.string().nullish(),
-  priceCurrency: zod.string().optional().default("TRY"),
+  unitPriceCurrency: zod.string().optional().default("TRY"),
+  costPriceCurrency: zod.string().optional().default("TRY"),
   createdAt: zod.string(),
 });
 
