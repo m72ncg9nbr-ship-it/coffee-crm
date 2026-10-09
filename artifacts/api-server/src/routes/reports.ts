@@ -261,7 +261,10 @@ router.get("/reports/profitability", requireAuth as any, async (req, res): Promi
     const gp          = costKnown ? netRevenue - productCost : null;
     const o           = order as any;
     const delay       = computeDelayDays(o.dueDate, o.paidAt?.toISOString?.());
-    const valorCost   = netRevenue * VALOR_RATE_MONTHLY * (delay / 30);
+    const orderTotal  = parseFloat(o.totalAmount);
+    const collected   = o.collectedAmount != null ? parseFloat(o.collectedAmount) : (o.paymentStatus === "paid" ? orderTotal : 0);
+    const outstanding = Math.max(0, orderTotal - collected);
+    const valorCost   = outstanding * (Math.pow(1 + VALOR_RATE_MONTHLY, delay / 30) - 1);
     const adjProfit   = gp != null ? gp - valorCost : null;
 
     return { grossRevenue, discountAmount, netRevenue, productCost: costKnown ? productCost : null, grossProfit: gp, valorCost, collectionAdjustedProfit: adjProfit };
