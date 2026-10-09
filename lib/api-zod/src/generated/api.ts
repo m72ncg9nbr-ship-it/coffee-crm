@@ -457,6 +457,7 @@ export const ListProductsResponseItem = zod.object({
   active: zod.boolean(),
   businessChannel: zod.string(),
   brand: zod.string().nullish(),
+  priceCurrency: zod.string().optional().default("TRY"),
   createdAt: zod.string(),
 });
 export const ListProductsResponse = zod.array(ListProductsResponseItem);
@@ -474,6 +475,7 @@ export const CreateProductBody = zod.object({
   active: zod.boolean().optional(),
   businessChannel: zod.string(),
   brand: zod.string().nullish(),
+  priceCurrency: zod.string().optional(),
 });
 
 /**
@@ -494,6 +496,7 @@ export const GetProductResponse = zod.object({
   active: zod.boolean(),
   businessChannel: zod.string(),
   brand: zod.string().nullish(),
+  priceCurrency: zod.string().optional().default("TRY"),
   createdAt: zod.string(),
 });
 
@@ -514,6 +517,7 @@ export const UpdateProductBody = zod.object({
   active: zod.boolean().optional(),
   businessChannel: zod.string().optional(),
   brand: zod.string().nullish(),
+  priceCurrency: zod.string().optional(),
 });
 
 export const UpdateProductResponse = zod.object({
@@ -527,7 +531,27 @@ export const UpdateProductResponse = zod.object({
   active: zod.boolean(),
   businessChannel: zod.string(),
   brand: zod.string().nullish(),
+  priceCurrency: zod.string().optional().default("TRY"),
   createdAt: zod.string(),
+});
+
+/**
+ * @summary Get FX rates from TCMB
+ */
+export const FxRateEntry = zod.object({
+  pair:         zod.string(),
+  rate:         zod.number(),
+  rateBuying:   zod.number(),
+  rateSelling:  zod.number(),
+  rateDate:     zod.string(),
+  source:       zod.literal("TCMB"),
+});
+
+export const FxRatesResponse = zod.object({
+  rates:       zod.array(FxRateEntry),
+  fetchedAt:   zod.string(),
+  stale:       zod.boolean(),
+  unavailable: zod.boolean(),
 });
 
 /**

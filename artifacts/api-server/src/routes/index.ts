@@ -14,6 +14,7 @@ import invoicingRouter from "./invoicing";
 import inventoryRouter from "./inventory";
 import reportsRouter from "./reports";
 import actionCenterRouter from "./action-center";
+import fxRouter from "./fx";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(invoicingRouter);
 router.use(inventoryRouter);
 router.use(reportsRouter);
 router.use(actionCenterRouter);
+router.use(fxRouter);
 
 export default router;

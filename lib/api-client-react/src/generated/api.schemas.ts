@@ -299,6 +299,7 @@ export interface Product {
   active: boolean;
   businessChannel: string;
   brand?: string | null;
+  priceCurrency?: string;
   createdAt: string;
 }
 
@@ -321,6 +322,7 @@ export interface CreateProductBody {
   active?: boolean;
   businessChannel: string;
   brand?: string | null;
+  priceCurrency?: string;
 }
 
 export type UpdateProductBodyStockStatus =
@@ -342,6 +344,24 @@ export interface UpdateProductBody {
   active?: boolean;
   businessChannel?: string;
   brand?: string | null;
+  priceCurrency?: string;
+}
+
+// FX rate types — Phase 3A
+export interface FxRateEntry {
+  pair:        string;
+  rate:        number;
+  rateBuying:  number;
+  rateSelling: number;
+  rateDate:    string;
+  source:      "TCMB";
+}
+
+export interface FxRatesResponse {
+  rates:       FxRateEntry[];
+  fetchedAt:   string;
+  stale:       boolean;
+  unavailable: boolean;
 }
 
 export type OrderOrderSource =

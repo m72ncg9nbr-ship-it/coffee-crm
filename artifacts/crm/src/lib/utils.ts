@@ -19,3 +19,16 @@ export function formatCurrency(amount: number | null | undefined): string {
   if (amount == null) return "—";
   return new Intl.NumberFormat("en-EU", { style: "currency", currency: "EUR" }).format(amount);
 }
+
+const INTL_LOCALE: Record<string, string> = { TRY: "tr-TR", EUR: "en-EU", USD: "en-US" };
+const INTL_CURRENCY: Record<string, string> = { TRY: "TRY", EUR: "EUR", USD: "USD" };
+
+export function formatCurrencyWithCode(
+  amount: number | null | undefined,
+  currencyCode: string,
+): string {
+  if (amount == null) return "—";
+  const locale   = INTL_LOCALE[currencyCode]   ?? "tr-TR";
+  const currency = INTL_CURRENCY[currencyCode] ?? currencyCode;
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+}

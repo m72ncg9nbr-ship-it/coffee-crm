@@ -9,12 +9,14 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useCreateProduct } from "@workspace/api-client-react";
+import { useCreateProduct, useGetFxRates } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useLang } from "@/lib/lang-context";
 import { t } from "@/lib/i18n";
 import { poolDisplayLabel } from "@/lib/inventoryStatus";
+import { SUPPORTED_CURRENCIES, convertToTRY, formatWithCurrency } from "@/lib/fx";
+import { formatCurrencyWithCode } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -40,8 +42,11 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
   const [stockStatus, setStockStatus] = useState<"in_stock" | "low_stock" | "out_of_stock">("in_stock");
   const [brand, setBrand] = useState("");
   const [costPrice, setCostPrice] = useState("");
+  const [priceCurrency, setPriceCurrency] = useState("TRY");
   const [initialStock, setInitialStock] = useState("");
   const [selectedPoolId, setSelectedPoolId] = useState("");
+
+  const { data: fxRates } = useGetFxRates();
 
   const { data: pools } = useQuery<any[]>({
     queryKey: ["/api/inventory/pools"],
@@ -71,6 +76,7 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
     setStockStatus("in_stock");
     setBrand("");
     setCostPrice("");
+    setPriceCurrency("TRY");
     setInitialStock("");
     setSelectedPoolId("");
   }
@@ -102,6 +108,7 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
           stockStatus,
           active: true,
           brand: brand.trim() || null,
+          priceCurrency,
         },
       });
     } catch {
@@ -195,15 +202,30 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="cp-price">{t("unitPrice", lang)} *</Label>
-              <Input
-                id="cp-price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={unitPrice}
-                onChange={e => setUnitPrice(e.target.value)}
-                required
-              />
+              <div className="flex gap-1.5">
+                <Input
+                  id="cp-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={unitPrice}
+                  onChange={e => setUnitPrice(e.target.value)}
+                  required
+                  className="flex-1"
+                />
+                <Select value={priceCurrency} onValueChange={setPriceCurrency}>
+                  <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {priceCurrency !== "TRY" && unitPrice && !isNaN(parseFloat(unitPrice)) && (() => {
+                const approx = convertToTRY(parseFloat(unitPrice), priceCurrency, fxRates);
+                return approx != null ? (
+                  <p className="text-[11px] text-muted-foreground">{t("fxApproxTRY", lang)} {formatCurrencyWithCode(approx, "TRY")}</p>
+                ) : null;
+              })()}
             </div>
             <div className="space-y-1.5">
               <Label>{t("stockStatusLabel", lang)}</Label>
@@ -238,6 +260,12 @@ export function CreateProductDialog({ open, onOpenChange, onCreated, defaultChan
                 value={costPrice}
                 onChange={e => setCostPrice(e.target.value)}
               />
+              {priceCurrency !== "TRY" && costPrice && !isNaN(parseFloat(costPrice)) && (() => {
+                const approx = convertToTRY(parseFloat(costPrice), priceCurrency, fxRates);
+                return approx != null ? (
+                  <p className="text-[11px] text-muted-foreground">{t("fxApproxTRY", lang)} {formatCurrencyWithCode(approx, "TRY")}</p>
+                ) : null;
+              })()}
             </div>
           )}
 

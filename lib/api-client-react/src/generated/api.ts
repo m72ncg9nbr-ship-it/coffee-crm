@@ -77,6 +77,7 @@ import type {
   SamplesSummaryResponse,
   RegionalSummaryResponse,
   MarkOrderPaidBody,
+  FxRatesResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -4428,3 +4429,49 @@ export const useMarkOrderPaid = <
   return useMutation(getMarkOrderPaidMutationOptions(options));
 };
 
+/**
+ * @summary Get FX rates from TCMB (Phase 3A)
+ */
+export const getFxRates = async (
+  options?: RequestInit,
+): Promise<FxRatesResponse> => {
+  return customFetch<FxRatesResponse>("/api/fx/rates", {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFxRatesQueryKey = () => ["/api/fx/rates"] as const;
+
+export const getGetFxRatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFxRates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getFxRates>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetFxRatesQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getFxRates>>> = ({ signal }) =>
+    getFxRates({ signal, ...requestOptions });
+  return { queryKey, queryFn, staleTime: 5 * 60 * 1000, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFxRates>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFxRatesQueryResult = NonNullable<Awaited<ReturnType<typeof getFxRates>>>;
+export type GetFxRatesQueryError = ErrorType<unknown>;
+
+export function useGetFxRates<
+  TData = Awaited<ReturnType<typeof getFxRates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getFxRates>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFxRatesQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}

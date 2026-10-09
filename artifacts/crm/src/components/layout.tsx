@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
-import { useLogout, getGetCurrentUserQueryKey } from "@workspace/api-client-react";
+import { useLogout, getGetCurrentUserQueryKey, useGetFxRates } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/lib/lang-context";
@@ -130,6 +130,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
+        {/* FX ticker */}
+        <FxTicker />
+
         {/* Footer: user + language toggle + sign out */}
         <div className="border-t border-sidebar-border">
           {/* User info */}
@@ -187,6 +190,58 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 min-w-0 overflow-y-auto">
         {children}
       </main>
+    </div>
+  );
+}
+
+function FxTicker() {
+  const { data, isLoading } = useGetFxRates({ query: { refetchInterval: 30 * 60 * 1000 } });
+
+  if (isLoading) return null;
+
+  if (!data || data.unavailable) {
+    return (
+      <div className="px-4 py-1.5 border-t border-sidebar-border">
+        <p className="text-[9px] text-sidebar-foreground/30 uppercase tracking-wide">FX · TCMB</p>
+        <p className="text-[9px] text-sidebar-foreground/40">—</p>
+      </div>
+    );
+  }
+
+  const eur = data.rates.find(r => r.pair === "EUR/TRY");
+  const usd = data.rates.find(r => r.pair === "USD/TRY");
+
+  return (
+    <div className={cn(
+      "px-4 py-1.5 border-t border-sidebar-border",
+      data.stale && "opacity-60"
+    )}>
+      <div className="flex items-center justify-between mb-0.5">
+        <p className="text-[9px] font-medium text-sidebar-foreground/40 uppercase tracking-wide">
+          TCMB {data.stale ? "· stale" : ""}
+        </p>
+        {eur?.rateDate && (
+          <p className="text-[9px] text-sidebar-foreground/30">{eur.rateDate}</p>
+        )}
+      </div>
+      <div className="flex gap-3">
+        {eur && (
+          <div>
+            <span className="text-[9px] text-sidebar-foreground/40">EUR/TRY </span>
+            <span className="text-[10px] font-semibold text-sidebar-foreground/70">
+              {eur.rateBuying.toFixed(4)}
+            </span>
+          </div>
+        )}
+        {usd && (
+          <div>
+            <span className="text-[9px] text-sidebar-foreground/40">USD/TRY </span>
+            <span className="text-[10px] font-semibold text-sidebar-foreground/70">
+              {usd.rateBuying.toFixed(4)}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

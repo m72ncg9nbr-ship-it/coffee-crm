@@ -876,6 +876,15 @@ export const dict = {
   // ── Action center reason labels ───────────────────────────────────────────────
   paymentDueReason:       { en: "Payment due",       tr: "Vadesi Gelen Ödeme" },
 
+  // ── FX / Currency (Phase 3A) ─────────────────────────────────────────────────
+  priceCurrencyLabel:         { en: "Currency",             tr: "Para Birimi" },
+  fxRates:                    { en: "FX Rates",             tr: "Döviz Kurları" },
+  fxStale:                    { en: "Stale",                tr: "Güncel değil" },
+  fxUnavailable:              { en: "Unavailable",          tr: "Mevcut değil" },
+  fxSource:                   { en: "Source",               tr: "Kaynak" },
+  fxRateDate:                 { en: "Rate date",            tr: "Kur tarihi" },
+  fxApproxTRY:                { en: "≈ TRY",                tr: "≈ TL" },
+
   // ── Misc display helpers ─────────────────────────────────────────────────────
   ofLabel:                    { en: "of",                   tr: "/" },
   searchCustomersPlaceholder: { en: "Search customers...",  tr: "Müşteri ara..." },
